@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Cordoba Institute of Knowledge",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
@@ -12,94 +12,65 @@
     "tabs": [
       {
         "tab": "Home",
-        "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
-            ]
+        "pages": ["index"]
       },
       {
         "tab": "Learning Paths",
         "groups": [
           {
-            "group": "Learning Path 1",
-            "pages": [
-              "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Learning Path 2",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
-            ]
+            "group": "RAG Chatbot",
+            "pages": ["learning-paths/rag-chatbot/home"]
           }
         ]
       },
-            {
+      {
         "tab": "Topics",
-        "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
-            ]
+        "pages": ["topics/cursor", "topics/claude-code", "topics/windsurf"]
       },
-            {
+      {
         "tab": "Reference",
         "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
-            ]
-      },      
-{
+          "reference/cursor",
+          "reference/claude-code",
+          "reference/windsurf"
+        ]
+      },
+      {
         "tab": "Tutorials",
         "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
-            ]
-      },         
-    ],
-    "global": {
-    }
+          "tutorials/cursor",
+          "tutorials/claude-code",
+          "tutorials/windsurf"
+        ]
+      }
+    ]
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/logo/lawh-logo.png",
+    "dark": "/logo/lawh-logo.png"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "About Cordoba",
+      "href": "https://cordoba.institute/about"
     }
   },
   "contextual": {
     "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/ismaelrumzan/cdm-institute"
     }
   }
 }
