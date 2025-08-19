@@ -19,16 +19,16 @@
             ]
       },
       {
-        "tab": "API reference",
+        "tab": "Learning Paths",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Learning Path 1",
             "pages": [
               "api-reference/introduction"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Learning Path 2",
             "pages": [
               "api-reference/endpoint/get",
               "api-reference/endpoint/create",
@@ -37,7 +37,31 @@
             ]
           }
         ]
-      }
+      },
+            {
+        "tab": "Topics",
+        "pages": [
+              "ai-tools/cursor",
+              "ai-tools/claude-code",
+              "ai-tools/windsurf"
+            ]
+      },
+            {
+        "tab": "Reference",
+        "pages": [
+              "ai-tools/cursor",
+              "ai-tools/claude-code",
+              "ai-tools/windsurf"
+            ]
+      },      
+{
+        "tab": "Tutorials",
+        "pages": [
+              "ai-tools/cursor",
+              "ai-tools/claude-code",
+              "ai-tools/windsurf"
+            ]
+      },         
     ],
     "global": {
     }
