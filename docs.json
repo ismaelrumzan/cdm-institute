@@ -19,13 +19,16 @@
         "groups": [
           {
             "group": "RAG Chatbot",
-            "pages": ["learning-paths/rag-chatbot/home"]
+            "pages": [
+              "learning-paths/rag-chatbot/home",
+              "learning-paths/rag-chatbot/module-1"
+            ]
           }
         ]
       },
       {
         "tab": "Topics",
-        "pages": ["topics/cursor", "topics/claude-code", "topics/windsurf"]
+        "pages": ["topics/ai/concepts"]
       },
       {
         "tab": "Reference",
