@@ -16,12 +16,33 @@
       },
       {
         "tab": "Learning Paths",
-        "groups": [
+        "menu": [
           {
-            "group": "RAG Chatbot",
-            "pages": [
-              "learning-paths/rag-chatbot/home",
-              "learning-paths/rag-chatbot/module-1"
+            "item": "RAG Chatbot",
+            "icon": "brain-circuit",
+            "groups": [
+              {
+                "group": "RAG Chatbot",
+                "icon": "brain-circuit",
+                "pages": [
+                  "learning-paths/rag-chatbot/home",
+                  {
+                    "group": "Introduction & Setup",
+                    "icon": "book",
+                    "pages": ["learning-paths/rag-chatbot/module-1"]
+                  },
+                  {
+                    "group": "Understanding RAG Concepts",
+                    "icon": "book",
+                    "pages": ["learning-paths/rag-chatbot/module-1"]
+                  },
+                  {
+                    "group": "Building the Chat Interface",
+                    "icon": "book",
+                    "pages": ["learning-paths/rag-chatbot/module-1"]
+                  }
+                ]
+              }
             ]
           }
         ]
