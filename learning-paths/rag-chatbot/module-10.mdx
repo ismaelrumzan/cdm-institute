@@ -1,0 +1,589 @@
+---
+title: "Production Deployment and Optimization"
+description: "Deploy RAG applications to Vercel and implement monitoring and logging systems. Optimize performance and costs for production environments."
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Deploy RAG applications to Vercel
+- Implement monitoring and logging systems
+- Optimize performance and costs
+- Handle production challenges and scaling
+
+## Module Overview
+
+This module guides you through deploying your RAG agent to production on Vercel. You'll learn about performance optimization, monitoring, cost management, and handling production challenges.
+
+<Callout>
+  **Time Estimate**: 90 minutes (35 + 35 + 20 minutes for each section)
+</Callout>
+
+---
+
+## 10.1 Vercel Deployment and Configuration
+
+**Duration**: 35 minutes
+
+### Preparing for Deployment
+
+Before deploying, ensure your application is production-ready:
+
+<Steps>
+  <Step title="1. Environment Variables">
+    Set up production environment variables
+  </Step>
+  <Step title="2. Database Migration">
+    Run migrations on production database
+  </Step>
+  <Step title="3. Build Testing">Test the production build locally</Step>
+  <Step title="4. Security Review">
+    Ensure API keys and sensitive data are secure
+  </Step>
+</Steps>
+
+### Environment Configuration
+
+Set up production environment variables in Vercel:
+
+<CodeGroup>
+  <CodeGroupItem title="Production Environment Variables">
+    ```bash # Required variables DATABASE_URL=postgresql://...
+    OPENAI_API_KEY=sk-... # Optional variables OPENAI_MODEL=gpt-4o
+    OPENAI_TEMPERATURE=0.7 OPENAI_MAX_TOKENS=1000 SYSTEM_PROMPT=Your custom
+    system prompt ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Vercel Account Setup
+
+<Steps>
+  <Step title="1. Create Vercel Account">
+    Go to [vercel.com](https://vercel.com) and sign up
+  </Step>
+  <Step title="2. Install Vercel CLI">
+    <Snippet text="npm install -g vercel" />
+  </Step>
+  <Step title="3. Login to Vercel">
+    <Snippet text="vercel login" />
+  </Step>
+  <Step title="4. Deploy Application">
+    <Snippet text="vercel --prod" />
+  </Step>
+</Steps>
+
+### Database Setup for Production
+
+Configure your production database:
+
+<Callout type="info">
+  **Vercel Postgres**: Use Vercel's managed PostgreSQL service for seamless
+  integration
+</Callout>
+
+<Steps>
+  <Step title="1. Create Vercel Postgres Database">
+    In your Vercel dashboard, go to Storage → Create Database → Postgres
+  </Step>
+  <Step title="2. Configure Database">
+    Choose your region and database name
+  </Step>
+  <Step title="3. Get Connection String">
+    Copy the DATABASE_URL from the database settings
+  </Step>
+  <Step title="4. Add to Environment Variables">
+    Add the DATABASE_URL to your Vercel project environment variables
+  </Step>
+</Steps>
+
+### Running Production Migrations
+
+Deploy your database schema to production:
+
+<CodeGroup>
+  <CodeGroupItem title="Production Migration">
+    ```bash # Set production database URL export
+    DATABASE_URL="your-production-database-url" # Run migrations npm run
+    db:migrate # Verify schema npm run db:studio ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Deployment Configuration
+
+Configure your deployment settings:
+
+<CodeGroup>
+  <CodeGroupItem title="vercel.json">
+    ```json
+    {
+      "buildCommand": "npm run build",
+      "outputDirectory": ".next",
+      "framework": "nextjs",
+      "functions": {
+        "app/api/chat/route.ts": {
+          "maxDuration": 30
+        }
+      },
+      "env": {
+        "OPENAI_MODEL": "gpt-4o",
+        "OPENAI_TEMPERATURE": "0.7"
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 10.2 Performance Optimization and Cost Management
+
+**Duration**: 35 minutes
+
+### Database Optimization
+
+Optimize your database for production:
+
+<CodeGroup>
+  <CodeGroupItem title="Database Optimization">
+    ```sql -- Optimize vector index for production CREATE INDEX CONCURRENTLY ON
+    embeddings USING hnsw (embedding vector_cosine_ops) WITH (m = 16,
+    ef_construction = 64); -- Add resource usage monitoring CREATE INDEX
+    CONCURRENTLY ON resources (created_at); CREATE INDEX CONCURRENTLY ON
+    embeddings (resource_id); -- Analyze table statistics ANALYZE embeddings;
+    ANALYZE resources; ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### API Optimization
+
+Optimize your API routes for better performance:
+
+<CodeGroup>
+  <CodeGroupItem title="API Optimization">
+    ```tsx
+    // Add response caching
+    export async function GET(req: Request) {
+      const response = await fetch('/api/data');
+      
+      return new Response(response.body, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+
+    // Optimize streaming responses
+    export async function POST(req: Request) {
+      const result = streamText({
+        model: openai("gpt-4o"),
+        messages: convertToModelMessages(messages),
+        maxTokens: 1000, // Limit token usage
+        temperature: 0.7,
+      });
+
+      return result.toUIMessageStreamResponse();
+    }
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Cost Optimization Strategies
+
+Implement cost optimization for OpenAI API usage:
+
+<Columns cols={2}>
+  <Card title="Model Selection" icon="model">
+    Use cheaper models for simple tasks Consider GPT-3.5-turbo for basic queries
+  </Card>
+  <Card title="Token Limits" icon="tokens">
+    Set reasonable maxTokens limits Monitor token usage and costs
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Caching" icon="cache">
+    Cache common responses Reduce redundant API calls
+  </Card>
+  <Card title="Batch Processing" icon="batch">
+    Batch embedding generation Use embedMany for efficiency
+  </Card>
+</Columns>
+
+### Rate Limiting and Quotas
+
+Implement rate limiting to control costs:
+
+<CodeGroup>
+  <CodeGroupItem title="Rate Limiting">
+    ```tsx
+    import { rateLimit } from '@/lib/rate-limit';
+
+    const limiter = rateLimit({
+      interval: 60 * 1000, // 1 minute
+      uniqueTokenPerInterval: 10, // 10 requests per minute
+    });
+
+    export async function POST(req: Request) {
+      try {
+        await limiter.check(req, 10, 'CACHE_TOKEN');
+      } catch {
+        return new Response('Rate limit exceeded', { status: 429 });
+      }
+
+      // ... rest of your API logic
+    }
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Monitoring API Usage
+
+Track and monitor your API usage:
+
+<CodeGroup>
+  <CodeGroupItem title="Usage Monitoring">
+    ```tsx
+    export async function trackUsage(
+      operation: string,
+      tokens: number,
+      cost: number
+    ) {
+      // Log usage metrics
+      console.log(`Usage: ${operation} - ${tokens} tokens - $${cost}`);
+      
+      // Send to monitoring service
+      await fetch('/api/metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operation,
+          tokens,
+          cost,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    }
+
+    // Use in your API routes
+    const result = await streamText({
+      model: openai("gpt-4o"),
+      messages: convertToModelMessages(messages),
+    });
+
+    // Track usage after response
+    trackUsage('chat_completion', result.usage.totalTokens, calculateCost(result.usage));
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 10.3 Monitoring and Maintenance
+
+**Duration**: 20 minutes
+
+### Application Monitoring
+
+Set up monitoring for your RAG application:
+
+<Callout type="info">
+  **Vercel Analytics**: Built-in analytics for performance monitoring
+</Callout>
+
+<CodeGroup>
+  <CodeGroupItem title="Basic Monitoring">
+    ```tsx
+    // Add error tracking
+    export async function POST(req: Request) {
+      try {
+        // ... your API logic
+      } catch (error) {
+        // Log error with context
+        console.error('Chat API Error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString(),
+          userAgent: req.headers.get('user-agent'),
+          url: req.url,
+        });
+
+        // Send to error tracking service
+        await trackError(error, req);
+
+        return new Response(
+          JSON.stringify({ error: 'Internal server error' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    async function trackError(error: unknown, req: Request) {
+      // Send to error tracking service (e.g., Sentry, LogRocket)
+      // This is a placeholder for actual error tracking implementation
+    }
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Database Monitoring
+
+Monitor your database performance:
+
+<CodeGroup>
+  <CodeGroupItem title="Database Monitoring">
+    ```sql
+    -- Monitor slow queries
+    SELECT 
+      query,
+      calls,
+      total_time,
+      mean_time,
+      rows
+    FROM pg_stat_statements
+    ORDER BY mean_time DESC
+    LIMIT 10;
+
+    -- Monitor table sizes
+    SELECT
+      schemaname,
+      tablename,
+      pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
+    FROM pg_tables
+    WHERE schemaname = 'public'
+    ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+
+    -- Monitor index usage
+    SELECT
+      indexrelname,
+      idx_tup_read,
+      idx_tup_fetch
+    FROM pg_stat_user_indexes
+    ORDER BY idx_tup_read DESC;
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Health Checks
+
+Implement health checks for your application:
+
+<CodeGroup>
+  <CodeGroupItem title="Health Check API">
+    ```tsx
+    // app/api/health/route.ts
+    export async function GET() {
+      try {
+        // Check database connection
+        await db.execute(sql`SELECT 1`);
+        
+        // Check OpenAI API
+        const testEmbedding = await embed({
+          model: openai.embedding("text-embedding-ada-002"),
+          value: "test",
+        });
+
+        return new Response(
+          JSON.stringify({
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            database: 'connected',
+            openai: 'connected',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            status: 'unhealthy',
+            timestamp: new Date().toISOString(),
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }),
+          {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    }
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Logging and Debugging
+
+Implement comprehensive logging:
+
+<CodeGroup>
+  <CodeGroupItem title="Structured Logging">
+    ```tsx
+    interface LogEntry {
+      level: 'info' | 'warn' | 'error';
+      message: string;
+      timestamp: string;
+      context?: Record<string, any>;
+    }
+
+    function log(entry: LogEntry) {
+      const logMessage = {
+        ...entry,
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+        version: process.env.VERCEL_GIT_COMMIT_SHA || 'local',
+      };
+
+      console.log(JSON.stringify(logMessage));
+
+      // Send to logging service in production
+      if (process.env.NODE_ENV === 'production') {
+        // Send to logging service (e.g., DataDog, LogRocket, etc.)
+      }
+    }
+
+    // Use in your application
+    log({
+      level: 'info',
+      message: 'User query processed',
+      context: {
+        query: 'What is machine learning?',
+        resultCount: 5,
+        duration: 150,
+      },
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Maintenance Tasks
+
+Set up regular maintenance tasks:
+
+<Callout type="info">
+  **Automated Maintenance**: Set up cron jobs or scheduled functions for regular
+  maintenance
+</Callout>
+
+<CodeGroup>
+  <CodeGroupItem title="Maintenance Functions">
+    ```tsx
+    // Clean up old embeddings (optional)
+    export async function cleanupOldEmbeddings() {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const result = await db
+        .delete(embeddings)
+        .where(lt(embeddings.createdAt, thirtyDaysAgo));
+
+      log({
+        level: 'info',
+        message: 'Cleaned up old embeddings',
+        context: { deletedCount: result.rowCount },
+      });
+    }
+
+    // Optimize database
+    export async function optimizeDatabase() {
+      await db.execute(sql`VACUUM ANALYZE`);
+      await db.execute(sql`REINDEX DATABASE rag_agent`);
+
+      log({
+        level: 'info',
+        message: 'Database optimization completed',
+      });
+    }
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Practical Exercise
+
+<Callout type="info">**Exercise**: Deploy and monitor your RAG agent</Callout>
+
+<Steps>
+  <Step title="1. Prepare for Deployment">
+    Set up environment variables and test production build
+  </Step>
+  <Step title="2. Deploy to Vercel">
+    Deploy your application and configure production database
+  </Step>
+  <Step title="3. Set Up Monitoring">
+    Implement health checks and monitoring
+  </Step>
+  <Step title="4. Test Production">
+    Test your application in production environment
+  </Step>
+</Steps>
+
+### Reflection Questions
+
+<Callout type="warning">Take a moment to reflect on these questions:</Callout>
+
+1. **How would you implement A/B testing for different RAG strategies?**
+
+   - Consider user segmentation and metric tracking
+
+2. **What backup and disaster recovery plans would you implement?**
+
+   - Think about data backup, failover, and recovery procedures
+
+3. **How would you handle data privacy and compliance requirements?**
+   - Consider GDPR, data retention, and user consent
+
+### Next Steps
+
+<Callout type="info">
+  **Ready to continue?** In the next module, you'll implement comprehensive
+  testing strategies for your RAG application.
+</Callout>
+
+---
+
+## Module Summary
+
+In this module, you successfully:
+
+- **Vercel Deployment**: Deployed your RAG agent to production on Vercel
+- **Performance Optimization**: Optimized database queries and API responses
+- **Cost Management**: Implemented strategies to control API costs
+- **Monitoring**: Set up comprehensive monitoring and logging
+
+### Key Takeaways
+
+- Proper environment configuration is crucial for production deployment
+- Performance optimization reduces costs and improves user experience
+- Monitoring and logging help identify and resolve issues quickly
+- Regular maintenance ensures long-term application health
+
+### Resources
+
+- [Vercel Documentation](https://vercel.com/docs) - Deployment and hosting guide
+- [Vercel Postgres](https://vercel.com/docs/storage/vercel-postgres) - Database hosting
+- [OpenAI API Pricing](https://openai.com/pricing) - Cost optimization guide
+- [PostgreSQL Performance](https://www.postgresql.org/docs/current/performance.html) - Database optimization
+
+### Troubleshooting
+
+If you encounter issues:
+
+1. **Deployment Errors**: Check environment variables and build configuration
+2. **Database Issues**: Verify connection strings and migration status
+3. **Performance Problems**: Monitor database queries and API response times
+4. **Cost Issues**: Review API usage and implement rate limiting
+
+<Callout type="success">
+  **Module Complete!** Your RAG agent is now deployed to production. Continue to
+  [Module 11: Testing and Quality
+  Assurance](/learning-paths/rag-chatbot/module-11) to implement comprehensive
+  testing strategies.
+</Callout>

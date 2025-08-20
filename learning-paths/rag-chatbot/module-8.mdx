@@ -1,0 +1,629 @@
+---
+title: "Tool Integration and Multi-Step Reasoning"
+description: "Implement AI tools for extending agent capabilities. Create multi-step reasoning with tool chaining and design tool schemas and validation."
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Implement AI tools for extending agent capabilities
+- Create multi-step reasoning with tool chaining
+- Design tool schemas and validation
+- Handle tool execution and result processing
+
+## Module Overview
+
+This module introduces AI tools that allow your RAG agent to perform actions beyond just generating text. You'll implement tools for adding and retrieving information from your knowledge base, and learn how to handle multi-step reasoning.
+
+<Callout>
+  **Time Estimate**: 100 minutes (35 + 40 + 25 minutes for each section)
+</Callout>
+
+---
+
+## 8.1 Tool Fundamentals and Architecture
+
+**Duration**: 35 minutes
+
+### Understanding AI Tools
+
+AI tools are functions that the model can call to perform specific tasks:
+
+<Callout type="info">
+  **Tools** allow AI models to interact with external systems, databases, and
+  APIs, enabling them to perform actions rather than just generate text.
+</Callout>
+
+### Tool Architecture
+
+<MDXImage
+  srcLight="/images/tool-architecture-light.png"
+  srcDark="/images/tool-architecture-dark.png"
+  width={700}
+  height={400}
+  alt="AI Tool Architecture Diagram"
+/>
+
+**Tool Flow**:
+
+1. User sends a message
+2. Model decides if it needs to use a tool
+3. Model calls the appropriate tool with parameters
+4. Tool executes and returns results
+5. Model uses the results to generate a response
+
+### Tool Components
+
+<Columns cols={2}>
+  <Card title="Description" icon="text">
+    Tells the model when and how to use the tool
+  </Card>
+  <Card title="Schema" icon="schema">
+    Defines the input parameters and their types
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Execute Function" icon="function">
+    The actual code that performs the tool's action
+  </Card>
+  <Card title="Result Handling" icon="result">
+    How the model processes the tool's output
+  </Card>
+</Columns>
+
+### Tool Schema Design
+
+Tools use Zod schemas to define their input parameters:
+
+<CodeGroup>
+  <CodeGroupItem title="Tool Schema Example">
+    ```tsx
+    import { z } from "zod";
+
+    const addResourceSchema = z.object({
+      content: z
+        .string()
+        .min(1, "Content cannot be empty")
+        .max(10000, "Content too long")
+        .describe("The content to add to the knowledge base"),
+    });
+
+    type AddResourceInput = z.infer<typeof addResourceSchema>;
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Tool Selection Logic
+
+The model decides which tool to use based on:
+
+<Callout type="info">
+  **Tool Description**: Clear, specific descriptions help the model choose the
+  right tool
+</Callout>
+
+<Callout type="info">
+  **Input Schema**: Well-defined schemas ensure the model provides correct
+  parameters
+</Callout>
+
+<Callout type="info">
+  **Context**: The model considers the conversation history and user intent
+</Callout>
+
+---
+
+## 8.2 Resource Management Tools
+
+**Duration**: 40 minutes
+
+### Adding the addResource Tool
+
+Create a tool for adding new information to the knowledge base:
+
+<CodeGroup>
+  <CodeGroupItem title="addResource Tool">
+    ```tsx
+    import { tool } from "ai";
+    import { z } from "zod";
+    import { createResource } from "@/lib/actions/resources";
+
+    const addResourceTool = tool({
+      description: `Add new information to the knowledge base.
+        Use this tool when users provide new facts, information, or content
+        that should be stored for future reference.`,
+      inputSchema: z.object({
+        content: z
+          .string()
+          .min(1, "Content cannot be empty")
+          .describe("The content or information to add to the knowledge base"),
+      }),
+      execute: async ({ content }) => {
+        try {
+          const result = await createResource({ content });
+          return {
+            success: true,
+            message: "Information added to knowledge base successfully",
+            result,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            message: error instanceof Error ? error.message : "Failed to add information",
+          };
+        }
+      },
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Adding the getInformation Tool
+
+Create a tool for retrieving information from the knowledge base:
+
+<CodeGroup>
+  <CodeGroupItem title="getInformation Tool">
+    ```tsx
+    import { findRelevantContent } from "@/lib/ai/embedding";
+
+    const getInformationTool = tool({
+      description: `Search the knowledge base for relevant information.
+        Use this tool when users ask questions that require information
+        from the knowledge base.`,
+      inputSchema: z.object({
+        query: z
+          .string()
+          .min(1, "Query cannot be empty")
+          .describe("The search query to find relevant information"),
+      }),
+      execute: async ({ query }) => {
+        try {
+          const results = await findRelevantContent(query);
+          return {
+            success: true,
+            results: results.map(r => ({
+              content: r.name,
+              similarity: r.similarity,
+            })),
+            count: results.length,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            message: error instanceof Error ? error.message : "Failed to search knowledge base",
+          };
+        }
+      },
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Integrating Tools with the API Route
+
+Update your chat API route to include the tools:
+
+<CodeGroup>
+  <CodeGroupItem title="Actual Implementation from Repository">
+```typescript
+// app/api/chat/route.ts
+import { openai } from "@ai-sdk/openai";
+import { convertToModelMessages, streamText, tool, UIMessage } from "ai";
+import { z } from "zod";
+import { createResource } from "@/lib/actions/resources";
+import { findRelevantContent } from "@/lib/ai/search";
+
+export async function POST(req: Request) {
+  try {
+    const { messages }: { messages: UIMessage[] } = await req.json();
+
+    const result = streamText({
+      model: openai("gpt-4o"),
+      messages: convertToModelMessages(messages),
+      system: `You are a helpful RAG assistant with access to a knowledge base.
+
+        You can:
+        1. Add new information to your knowledge base using the addResource tool
+        2. Search for information using the getInformation tool
+        3. Answer questions based on the information you find
+
+        Always use tools when appropriate to provide accurate, up-to-date information.`,
+      tools: {
+        addResource: tool({
+              description: `Add new information to the knowledge base.
+                Use this when users provide new facts or information.`,
+              inputSchema: z.object({
+                content: z.string().describe("The content to add"),
+              }),
+              execute: async ({ content }) => {
+                const result = await createResource({ content });
+                return { success: true, message: "Added to knowledge base", result };
+              },
+            }),
+            getInformation: tool({
+              description: `Search the knowledge base for relevant information.
+                Use this when users ask questions.`,
+              inputSchema: z.object({
+                query: z.string().describe("The search query"),
+              }),
+              execute: async ({ query }) => {
+                const results = await findRelevantContent(query);
+                return { success: true, results };
+              },
+            }),
+          },
+        });
+
+        return result.toUIMessageStreamResponse();
+      } catch (error) {
+        console.error("Chat API error:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to process request" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Tool Visualization in UI
+
+Update your chat interface to show tool calls:
+
+<CodeGroup>
+  <CodeGroupItem title="Tool Call Display">
+    ```tsx
+    function MessageComponent({ message }: { message: any }) {
+      return (
+        <div className={`message ${message.role}`}>
+          <div className="message-header">
+            {message.role === "user" ? "You" : "Assistant"}
+          </div>
+          <div className="message-content">
+            {message.parts.map((part: any) => {
+              switch (part.type) {
+                case "text":
+                  return <TextMessage key={part.id} part={part} />;
+                case "tool-call":
+                  return <ToolCallMessage key={part.id} part={part} />;
+                case "tool-result":
+                  return <ToolResultMessage key={part.id} part={part} />;
+                default:
+                  return null;
+              }
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    function ToolCallMessage({ part }: { part: any }) {
+      return (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <span className="text-sm text-blue-700">
+              Using {part.toolName}...
+            </span>
+          </div>
+          <pre className="text-xs text-blue-600 mt-2">
+            {JSON.stringify(part.args, null, 2)}
+          </pre>
+        </div>
+      );
+    }
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 8.3 Multi-Step Reasoning and Tool Chaining
+
+**Duration**: 25 minutes
+
+### Understanding Multi-Step Reasoning
+
+Multi-step reasoning allows the model to use multiple tools in sequence:
+
+<Callout type="info">
+  **Multi-Step Reasoning** enables complex workflows where the model can use
+  multiple tools, make decisions based on results, and chain operations
+  together.
+</Callout>
+
+### Configuring stopWhen
+
+Use `stopWhen` to control when the model stops generating:
+
+<CodeGroup>
+  <CodeGroupItem title="stopWhen Configuration">
+    ```tsx
+    import { stepCountIs } from "ai";
+
+    const result = streamText({
+      model: openai("gpt-4o"),
+      messages: convertToModelMessages(messages),
+      tools: {
+        // ... your tools
+      },
+      stopWhen: stepCountIs(5), // Stop after 5 steps
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Tool Chaining Example
+
+The model can chain tools together for complex operations:
+
+<Callout type="info">
+  **Example Workflow**: 1. User asks: "What do you know about machine learning?"
+  2. Model calls `getInformation` with query "machine learning" 3. Model
+  receives results and generates a response 4. User says: "Add that deep
+  learning is a subset of machine learning" 5. Model calls `addResource` with
+  the new information 6. Model confirms the information was added
+</Callout>
+
+### Handling Tool Results
+
+Process tool results effectively:
+
+<CodeGroup>
+  <CodeGroupItem title="Result Processing">
+    ```tsx
+    function ToolResultMessage({ part }: { part: any }) {
+      return (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-2">
+          <div className="flex items-center space-x-2">
+            <CheckCircle className="w-4 h-4 text-green-600" />
+            <span className="text-sm text-green-700">
+              {part.toolName} completed
+            </span>
+          </div>
+          {part.result && (
+            <pre className="text-xs text-green-600 mt-2">
+              {JSON.stringify(part.result, null, 2)}
+            </pre>
+          )}
+        </div>
+      );
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Error Handling in Tools
+
+Implement robust error handling for tools:
+
+<CodeGroup>
+  <CodeGroupItem title="Tool Error Handling">
+    ```tsx
+    const addResourceTool = tool({
+      description: "Add information to knowledge base",
+      inputSchema: z.object({
+        content: z.string().describe("Content to add"),
+      }),
+      execute: async ({ content }) => {
+        try {
+          // Validate input
+          if (!content || content.trim().length === 0) {
+            return {
+              success: false,
+              error: "Content cannot be empty",
+            };
+          }
+
+          // Execute the action
+          const result = await createResource({ content });
+
+          return {
+            success: true,
+            message: "Information added successfully",
+            resourceId: result.resourceId,
+          };
+        } catch (error) {
+          console.error("Tool execution error:", error);
+
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          };
+        }
+      },
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### User Feedback and Progress Indicators
+
+Keep users informed about tool progress:
+
+<CodeGroup>
+  <CodeGroupItem title="Progress Indicators">
+    ```tsx
+    function ToolProgressIndicator({ toolName, state }: { toolName: string; state: string }) {
+      const getStatusText = () => {
+        switch (state) {
+          case "calling":
+            return `Using ${toolName}...`;
+          case "result":
+            return `${toolName} completed`;
+          case "error":
+            return `${toolName} failed`;
+          default:
+            return `Processing ${toolName}...`;
+        }
+      };
+
+      const getStatusColor = () => {
+        switch (state) {
+          case "calling":
+            return "text-blue-600";
+          case "result":
+            return "text-green-600";
+          case "error":
+            return "text-red-600";
+          default:
+            return "text-gray-600";
+        }
+      };
+
+      return (
+        <div className={`text-sm ${getStatusColor()}`}>
+          {getStatusText()}
+        </div>
+      );
+    }
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Practical Exercise
+
+<Callout type="info">
+  **Exercise**: Test tool integration and multi-step reasoning
+</Callout>
+
+<Steps>
+  <Step title="1. Test addResource Tool">
+    Tell the agent to add some information to the knowledge base
+  </Step>
+  <Step title="2. Test getInformation Tool">
+    Ask the agent a question that requires searching the knowledge base
+  </Step>
+  <Step title="3. Test Tool Chaining">
+    Have a conversation that requires multiple tool calls
+  </Step>
+  <Step title="4. Test Error Handling">
+    Try to add invalid content and see how errors are handled
+  </Step>
+</Steps>
+
+### Testing Tool Integration
+
+Create a test script for your tools:
+
+<CodeGroup>
+  <CodeGroupItem title="Tool Testing">
+    ```tsx
+    async function testTools() {
+      const testCases = [
+        {
+          name: "Add Resource",
+          message: "Add this information: Machine learning is a subset of artificial intelligence.",
+          expectedTool: "addResource",
+        },
+        {
+          name: "Get Information",
+          message: "What do you know about machine learning?",
+          expectedTool: "getInformation",
+        },
+        {
+          name: "Complex Query",
+          message: "Tell me about AI and then add that neural networks are important for deep learning.",
+          expectedTools: ["getInformation", "addResource"],
+        },
+      ];
+
+      for (const testCase of testCases) {
+        console.log(`Testing: ${testCase.name}`);
+
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [
+              {
+                id: "1",
+                role: "user",
+                content: testCase.message,
+              },
+            ],
+          }),
+        });
+
+        // Process the streaming response and check for tool calls
+        // ... implementation details
+      }
+    }
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Reflection Questions
+
+<Callout type="warning">Take a moment to reflect on these questions:</Callout>
+
+1. **How would you implement tool versioning?**
+
+   - Consider backward compatibility and schema evolution
+
+2. **What strategies would you use for tool discovery?**
+
+   - Think about dynamic tool loading and plugin systems
+
+3. **How would you handle tool execution failures?**
+   - Consider retry logic, fallbacks, and user feedback
+
+### Next Steps
+
+<Callout type="info">
+  **Ready to continue?** In the next module, you'll implement semantic search
+  and retrieval functionality.
+</Callout>
+
+---
+
+## Module Summary
+
+In this module, you successfully:
+
+- **Tool Fundamentals**: Learned about AI tool architecture and design
+- **Resource Management Tools**: Implemented tools for adding and retrieving information
+- **Multi-Step Reasoning**: Configured tool chaining and multi-step workflows
+- **User Feedback**: Added progress indicators and error handling
+
+### Key Takeaways
+
+- AI tools enable models to perform actions beyond text generation
+- Well-designed tool schemas improve model decision-making
+- Multi-step reasoning allows for complex workflows
+- Proper error handling and user feedback are crucial for tool usability
+
+### Resources
+
+- [AI SDK Tools Documentation](https://sdk.vercel.ai/docs/api-reference/tools) - Tool implementation guide
+- [Zod Schema Validation](https://zod.dev/) - Schema definition library
+- [Tool Design Best Practices](https://platform.openai.com/docs/guides/tools) - OpenAI tool guidelines
+- [Multi-Step Reasoning](https://sdk.vercel.ai/docs/api-reference/stream-text#stopwhen) - AI SDK documentation
+
+### Troubleshooting
+
+If you encounter issues:
+
+1. **Tool Not Called**: Check tool descriptions and input schemas
+2. **Schema Errors**: Verify Zod schema definitions and validation
+3. **Execution Errors**: Check tool implementation and error handling
+4. **UI Issues**: Ensure tool call visualization is properly implemented
+
+<Callout type="success">
+  **Module Complete!** Your RAG agent now has powerful tools for knowledge
+  management. Continue to [Module 9: Semantic Search and
+  Retrieval](/learning-paths/rag-chatbot/module-9) to implement advanced search
+  functionality.
+</Callout>

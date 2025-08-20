@@ -1,0 +1,609 @@
+---
+title: "4.2 Embedding Generation"
+description: "Implement chunking strategies, batch embedding generation, and create efficient utilities for processing text content into embeddings."
+---
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Implement different chunking strategies for text processing
+- Generate embeddings efficiently using batch operations
+- Handle API rate limits and implement retry logic
+- Create reusable embedding utilities for your RAG application
+
+<Callout>**Duration**: 40 minutes</Callout>
+
+---
+
+## Chunking Strategies Implementation
+
+### Why Chunking Matters
+
+<Callout type="info">
+  **Context Limits**: Embedding models have token limits (8K for
+  text-embedding-ada-002)
+</Callout>
+
+<Callout type="info">
+  **Semantic Coherence**: Smaller chunks maintain better semantic meaning
+</Callout>
+
+<Callout type="info">
+  **Retrieval Precision**: Smaller chunks enable more precise information
+  retrieval
+</Callout>
+
+### Chunking Strategy Comparison
+
+<Columns cols={3}>
+  <Card title="Fixed-Size" icon="ruler">
+    **Simple**: Split by character count **Pros**: Predictable, fast **Cons**:
+    May break semantic units
+  </Card>
+  <Card title="Semantic" icon="brain">
+    **Intelligent**: Split by natural boundaries **Pros**: Maintains context
+    **Cons**: Variable chunk sizes
+  </Card>
+  <Card title="Overlapping" icon="layers">
+    **Contextual**: Overlapping chunks **Pros**: Preserves context boundaries
+    **Cons**: More storage, processing overhead
+  </Card>
+</Columns>
+
+---
+
+## Repository-Based Implementation
+
+### Actual Implementation from Vercel AI SDK RAG Starter
+
+<CodeGroup>
+  <CodeGroupItem title="lib/ai/embedding.ts">
+```typescript
+// lib/ai/embedding.ts
+import { embedMany } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const embeddingModel = openai.embedding("text-embedding-ada-002");
+
+const generateChunks = (input: string): string[] => {
+return input
+.trim()
+.split(".")
+.filter((i) => i !== "");
+};
+
+export const generateEmbeddings = async (
+  value: string
+): Promise<Array<{ embedding: number[]; content: string }>> => {
+  const chunks = generateChunks(value);
+  const { embeddings } = await embedMany({
+    model: embeddingModel,
+    values: chunks,
+  });
+  return embeddings.map((e, i) => ({ content: chunks[i], embedding: e }));
+};
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Enhanced Chunking Strategies">
+```typescript
+// lib/ai/chunking.ts
+export function chunkTextFixed(text: string, chunkSize: number = 1000): string[] {
+  const chunks: string[] = []
+  
+  for (let i = 0; i < text.length; i += chunkSize) {
+    chunks.push(text.slice(i, i + chunkSize))
+  }
+  
+  return chunks
+}
+
+export function chunkTextSemantic(text: string): string[] {
+  // Split by paragraphs, sections, or natural breaks
+  const paragraphs = text.split('\n\n');
+  
+  return paragraphs
+    .filter(p => p.trim().length > 50) // Remove very short paragraphs
+    .map(p => p.trim());
+}
+
+export function chunkTextOverlapping(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
+  const words = text.split(' ');
+  const chunks = [];
+  
+  for (let i = 0; i < words.length; i += chunkSize - overlap) {
+    chunks.push(words.slice(i, i + chunkSize).join(' '));
+  }
+  
+  return chunks;
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+    }
+  }
+
+if (currentChunk) {
+chunks.push(currentChunk.trim())
+}
+
+return chunks
+}
+
+````
+
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Semantic Chunking Implementation
+
+### Natural Language Chunking
+
+<CodeGroup>
+  <CodeGroupItem title="Paragraph-Based">
+```typescript
+// lib/chunking.ts
+export function chunkTextSemantic(text: string): string[] {
+  // Split by paragraphs (double newlines)
+  const paragraphs = text.split(/\n\s*\n/)
+
+  return paragraphs
+    .map(p => p.trim())
+    .filter(p => p.length > 50) // Filter out very short paragraphs
+}
+
+// Usage
+const text = `First paragraph content.
+
+Second paragraph with more content.
+
+Third paragraph here.`
+
+const chunks = chunkTextSemantic(text)
+
+````
+
+  </CodeGroupItem>
+  <CodeGroupItem title="Sentence-Based">
+```typescript
+// lib/chunking.ts
+export function chunkTextBySentences(text: string, maxChunkSize: number = 1000): string[] {
+  const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0)
+  const chunks: string[] = []
+  let currentChunk = ''
+
+for (const sentence of sentences) {
+if ((currentChunk + ' ' + sentence).length > maxChunkSize) {
+if (currentChunk) {
+chunks.push(currentChunk.trim())
+currentChunk = sentence
+} else {
+// Single sentence is longer than max size
+chunks.push(sentence)
+}
+} else {
+currentChunk += (currentChunk ? ' ' : '') + sentence
+}
+}
+
+if (currentChunk) {
+chunks.push(currentChunk.trim())
+}
+
+return chunks
+}
+
+````
+
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Overlapping Chunking Implementation
+
+### Context-Preserving Chunks
+
+<CodeGroup>
+  <CodeGroupItem title="Basic Overlapping">
+```typescript
+// lib/chunking.ts
+export function chunkTextOverlapping(
+  text: string,
+  chunkSize: number = 1000,
+  overlapSize: number = 200
+): string[] {
+  const chunks: string[] = []
+  let start = 0
+
+  while (start < text.length) {
+    const end = Math.min(start + chunkSize, text.length)
+    const chunk = text.slice(start, end)
+
+    // Try to end at a word boundary
+    if (end < text.length) {
+      const lastSpace = chunk.lastIndexOf(' ')
+      if (lastSpace > chunkSize * 0.8) {
+        chunks.push(chunk.slice(0, lastSpace).trim())
+        start = start + lastSpace + 1 - overlapSize
+        continue
+      }
+    }
+
+    chunks.push(chunk.trim())
+    start = end - overlapSize
+  }
+
+  return chunks.filter(chunk => chunk.length > 0)
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Advanced Overlapping">
+```typescript
+// lib/chunking.ts
+export function chunkTextAdvanced(
+  text: string,
+  options: {
+    chunkSize?: number
+    overlapSize?: number
+    minChunkSize?: number
+    respectParagraphs?: boolean
+  } = {}
+): string[] {
+  const {
+    chunkSize = 1000,
+    overlapSize = 200,
+    minChunkSize = 100,
+    respectParagraphs = true
+  } = options
+
+  if (respectParagraphs) {
+    const paragraphs = text.split(/\n\s*\n/)
+    const chunks: string[] = []
+
+    for (const paragraph of paragraphs) {
+      if (paragraph.length <= chunkSize) {
+        chunks.push(paragraph.trim())
+      } else {
+        // Apply overlapping chunking to long paragraphs
+        const paragraphChunks = chunkTextOverlapping(paragraph, chunkSize, overlapSize)
+        chunks.push(...paragraphChunks)
+      }
+    }
+
+    return chunks.filter(chunk => chunk.length >= minChunkSize)
+  }
+
+  return chunkTextOverlapping(text, chunkSize, overlapSize)
+    .filter(chunk => chunk.length >= minChunkSize)
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Batch Embedding Generation
+
+### Efficient API Usage
+
+<CodeGroup>
+  <CodeGroupItem title="Single Embedding">
+```typescript
+// lib/embeddings.ts
+import { openai } from './openai'
+
+export async function generateEmbedding(text: string): Promise<number[]> {
+  try {
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-ada-002',
+      input: text,
+    })
+
+    return response.data[0].embedding
+  } catch (error) {
+    console.error('Error generating embedding:', error)
+    throw error
+  }
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Batch Embeddings">
+```typescript
+// lib/embeddings.ts
+export async function generateEmbeddingsBatch(texts: string[]): Promise<number[][]> {
+  try {
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-ada-002',
+      input: texts,
+    })
+
+    return response.data.map(item => item.embedding)
+  } catch (error) {
+    console.error('Error generating batch embeddings:', error)
+    throw error
+  }
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Rate Limiting and Retry Logic
+
+### Exponential Backoff Implementation
+
+<CodeGroup>
+  <CodeGroupItem title="Retry with Backoff">
+```typescript
+// lib/retry.ts
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: Error
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      lastError = error
+
+      if (attempt === maxRetries) {
+        throw error
+      }
+
+      // Check if it's a rate limit error
+      if (error.status === 429) {
+        const delay = baseDelay * Math.pow(2, attempt)
+        console.log(`Rate limited. Retrying in ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      } else {
+        // For other errors, retry immediately
+        console.log(`Error: ${error.message}. Retrying...`)
+      }
+    }
+  }
+
+  throw lastError!
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Enhanced Embedding with Retry">
+```typescript
+// lib/embeddings.ts
+export async function generateEmbeddingWithRetry(text: string): Promise<number[]> {
+  return withRetry(async () => {
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-ada-002',
+      input: text,
+    })
+
+    return response.data[0].embedding
+  })
+}
+
+export async function generateEmbeddingsBatchWithRetry(texts: string[]): Promise<number[][]> {
+  return withRetry(async () => {
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-ada-002',
+      input: texts,
+    })
+
+    return response.data.map(item => item.embedding)
+  })
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Complete Embedding Pipeline
+
+### End-to-End Processing
+
+<CodeGroup>
+  <CodeGroupItem title="Pipeline Implementation">
+```typescript
+// lib/embedding-pipeline.ts
+import { chunkTextAdvanced } from './chunking'
+import { generateEmbeddingsBatchWithRetry } from './embeddings'
+
+export interface ChunkedContent {
+  content: string
+  chunkIndex: number
+  embedding?: number[]
+}
+
+export async function processTextToEmbeddings(
+  text: string,
+  options: {
+    chunkSize?: number
+    overlapSize?: number
+    batchSize?: number
+  } = {}
+): Promise<ChunkedContent[]> {
+  const { chunkSize = 1000, overlapSize = 200, batchSize = 10 } = options
+
+  // Step 1: Chunk the text
+  const chunks = chunkTextAdvanced(text, {
+    chunkSize,
+    overlapSize,
+    respectParagraphs: true
+  })
+
+  // Step 2: Prepare chunked content
+  const chunkedContent: ChunkedContent[] = chunks.map((chunk, index) => ({
+    content: chunk,
+    chunkIndex: index
+  }))
+
+  // Step 3: Generate embeddings in batches
+  for (let i = 0; i < chunkedContent.length; i += batchSize) {
+    const batch = chunkedContent.slice(i, i + batchSize)
+    const texts = batch.map(item => item.content)
+
+    try {
+      const embeddings = await generateEmbeddingsBatchWithRetry(texts)
+
+      // Assign embeddings to chunks
+      batch.forEach((item, index) => {
+        item.embedding = embeddings[index]
+      })
+
+      console.log(`Processed batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(chunkedContent.length / batchSize)}`)
+    } catch (error) {
+      console.error(`Error processing batch ${Math.floor(i / batchSize) + 1}:`, error)
+      throw error
+    }
+  }
+
+  return chunkedContent
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Usage Example">
+```typescript
+// Example usage
+const longText = `Your long document content here...`
+
+try {
+const processedContent = await processTextToEmbeddings(longText, {
+chunkSize: 800,
+overlapSize: 150,
+batchSize: 5
+})
+
+console.log(`Processed ${processedContent.length} chunks`)
+console.log('First chunk embedding dimensions:', processedContent[0].embedding?.length)
+} catch (error) {
+console.error('Error processing text:', error)
+}
+
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Performance Optimization
+
+### Batch Size Optimization
+
+<Columns cols={2}>
+  <Card title="Small Batches" icon="turtle">
+    **Size**: 1-5 texts
+    **Pros**: Lower memory usage, easier error handling
+    **Cons**: More API calls, slower overall
+  </Card>
+  <Card title="Large Batches" icon="zap">
+    **Size**: 10-20 texts
+    **Pros**: Fewer API calls, faster overall
+    **Cons**: Higher memory usage, harder error recovery
+  </Card>
+</Columns>
+
+### Memory Management
+
+<Callout type="info">
+  **Monitor Memory**: Large batches can consume significant memory
+</Callout>
+
+<Callout type="info">
+  **Garbage Collection**: Process in smaller batches for large documents
+</Callout>
+
+<Callout type="info">
+  **Streaming**: Consider streaming for very large documents
+</Callout>
+
+---
+
+## Interactive Elements
+
+### Chunking Strategy Tester
+
+<Callout type="info">
+  **Test different chunking strategies**:
+
+  1. Try fixed-size chunking with different sizes (500, 1000, 1500 characters)
+  2. Test semantic chunking on a document with clear paragraph structure
+  3. Compare overlapping vs non-overlapping chunks
+  4. Measure the impact on embedding quality
+</Callout>
+
+### Performance Benchmarking
+
+<Callout type="info">
+  **Benchmark your embedding pipeline**:
+
+  1. Measure processing time for different batch sizes
+  2. Test with documents of varying lengths
+  3. Monitor API usage and costs
+  4. Compare different chunking strategies
+</Callout>
+
+---
+
+## Troubleshooting Common Issues
+
+<Callout type="warning">
+  **Issue**: "Request too large" error
+  **Solution**: Reduce chunk size or implement better chunking strategy
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Rate limiting despite retry logic
+  **Solution**: Increase delay between retries or reduce batch size
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Memory issues with large documents
+  **Solution**: Process in smaller batches or implement streaming
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Poor embedding quality
+  **Solution**: Adjust chunking strategy or increase chunk overlap
+</Callout>
+
+---
+
+## Reflection Questions
+
+Take a moment to reflect on what you've learned:
+
+1. **How does chunking strategy affect embedding quality?**
+   - Consider semantic coherence vs processing efficiency
+   - Think about your specific content type
+
+2. **What are the trade-offs between different batch sizes?**
+   - Consider API costs vs processing speed
+   - Think about error handling and recovery
+
+3. **How would you optimize the pipeline for your specific use case?**
+   - Consider your content characteristics
+   - Think about performance requirements
+
+---
+
+## Next Steps
+
+You've implemented embedding generation! In the next section, you'll:
+
+- **Store embeddings in the database** with proper metadata
+- **Integrate with server actions** for automatic embedding generation
+- **Test the complete pipeline** end-to-end
+
+Ready to continue? Proceed to [Section 4.3: Embedding Storage](/learning-paths/rag-chatbot/module-4-3).
+
+<Callout>
+  **Key Takeaway**: Efficient embedding generation with proper chunking strategies and batch processing is essential for building scalable RAG applications.
+</Callout>
+```
+````

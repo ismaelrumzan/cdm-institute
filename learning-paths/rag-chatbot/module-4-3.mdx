@@ -1,0 +1,549 @@
+---
+title: "4.3 Embedding Storage"
+description: "Store embeddings in the database with proper metadata, integrate with server actions, and test the complete embedding pipeline."
+---
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Store embeddings in the database with proper metadata
+- Integrate embedding generation with server actions
+- Implement efficient database operations for embeddings
+- Test the complete embedding pipeline end-to-end
+
+<Callout>**Duration**: 25 minutes</Callout>
+
+---
+
+## Database Storage Implementation
+
+### Embedding Storage Functions
+
+<CodeGroup>
+  <CodeGroupItem title="Single Embedding Storage">
+```typescript
+// lib/embedding-storage.ts
+import { db } from './db'
+import { embeddings } from '../drizzle/schema'
+import { nanoid } from 'nanoid'
+
+export async function storeEmbedding(
+  resourceId: string,
+  content: string,
+  embedding: number[],
+  chunkIndex: number
+): Promise<string> {
+  const embeddingId = nanoid()
+  
+  await db.insert(embeddings).values({
+    id: embeddingId,
+    resourceId,
+    content,
+    embedding,
+    chunkIndex,
+  })
+  
+  return embeddingId
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Batch Embedding Storage">
+```typescript
+// lib/embedding-storage.ts
+export async function storeEmbeddingsBatch(
+  resourceId: string,
+  chunkedContent: Array<{
+    content: string
+    chunkIndex: number
+    embedding: number[]
+  }>
+): Promise<string[]> {
+  const embeddingIds: string[] = []
+  
+  for (const chunk of chunkedContent) {
+    const embeddingId = await storeEmbedding(
+      resourceId,
+      chunk.content,
+      chunk.embedding,
+      chunk.chunkIndex
+    )
+    embeddingIds.push(embeddingId)
+  }
+  
+  return embeddingIds
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Server Action Integration
+
+### Enhanced createResource Function
+
+<CodeGroup>
+  <CodeGroupItem title="Actual Implementation from Repository">
+```typescript
+// lib/actions/resources.ts
+"use server";
+
+import {
+  NewResourceParams,
+  insertResourceSchema,
+  resources,
+} from "@/lib/db/schema/resources";
+import { db } from "../db";
+import { generateEmbeddings } from "../ai/embedding";
+import { embeddings as embeddingsTable } from "../db/schema/embeddings";
+
+export const createResource = async (input: NewResourceParams) => {
+  try {
+    const { content } = insertResourceSchema.parse(input);
+
+    const [resource] = await db
+      .insert(resources)
+      .values({ content })
+      .returning();
+
+    const embeddings = await generateEmbeddings(content);
+    await db.insert(embeddingsTable).values(
+      embeddings.map((embedding) => ({
+        resourceId: resource.id,
+        ...embedding,
+      }))
+    );
+
+    return "Resource successfully created and embedded.";
+
+} catch (error) {
+console.error("Error creating resource:", error);
+return error instanceof Error && error.message.length > 0
+? error.message
+: "Error, please try again.";
+}
+};
+
+````
+  </CodeGroupItem>
+  <CodeGroupItem title="Error Handling">
+```typescript
+// app/actions.ts
+export async function createResourceWithErrorHandling(formData: FormData) {
+  try {
+    const content = formData.get('content') as string
+
+    // Validate input
+    if (!content || content.trim().length === 0) {
+      throw new Error('Content is required')
+    }
+
+    if (content.length > 100000) {
+      throw new Error('Content too long (max 100,000 characters)')
+    }
+
+    const resourceId = nanoid()
+
+    // Store resource first
+    await db.insert(resources).values({
+      id: resourceId,
+      content: content.trim(),
+    })
+
+    // Process embeddings with error handling
+    try {
+      const chunkedContent = await processTextToEmbeddings(content)
+
+      if (chunkedContent.length > 0) {
+        await storeEmbeddingsBatch(resourceId, chunkedContent)
+      }
+    } catch (embeddingError) {
+      console.error('Embedding generation failed:', embeddingError)
+      // Resource is still created, but without embeddings
+      // You might want to delete the resource or mark it as failed
+    }
+
+    revalidatePath('/')
+    return { success: true, resourceId }
+
+  } catch (error) {
+    console.error('Error creating resource:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to create resource'
+    }
+  }
+}
+````
+
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Database Operations Optimization
+
+### Efficient Batch Operations
+
+<CodeGroup>
+  <CodeGroupItem title="Optimized Batch Insert">
+```typescript
+// lib/embedding-storage.ts
+export async function storeEmbeddingsBatchOptimized(
+  resourceId: string,
+  chunkedContent: Array<{
+    content: string
+    chunkIndex: number
+    embedding: number[]
+  }>
+): Promise<void> {
+  // Prepare all values for batch insert
+  const values = chunkedContent.map(chunk => ({
+    id: nanoid(),
+    resourceId,
+    content: chunk.content,
+    embedding: chunk.embedding,
+    chunkIndex: chunk.chunkIndex,
+  }))
+  
+  // Single batch insert operation
+  await db.insert(embeddings).values(values)
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Transaction-Based Storage">
+```typescript
+// lib/embedding-storage.ts
+export async function storeResourceWithEmbeddings(
+  content: string,
+  chunkedContent: Array<{
+    content: string
+    chunkIndex: number
+    embedding: number[]
+  }>
+): Promise<string> {
+  return await db.transaction(async (tx) => {
+    const resourceId = nanoid()
+    
+    // Insert resource
+    await tx.insert(resources).values({
+      id: resourceId,
+      content: content.trim(),
+    })
+    
+    // Insert embeddings
+    if (chunkedContent.length > 0) {
+      const embeddingValues = chunkedContent.map(chunk => ({
+        id: nanoid(),
+        resourceId,
+        content: chunk.content,
+        embedding: chunk.embedding,
+        chunkIndex: chunk.chunkIndex,
+      }))
+      
+      await tx.insert(embeddings).values(embeddingValues)
+    }
+    
+    return resourceId
+  })
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Data Validation and Quality
+
+### Input Validation
+
+<CodeGroup>
+  <CodeGroupItem title="Content Validation">
+```typescript
+// lib/validation.ts
+export function validateContent(content: string): {
+  isValid: boolean
+  errors: string[]
+} {
+  const errors: string[] = []
+  
+  if (!content || content.trim().length === 0) {
+    errors.push('Content is required')
+  }
+  
+  if (content.length > 100000) {
+    errors.push('Content too long (max 100,000 characters)')
+  }
+  
+  if (content.length < 10) {
+    errors.push('Content too short (min 10 characters)')
+  }
+  
+  // Check for reasonable text content
+  const wordCount = content.split(/\s+/).length
+  if (wordCount < 3) {
+    errors.push('Content must have at least 3 words')
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  }
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Embedding Validation">
+```typescript
+// lib/validation.ts
+export function validateEmbedding(embedding: number[]): {
+  isValid: boolean
+  errors: string[]
+} {
+  const errors: string[] = []
+  
+  if (!Array.isArray(embedding)) {
+    errors.push('Embedding must be an array')
+    return { isValid: false, errors }
+  }
+  
+  if (embedding.length !== 1536) {
+    errors.push(`Expected 1536 dimensions, got ${embedding.length}`)
+  }
+  
+  // Check for valid numeric values
+  for (let i = 0; i < embedding.length; i++) {
+    if (typeof embedding[i] !== 'number' || isNaN(embedding[i])) {
+      errors.push(`Invalid embedding value at index ${i}`)
+      break
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  }
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Testing the Complete Pipeline
+
+### End-to-End Testing
+
+<Steps>
+  <Step title="1. Test resource creation">
+    Create a resource through the UI
+  </Step>
+  <Step title="2. Verify database storage">
+    Check that resource and embeddings are stored
+  </Step>
+  <Step title="3. Test embedding quality">
+    Verify embeddings are generated correctly
+  </Step>
+  <Step title="4. Test error handling">
+    Test with invalid inputs and edge cases
+  </Step>
+</Steps>
+
+<Snippet>
+```typescript
+// test-pipeline.ts
+import { createResource } from './app/actions'
+import { db } from './lib/db'
+import { resources, embeddings } from './drizzle/schema'
+import { eq } from 'drizzle-orm'
+
+async function testCompletePipeline() {
+// Test data
+const testContent = `Machine learning is a subset of artificial intelligence that focuses on algorithms and statistical models that enable computers to improve their performance on a specific task through experience. These algorithms build mathematical models based on sample data, known as training data, to make predictions or decisions without being explicitly programmed to perform the task.
+
+Deep learning is a subset of machine learning that uses neural networks with multiple layers to model and understand complex patterns in data. These neural networks are inspired by the human brain and can automatically learn representations from data such as images, text, or sound.`
+
+// Create FormData
+const formData = new FormData()
+formData.append('content', testContent)
+
+try {
+// Step 1: Create resource
+const result = await createResource(formData)
+console.log('Resource creation result:', result)
+
+    if (result.success) {
+      // Step 2: Verify resource storage
+      const resource = await db.select().from(resources).where(eq(resources.id, result.resourceId))
+      console.log('Stored resource:', resource[0])
+
+      // Step 3: Verify embeddings storage
+      const storedEmbeddings = await db.select().from(embeddings).where(eq(embeddings.resourceId, result.resourceId))
+      console.log(`Stored ${storedEmbeddings.length} embeddings`)
+
+      // Step 4: Verify embedding quality
+      if (storedEmbeddings.length > 0) {
+        const firstEmbedding = storedEmbeddings[0]
+        console.log('First embedding dimensions:', firstEmbedding.embedding?.length)
+        console.log('First embedding sample values:', firstEmbedding.embedding?.slice(0, 5))
+      }
+    }
+
+} catch (error) {
+console.error('Pipeline test failed:', error)
+}
+}
+
+testCompletePipeline()
+
+````
+</Snippet>
+
+---
+
+## Performance Monitoring
+
+### Database Performance Tracking
+
+<CodeGroup>
+  <CodeGroupItem title="Performance Metrics">
+```typescript
+// lib/performance.ts
+export interface PerformanceMetrics {
+  resourceCreationTime: number
+  embeddingGenerationTime: number
+  databaseStorageTime: number
+  totalTime: number
+  chunkCount: number
+  embeddingCount: number
+}
+
+export async function measurePipelinePerformance(
+  content: string,
+  pipelineFn: (content: string) => Promise<any>
+): Promise<PerformanceMetrics> {
+  const startTime = Date.now()
+
+  // Measure resource creation
+  const resourceStart = Date.now()
+  const result = await pipelineFn(content)
+  const resourceEnd = Date.now()
+
+  const endTime = Date.now()
+
+  return {
+    resourceCreationTime: resourceEnd - resourceStart,
+    embeddingGenerationTime: 0, // Would need to be measured separately
+    databaseStorageTime: 0, // Would need to be measured separately
+    totalTime: endTime - startTime,
+    chunkCount: result.chunkCount || 0,
+    embeddingCount: result.embeddingCount || 0,
+  }
+}
+````
+
+  </CodeGroupItem>
+  <CodeGroupItem title="Database Query Monitoring">
+```typescript
+// lib/monitoring.ts
+export async function getEmbeddingStats(): Promise<{
+  totalResources: number
+  totalEmbeddings: number
+  averageEmbeddingsPerResource: number
+}> {
+  const [resourceCount] = await db.select({ count: sql`count(*)` }).from(resources)
+  const [embeddingCount] = await db.select({ count: sql`count(*)` }).from(embeddings)
+  
+  return {
+    totalResources: resourceCount.count,
+    totalEmbeddings: embeddingCount.count,
+    averageEmbeddingsPerResource: embeddingCount.count / resourceCount.count,
+  }
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Interactive Elements
+
+### Pipeline Testing Checklist
+
+<Callout type="info">
+  **Complete this checklist to verify your embedding storage**: ✅ Resource
+  creation works correctly ✅ Embeddings are generated and stored ✅ Database
+  relationships are maintained ✅ Error handling works for invalid inputs ✅
+  Performance is acceptable ✅ Data validation prevents bad inputs ✅ Batch
+  operations are efficient ✅ Transaction integrity is maintained
+</Callout>
+
+### Performance Benchmarking
+
+<Callout type="info">
+  **Benchmark your storage pipeline**: 1. Test with different content lengths 2.
+  Measure database insertion times 3. Monitor memory usage during processing 4.
+  Test concurrent resource creation 5. Verify data consistency after operations
+</Callout>
+
+---
+
+## Troubleshooting Common Issues
+
+<Callout type="warning">
+  **Issue**: Embeddings not being stored **Solution**: Check database connection
+  and transaction rollback
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Slow embedding storage **Solution**: Use batch operations and
+  optimize database queries
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Memory issues during processing **Solution**: Reduce batch sizes
+  and implement streaming
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Data inconsistency **Solution**: Use database transactions and
+  proper error handling
+</Callout>
+
+---
+
+## Reflection Questions
+
+Take a moment to reflect on what you've learned:
+
+1. **How does database transaction usage improve data consistency?**
+
+   - Consider atomicity and rollback scenarios
+   - Think about error handling and recovery
+
+2. **What are the benefits of batch operations for embedding storage?**
+
+   - Consider performance vs memory usage
+   - Think about error handling and partial failures
+
+3. **How would you optimize the storage pipeline for your specific use case?**
+   - Consider your data volume and patterns
+   - Think about performance requirements and constraints
+
+---
+
+## Next Steps
+
+You've successfully implemented embedding storage! In the next module, you'll:
+
+- **Extend server actions** for enhanced resource management
+- **Implement data validation** and error handling
+- **Create testing and validation** procedures
+
+Ready to continue? Proceed to [Module 5: Server Actions and Data Management](/learning-paths/rag-chatbot/module-5-home).
+
+<Callout>
+  **Key Takeaway**: Proper embedding storage with database transactions and
+  efficient batch operations ensures data consistency and performance in your
+  RAG application.
+</Callout>

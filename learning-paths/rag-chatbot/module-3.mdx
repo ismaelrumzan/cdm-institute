@@ -1,0 +1,377 @@
+---
+title: "Database Schema and Data Modeling"
+description: "Understand the existing database schemas in the starter project and implement vector storage with proper indexing. Learn about foreign key relationships and database migrations."
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Understand the existing database schemas in the starter project
+- Implement vector storage with proper indexing
+- Understand foreign key relationships and data integrity
+- Set up database migrations and version control
+
+## Module Overview
+
+This module explores the database architecture of your RAG agent. You'll understand the existing schema, implement vector storage for embeddings, and learn how to manage database migrations effectively.
+
+<Callout>
+  **Time Estimate**: 80 minutes (30 + 30 + 20 minutes for each section)
+</Callout>
+
+---
+
+## 3.1 Schema Analysis and Design
+
+**Duration**: 30 minutes
+
+### Understanding the Existing Schema
+
+The starter repository comes with a basic `resources` table. Let's examine its structure:
+
+<CodeGroup>
+  <CodeGroupItem title="lib/db/schema/resources.ts">
+    ```tsx
+    import { pgTable, text, varchar, timestamp } from "drizzle-orm/pg-core";
+    import { nanoid } from "@/lib/utils";
+
+    export const resources = pgTable("resources", {
+      id: varchar("id", { length: 191 })
+        .primaryKey()
+        .$defaultFn(() => nanoid()),
+      content: text("content").notNull(),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow(),
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Schema Components Explained
+
+<Columns cols={2}>
+  <Card title="id" icon="hash">
+    Unique identifier using nanoid for collision resistance
+  </Card>
+  <Card title="content" icon="text">
+    The actual text content that will be embedded
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="createdAt" icon="calendar">
+    Timestamp when the resource was created
+  </Card>
+  <Card title="updatedAt" icon="clock">
+    Timestamp when the resource was last modified
+  </Card>
+</Columns>
+
+### What's Missing for RAG
+
+The current schema is missing the crucial component for RAG: **vector storage**. We need to add:
+
+<Callout type="warning">
+  **Embeddings Table**: To store vector representations of content chunks
+</Callout>
+
+<Callout type="warning">
+  **Vector Indexing**: For efficient similarity search
+</Callout>
+
+<Callout type="warning">
+  **Chunk Management**: To handle document chunking and relationships
+</Callout>
+
+### Designing the Embeddings Table
+
+We need a new table to store embeddings with the following requirements:
+
+<CodeGroup>
+  <CodeGroupItem title="Embeddings Table Design">
+    ```tsx
+    export const embeddings = pgTable("embeddings", {
+      id: varchar("id", { length: 191 })
+        .primaryKey()
+        .$defaultFn(() => nanoid()),
+      resourceId: varchar("resource_id", { length: 191 })
+        .references(() => resources.id, { onDelete: "cascade" }),
+      content: text("content").notNull(),
+      embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+    });
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Relationship Design
+
+<MDXImage
+  srcLight="/images/database-relationships-light.png"
+  srcDark="/images/database-relationships-dark.png"
+  width={600}
+  height={400}
+  alt="Database Relationships Diagram"
+/>
+
+**One-to-Many Relationship**:
+
+- One `resource` can have multiple `embeddings` (chunks)
+- Each `embedding` belongs to exactly one `resource`
+- Cascade delete ensures data integrity
+
+### Schema Visualization
+
+```
+resources table:
+├── id (primary key)
+├── content (full document text)
+├── createdAt
+└── updatedAt
+
+embeddings table:
+├── id (primary key)
+├── resourceId (foreign key → resources.id)
+├── content (chunk text)
+└── embedding (vector representation)
+```
+
+---
+
+## 3.2 Vector Database Implementation
+
+**Duration**: 30 minutes
+
+### Creating the Embeddings Schema
+
+Create a new file `lib/db/schema/embeddings.ts`:
+
+<CodeGroup>
+  <CodeGroupItem title="lib/db/schema/embeddings.ts">
+    ```tsx
+    import { nanoid } from "@/lib/utils";
+    import { index, pgTable, text, varchar, vector } from "drizzle-orm/pg-core";
+    import { resources } from "./resources";
+
+    export const embeddings = pgTable(
+      "embeddings",
+      {
+        id: varchar("id", { length: 191 })
+          .primaryKey()
+          .$defaultFn(() => nanoid()),
+        resourceId: varchar("resource_id", { length: 191 }).references(
+          () => resources.id,
+          { onDelete: "cascade" }
+        ),
+        content: text("content").notNull(),
+        embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+      },
+      (table) => ({
+        embeddingIndex: index("embeddingIndex").using(
+          "hnsw",
+          table.embedding.op("vector_cosine_ops")
+        ),
+      })
+    );
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Understanding the Vector Column
+
+<Callout type="info">
+  **vector("embedding", \{" dimensions: 1536 "\})**: Stores 1536-dimensional vectors (OpenAI's text-embedding-ada-002 model)
+</Callout>
+
+<Callout type="info">
+  **HNSW Index**: Hierarchical Navigable Small World index for efficient
+  similarity search
+</Callout>
+
+<Callout type="info">
+  **vector_cosine_ops**: Cosine similarity operator for measuring vector
+  similarity
+</Callout>
+
+### Indexing Strategies
+
+<Columns cols={2}>
+  <Card title="HNSW Index" icon="graph">
+    **Pros**: Fast approximate search, good for high-dimensional vectors
+    **Cons**: Larger index size, approximate results
+  </Card>
+  <Card title="IVFFlat Index" icon="grid">
+    **Pros**: Exact results, smaller index size **Cons**: Slower for large
+    datasets, requires more memory
+  </Card>
+</Columns>
+
+### Performance Considerations
+
+<Callout type="warning">
+  **Index Size**: HNSW indexes can be large, monitor storage usage
+</Callout>
+
+<Callout type="warning">
+  **Query Performance**: Test with realistic data volumes
+</Callout>
+
+<Callout type="warning">
+  **Memory Usage**: Vector operations can be memory-intensive
+</Callout>
+
+### Updating the Database Schema
+
+Add the embeddings table to your schema exports:
+
+<CodeGroup>
+  <CodeGroupItem title="lib/db/schema/index.ts">
+    ```tsx export * from "./resources"; export * from "./embeddings"; ```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 3.3 Migration and Validation
+
+**Duration**: 20 minutes
+
+### Creating the Migration
+
+Generate a new migration for the embeddings table:
+
+<Snippet text="npm run db:generate" />
+
+This will create a new migration file in `lib/db/migrations/`.
+
+### Running the Migration
+
+<Snippet text="npm run db:migrate" />
+
+<Callout type="info">
+  The migration will: - Create the embeddings table - Add the pgvector extension
+  (if not already present) - Create the HNSW index for efficient similarity
+  search
+</Callout>
+
+### Verifying the Migration
+
+Check that the migration was successful:
+
+<Snippet text="npm run db:studio" />
+
+You should now see:
+
+- The `embeddings` table in your database
+- The `embeddingIndex` for vector similarity search
+- The foreign key relationship to the `resources` table
+
+### Testing the Schema
+
+Let's verify the schema works correctly:
+
+<CodeGroup>
+  <CodeGroupItem title="Test Query">
+    ```sql -- Check if the table was created SELECT table_name FROM
+    information_schema.tables WHERE table_name = 'embeddings'; -- Check if the
+    index was created SELECT indexname FROM pg_indexes WHERE tablename =
+    'embeddings'; ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Schema Validation
+
+<Steps>
+  <Step title="1. Table Structure">
+    Verify the embeddings table has all required columns
+  </Step>
+  <Step title="2. Foreign Key">
+    Confirm the relationship to resources table works
+  </Step>
+  <Step title="3. Vector Column">
+    Test that the vector column accepts embedding data
+  </Step>
+  <Step title="4. Index Performance">
+    Verify the HNSW index is working for similarity search
+  </Step>
+</Steps>
+
+### Practical Exercise
+
+<Callout type="info">
+  **Exercise**: Test the database schema by inserting a sample embedding
+</Callout>
+
+<CodeGroup>
+  <CodeGroupItem title="Test Insert">
+    ```sql -- Insert a test resource INSERT INTO resources (id, content) VALUES
+    ('test-1', 'This is a test document for RAG.'); -- Insert a test embedding
+    (you'll need actual vector data) INSERT INTO embeddings (resource_id,
+    content, embedding) VALUES ('test-1', 'This is a test document for RAG.',
+    '[0.1, 0.2, ...]'); ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Reflection Questions
+
+<Callout type="warning">Take a moment to reflect on these questions:</Callout>
+
+1. **How would you scale this schema for millions of embeddings?**
+
+   - Consider partitioning, sharding, and performance optimization
+
+2. **What backup and recovery strategies would you implement?**
+
+   - Think about data integrity and disaster recovery
+
+3. **How would you handle schema evolution in production?**
+   - Consider migration strategies and backward compatibility
+
+### Next Steps
+
+<Callout type="info">
+  **Ready to continue?** In the next module, you'll integrate the AI SDK and
+  implement embedding generation.
+</Callout>
+
+---
+
+## Module Summary
+
+In this module, you successfully:
+
+- **Schema Analysis**: Understood the existing resources table structure
+- **Vector Implementation**: Created the embeddings table with proper indexing
+- **Migration Management**: Set up and ran database migrations
+- **Schema Validation**: Verified the database structure works correctly
+
+### Key Takeaways
+
+- The embeddings table stores vector representations of content chunks
+- HNSW indexing provides efficient similarity search for high-dimensional vectors
+- Foreign key relationships maintain data integrity between resources and embeddings
+- Proper migration management ensures database schema evolution
+
+### Resources
+
+- [Drizzle ORM Schema Documentation](https://orm.drizzle.team/docs/get-started-postgresql) - Schema definition guide
+- [pgvector Indexing Guide](https://github.com/pgvector/pgvector#indexing) - Vector indexing strategies
+- [PostgreSQL Foreign Keys](https://www.postgresql.org/docs/current/ddl-constraints.html) - Foreign key constraints
+- [Database Migration Best Practices](https://orm.drizzle.team/docs/get-started-postgresql#migrations) - Migration strategies
+
+### Troubleshooting
+
+If you encounter issues:
+
+1. **Migration Errors**: Check that pgvector extension is installed
+2. **Index Creation**: Verify you have sufficient permissions
+3. **Foreign Key Issues**: Ensure the resources table exists before creating embeddings
+4. **Vector Column**: Confirm the vector extension is properly loaded
+
+<Callout type="success">
+  **Module Complete!** Your database schema is ready for vector storage.
+  Continue to [Module 4: AI SDK Integration and Embedding
+  Generation](/learning-paths/rag-chatbot/module-4) to implement embedding
+  generation.
+</Callout>

@@ -1,0 +1,364 @@
+---
+title: "Project Setup and Environment Configuration"
+description: "Set up your development environment and get the Vercel AI SDK RAG starter repository running. Configure PostgreSQL database with pgvector and understand the project structure."
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Clone and set up the Vercel AI SDK RAG Starter repository
+- Configure PostgreSQL database with pgvector extension
+- Set up development environment with proper tooling
+- Understand the project structure and architecture
+
+## Module Overview
+
+This module guides you through setting up your development environment for building a RAG agent. You'll clone the starter repository, configure your database, and get everything running locally.
+
+<Callout>
+  **Time Estimate**: 95 minutes (30 + 40 + 25 minutes for each section)
+</Callout>
+
+---
+
+## 2.1 Repository Setup and Dependencies
+
+**Duration**: 30 minutes
+
+### Understanding the Starter Repository
+
+The [Vercel AI SDK RAG Starter](https://github.com/vercel/ai-sdk-rag-starter) is a pre-configured Next.js application that provides:
+
+<Columns cols={2}>
+  <Card title="Next.js 14 Setup" icon="code">
+    App Router, TypeScript, and modern React patterns
+  </Card>
+  <Card title="Database Schema" icon="database">
+    Pre-configured Drizzle ORM with resources table
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Server Actions" icon="server">
+    Basic CRUD operations for resource management
+  </Card>
+  <Card title="UI Components" icon="layout">
+    shadcn-ui components and TailwindCSS styling
+  </Card>
+</Columns>
+
+### Repository Structure
+
+```
+ai-sdk-rag-starter/
+├── app/                    # Next.js App Router pages
+├── components/             # React components
+├── lib/                    # Utility functions and configurations
+│   ├── db/                # Database configuration and schemas
+│   └── actions/           # Server actions
+├── public/                # Static assets
+└── package.json           # Dependencies and scripts
+```
+
+### Step 1: Clone the Repository
+
+<Snippet text="git clone https://github.com/vercel/ai-sdk-rag-starter" />
+
+<Snippet text="cd ai-sdk-rag-starter" />
+
+### Step 2: Install Dependencies
+
+<Snippet text="npm install" />
+
+<Note>
+  The starter uses npm by default, but you can also use pnpm or yarn if you prefer.
+</Note>
+
+### Step 3: Environment Configuration
+
+Copy the example environment file:
+
+<Snippet text="cp .env.example .env" />
+
+You'll need to configure these environment variables:
+
+<CodeGroup>
+  <CodeGroupItem title=".env">
+    ```bash
+    # Database connection (we'll set this up next)
+    DATABASE_URL="postgresql://..."
+    
+    # OpenAI API key (we'll get this later)
+    OPENAI_API_KEY="sk-..."
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Understanding the Tech Stack
+
+<Callout type="info">
+  **Next.js 14**: Modern React framework with App Router, Server Components, and built-in optimizations
+</Callout>
+
+<Callout type="info">
+  **Drizzle ORM**: Type-safe database toolkit with excellent TypeScript support and migration capabilities
+</Callout>
+
+<Callout type="info">
+  **shadcn-ui**: High-quality React components built on Radix UI and TailwindCSS
+</Callout>
+
+<Callout type="info">
+  **TailwindCSS**: Utility-first CSS framework for rapid UI development
+</Callout>
+
+---
+
+## 2.2 PostgreSQL Database Setup with pgvector
+
+**Duration**: 40 minutes
+
+### Why PostgreSQL with pgvector?
+
+<Columns cols={2}>
+  <Card title="Vector Storage" icon="database">
+    pgvector extension enables efficient vector storage and similarity search
+  </Card>
+  <Card title="Production Ready" icon="check">
+    PostgreSQL is battle-tested and widely used in production environments
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Vercel Integration" icon="cloud">
+    Seamless integration with Vercel's database offerings
+  </Card>
+  <Card title="Cost Effective" icon="dollar">
+    More cost-effective than specialized vector databases for most use cases
+  </Card>
+</Columns>
+
+### Option 1: Vercel Postgres (Recommended)
+
+<Steps>
+  <Step title="1. Create Vercel Account">
+    Go to [vercel.com](https://vercel.com) and sign up or log in
+  </Step>
+  <Step title="2. Navigate to Storage">
+    In your Vercel dashboard, go to the **Storage** tab
+  </Step>
+  <Step title="3. Create Database">
+    Click **Create Database** and select **Postgres**
+  </Step>
+  <Step title="4. Configure Database">
+    Choose your region and database name
+  </Step>
+  <Step title="5. Get Connection String">
+    Copy the `DATABASE_URL` from the database settings
+  </Step>
+</Steps>
+
+### Option 2: Local PostgreSQL Setup
+
+If you prefer to run PostgreSQL locally:
+
+<Snippet text="# macOS (using Homebrew)" />
+<Snippet text="brew install postgresql" />
+<Snippet text="brew services start postgresql" />
+
+<Snippet text="# Create database" />
+<Snippet text="createdb rag_tutorial" />
+
+<Snippet text="# Install pgvector extension" />
+<Snippet text="psql rag_tutorial -c 'CREATE EXTENSION IF NOT EXISTS vector;'" />
+
+### Database Migration
+
+Once your database is set up, run the initial migration:
+
+<Snippet text="npm run db:migrate" />
+
+This will:
+- Add the pgvector extension to your database
+- Create the initial `resources` table
+- Set up the basic schema structure
+
+### Verify Database Connection
+
+Test your database connection:
+
+<Snippet text="npm run db:studio" />
+
+This opens Drizzle Studio, a web interface for managing your database. You should see:
+- The `resources` table
+- The pgvector extension enabled
+- Ability to view and edit data
+
+### Troubleshooting Common Issues
+
+<Callout type="warning">
+  **Connection Issues**: Make sure your `DATABASE_URL` is correct and the database is accessible
+</Callout>
+
+<Callout type="warning">
+  **pgvector Extension**: Ensure the pgvector extension is installed and enabled
+</Callout>
+
+<Callout type="warning">
+  **Migration Errors**: If migrations fail, check that your database user has the necessary permissions
+</Callout>
+
+---
+
+## 2.3 Development Environment and Project Structure
+
+**Duration**: 25 minutes
+
+### Starting the Development Server
+
+<Snippet text="npm run dev" />
+
+Your application should now be running at `http://localhost:3000`
+
+### Project Structure Deep Dive
+
+Let's explore the key files and directories:
+
+<CodeGroup>
+  <CodeGroupItem title="app/page.tsx">
+    ```tsx
+    // Main page component
+    // This is where we'll build our chat interface
+    ```
+  </CodeGroupItem>
+  <CodeGroupItem title="lib/db/schema/resources.ts">
+    ```tsx
+    // Database schema for resources
+    // Defines the structure of our knowledge base
+    ```
+  </CodeGroupItem>
+  <CodeGroupItem title="lib/actions/resources.ts">
+    ```tsx
+    // Server actions for resource management
+    // Handles CRUD operations for our knowledge base
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Key Configuration Files
+
+<Columns cols={2}>
+  <Card title="drizzle.config.ts" icon="settings">
+    Database configuration and migration settings
+  </Card>
+  <Card title="next.config.mjs" icon="next">
+    Next.js configuration and optimizations
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="tailwind.config.ts" icon="css">
+    TailwindCSS styling configuration
+  </Card>
+  <Card title="components.json" icon="components">
+    shadcn-ui component configuration
+  </Card>
+</Columns>
+
+### Development Tools
+
+<Callout type="info">
+  **Drizzle Studio**: Web-based database management tool for viewing and editing data
+</Callout>
+
+<Callout type="info">
+  **Next.js DevTools**: Built-in development tools for debugging and performance monitoring
+</Callout>
+
+<Callout type="info">
+  **TypeScript**: Full type safety throughout the application
+</Callout>
+
+### Testing the Setup
+
+<Steps>
+  <Step title="1. Verify Application">
+    Open `http://localhost:3000` and confirm the page loads
+  </Step>
+  <Step title="2. Check Database">
+    Run `npm run db:studio` and verify you can see the database
+  </Step>
+  <Step title="3. Test Build">
+    Run `npm run build` to ensure everything compiles correctly
+  </Step>
+</Steps>
+
+### Understanding the Current State
+
+At this point, you have:
+- ✅ A working Next.js application
+- ✅ PostgreSQL database with pgvector
+- ✅ Basic database schema (resources table)
+- ✅ Server actions for resource management
+- ✅ UI components and styling
+
+<Callout type="info">
+  **What's Missing**: We still need to add embedding generation, vector storage, and the chat interface. These will be covered in the next modules.
+</Callout>
+
+### Reflection Questions
+
+<Callout type="warning">
+  Take a moment to reflect on these questions:
+</Callout>
+
+1. **What are the benefits of using pgvector over other vector databases?**
+   - Consider cost, complexity, and integration requirements
+
+2. **How does the project structure support scalability?**
+   - Think about how the modular structure helps with maintenance
+
+3. **What debugging strategies would you use for database issues?**
+   - Consider logging, monitoring, and troubleshooting approaches
+
+### Next Steps
+
+<Callout type="info">
+  **Ready to continue?** In the next module, you'll understand the database schema and implement vector storage for embeddings.
+</Callout>
+
+---
+
+## Module Summary
+
+In this module, you successfully:
+
+- **Repository Setup**: Cloned and configured the Vercel AI SDK RAG starter
+- **Database Configuration**: Set up PostgreSQL with pgvector extension
+- **Development Environment**: Started the development server and explored the project structure
+- **Environment Configuration**: Prepared for API keys and database connections
+
+### Key Takeaways
+
+- The starter repository provides a solid foundation for building RAG applications
+- PostgreSQL with pgvector is a cost-effective solution for vector storage
+- The project structure follows Next.js 14 best practices
+- Drizzle Studio provides a convenient way to manage your database
+
+### Resources
+
+- [Vercel AI SDK RAG Starter](https://github.com/vercel/ai-sdk-rag-starter) - Official repository
+- [Vercel Postgres Documentation](https://vercel.com/docs/storage/vercel-postgres) - Database setup guide
+- [Drizzle ORM Documentation](https://orm.drizzle.team/) - Database toolkit docs
+- [pgvector Documentation](https://github.com/pgvector/pgvector) - Vector extension docs
+
+### Troubleshooting
+
+If you encounter issues:
+
+1. **Database Connection**: Verify your `DATABASE_URL` and database accessibility
+2. **Dependencies**: Ensure all packages are installed correctly
+3. **Port Conflicts**: Make sure port 3000 is available
+4. **Environment Variables**: Check that your `.env` file is properly configured
+
+<Callout type="success">
+  **Module Complete!** Your development environment is ready. Continue to [Module 3: Database Schema and Data Modeling](/learning-paths/rag-chatbot/module-3) to understand the database architecture.
+</Callout>

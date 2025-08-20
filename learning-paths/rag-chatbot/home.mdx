@@ -1,48 +1,214 @@
 ---
-title: "Build a Retrieval-Augmented Chatbot with Vercel AI SDK"
-description: "Master the art of building intelligent chatbots using RAG architecture. Learn to combine the power of vector embeddings, semantic search, and large language models to create context-aware AI assistants."
+title: "Build a Retrieval-Augmented Generation (RAG) Agent"
+description: "Learn to build intelligent AI agents using RAG architecture. You will combine the power of vector embeddings, semantic search, and large language models to create context-aware AI assistants that can learn and retrieve information dynamically."
 ---
 
 ## What You'll Build
 
-Throughout this program, you'll build a production-ready RAG chatbot using the official Vercel AI SDK RAG starter. You'll learn to ingest documents, create vector embeddings, implement semantic search, and generate contextually relevant responses using OpenAI's models.
+Throughout this program, you'll build a production-ready RAG agent using the [Vercel AI SDK RAG Starter](https://github.com/vercel/ai-sdk-rag-starter) repository. You'll learn to ingest documents, create vector embeddings, implement semantic search, and generate contextually relevant responses using OpenAI's models.
+
+<Callout>
+  This learning path is designed for developers familiar with React and
+  TypeScript, but new to Next.js, Vercel, and AI development. No prior
+  experience with these technologies is required.
+</Callout>
 
 ## Learning Outcomes
 
-- Build production-ready RAG chatbots using Vercel AI SDK
-- Understand vector embeddings and semantic search
-- Implement document ingestion and processing pipelines
-- Create responsive chat interfaces with streaming
-- Deploy and scale AI applications on Vercel
-- Integrate PostgreSQL with pgvector for vector storage
+- **Build production-ready RAG agents** using Vercel AI SDK and Next.js 14
+- **Understand vector embeddings and semantic search** with practical implementations
+- **Implement document ingestion and processing pipelines** with automatic embedding generation
+- **Create responsive chat interfaces** with real-time streaming and tool visualization
+- **Deploy and scale AI applications** on Vercel with PostgreSQL and pgvector
+- **Build AI tool integration** for dynamic knowledge base management
 
-## Tech Stack You'll Learn
+## Tech Stack You'll Master
 
 <Columns cols={2}>
-  <Card title="Next.js App Router" icon="code">
-    Modern React framework.
+  <Card title="Next.js 14 (App Router)" icon="code">
+    Modern React framework with server components and app router architecture.
   </Card>
   <Card title="Vercel AI SDK" icon="code">
-    AI integration toolkit.
+    Unified AI integration toolkit for building AI-powered applications.
   </Card>
 </Columns>
 <Columns cols={2}>
   <Card title="PostgreSQL + pgvector" icon="database">
-    Vector database storage.
+    Vector database storage with efficient similarity search capabilities.
+  </Card>
+  <Card title="OpenAI API" icon="code">
+    State-of-the-art language models for text generation and embeddings.
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Drizzle ORM" icon="database">
+    Type-safe database toolkit with excellent TypeScript support.
+  </Card>
+  <Card title="Vercel Platform" icon="cloud">
+    Deployment and hosting platform with seamless database integration.
   </Card>
 </Columns>
 
-## Program Modules
+## Program Structure
+
+This 12-module program is designed for **4-6 hours of self-paced learning** with asynchronous support via Slack/Email.
 
 <AccordionGroup>
-  <Accordion title="Module 1: Introduction & Setup">
+  <Accordion title="Module 1: Understanding RAG Fundamentals">
     <p>
-      Get started with the AI SDK RAG starter repository and understand the
-      architecture
+      Learn the core concepts of Retrieval-Augmented Generation and why it's
+      revolutionizing AI applications.
     </p>
-    <li>What is RAG and What We'll Build</li>
-    <li>Clone and Explore the Repository</li>
-    <li>Set up your Database</li>
-    <li>Install Dependencies and Run the App</li>
+    <li>What is RAG and Why It Matters</li>
+    <li>Embeddings Deep Dive: Vector Space and Similarity</li>
+    <li>Chunking Strategies and Best Practices</li>
+    <li>Practical Exercise: Embedding Exploration</li>
+  </Accordion>
+
+<Accordion title="Module 2: Project Setup and Environment Configuration">
+  <p>
+    Set up your development environment and get the starter repository running.
+  </p>
+  <li>Repository Setup and Dependencies</li>
+  <li>PostgreSQL Database Setup with pgvector</li>
+  <li>Development Environment and Project Structure</li>
+  <li>Environment Configuration and API Keys</li>
+</Accordion>
+
+{" "}
+
+<Accordion title="Module 3: Database Schema and Data Modeling">
+  <p>Understand the database architecture and implement vector storage.</p>
+  <li>Schema Analysis and Design</li>
+  <li>Vector Database Implementation</li>
+  <li>Migration and Validation</li>
+  <li>Performance Optimization</li>
+</Accordion>
+
+{" "}
+
+<Accordion title="Module 4: AI SDK Integration and Embedding Generation">
+  <p>Integrate AI SDK and implement embedding generation pipelines.</p>
+  <li>AI SDK Setup and Configuration</li>
+  <li>Embedding Generation and Chunking</li>
+  <li>Embedding Storage and Database Integration</li>
+  <li>Error Handling and Performance Optimization</li>
+</Accordion>
+
+{" "}
+
+<Accordion title="Module 5: Server Actions and Data Management">
+  <p>
+    Extend server actions to handle embedding generation and data management.
+  </p>
+  <li>Server Actions Fundamentals</li>
+  <li>Resource Management Enhancement</li>
+  <li>Testing and Validation</li>
+  <li>Error Recovery and Monitoring</li>
+</Accordion>
+
+{" "}
+
+<Accordion title="Module 6: Building the Chat Interface">
+  <p>Create a responsive chat interface with real-time streaming.</p>
+  <li>Chat Interface Setup with AI SDK</li>
+  <li>Real-time Streaming Implementation</li>
+  <li>UI/UX Enhancement and Accessibility</li>
+  <li>Tool Call Visualization</li>
+</Accordion>
+
+{" "}
+
+<Accordion title="Module 7: API Routes and Model Integration">
+  <p>Implement API routes for AI model integration and response handling.</p>
+  <li>API Route Setup and Configuration</li>
+  <li>Model Configuration and System Prompts</li>
+  <li>Response Handling and Error Recovery</li>
+  <li>Streaming Optimization</li>
+</Accordion>
+
+{" "}
+
+<Accordion title="Module 8: Tool Integration and Multi-Step Reasoning">
+  <p>Implement AI tools for dynamic knowledge base management.</p>
+  <li>Tool Fundamentals and Architecture</li>
+  <li>Resource Management Tools</li>
+  <li>Multi-Step Reasoning and Tool Chaining</li>
+  <li>User Feedback and Progress Indicators</li>
+</Accordion>
+
+{" "}
+
+<Accordion title="Module 9: Semantic Search and Retrieval">
+  <p>Implement efficient semantic search algorithms and optimization.</p>
+  <li>Semantic Search Implementation</li>
+  <li>Search Optimization and Performance</li>
+  <li>Testing and Validation</li>
+  <li>Edge Cases and Error Handling</li>
+</Accordion>
+
+{" "}
+
+<Accordion title="Module 10: Production Deployment and Optimization">
+  <p>Deploy your RAG agent to production and optimize for performance.</p>
+  <li>Vercel Deployment and Configuration</li>
+  <li>Performance Optimization Strategies</li>
+  <li>Monitoring and Maintenance</li>
+  <li>Cost Management and Scaling</li>
+</Accordion>
+
+{" "}
+
+<Accordion title="Module 11: Testing and Quality Assurance">
+  <p>Implement comprehensive testing strategies for RAG applications.</p>
+  <li>Testing Strategy and Best Practices</li>
+  <li>Embedding and Search Testing</li>
+  <li>User Experience Testing</li>
+  <li>Performance and Reliability Testing</li>
+</Accordion>
+
+  <Accordion title="Module 12: Real-World Applications and Best Practices">
+    <p>Apply your knowledge to real-world use cases and best practices.</p>
+    <li>Use Case Analysis and Applications</li>
+    <li>Best Practices and Security Considerations</li>
+    <li>Project Completion and Next Steps</li>
+    <li>Community and Continuous Learning</li>
   </Accordion>
 </AccordionGroup>
+
+## Prerequisites
+
+<Note>
+  This program assumes you have basic knowledge of React and TypeScript, but no
+  prior experience with Next.js, Vercel, or AI development is required.
+</Note>
+
+- **React & TypeScript**: Basic understanding of React components and TypeScript syntax
+- **Command Line**: Familiarity with terminal commands and package managers
+- **REST APIs**: Understanding of HTTP requests and API concepts
+- **Git**: Basic knowledge of version control and repository management
+
+## Support and Resources
+
+<Columns cols={2}>
+  <Card title="Slack Community" icon="message">
+    Join our community for peer support and discussions.
+  </Card>
+  <Card title="Email Support" icon="mail">
+    Direct instructor support for technical questions.
+  </Card>
+</Columns>
+
+<Columns cols={2}>
+  <Card title="Troubleshooting Guides" icon="book">
+    Common issues and solutions for each module.
+  </Card>
+  <Card title="FAQ Section" icon="help">
+    Frequently asked questions and quick answers.
+  </Card>
+</Columns>
+
+<Note>
+  The final project involves building a complete RAG application for a specific
+  domain, showcasing all the skills learned throughout the program.
+</Note>

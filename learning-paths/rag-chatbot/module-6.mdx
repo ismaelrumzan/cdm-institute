@@ -1,0 +1,564 @@
+---
+title: "Building the Chat Interface"
+description: "Create responsive chat interfaces with AI SDK. Implement real-time message streaming and design intuitive user experiences with proper error handling."
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Create responsive chat interfaces with AI SDK
+- Implement real-time message streaming
+- Design intuitive user experiences
+- Handle different message types and states
+
+## Module Overview
+
+This module focuses on building the user interface for your RAG agent. You'll create a chat interface using AI SDK's React hooks, implement real-time streaming, and add proper error handling and user feedback.
+
+<Callout>
+  **Time Estimate**: 90 minutes (35 + 30 + 25 minutes for each section)
+</Callout>
+
+---
+
+## 6.1 Chat Interface Setup with AI SDK
+
+**Duration**: 35 minutes
+
+### Understanding the AI SDK React Hooks
+
+The AI SDK provides React hooks for building chat interfaces:
+
+<Columns cols={2}>
+  <Card title="useChat" icon="chat">
+    Main hook for chat functionality with streaming
+  </Card>
+  <Card title="useCompletion" icon="text">
+    Hook for single-turn completions
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="useAssistant" icon="assistant">
+    Hook for assistant-style interactions
+  </Card>
+  <Card title="useChatHelpers" icon="tools">
+    Utility hooks for chat management
+  </Card>
+</Columns>
+
+### Setting Up the Basic Chat Interface
+
+Replace your `app/page.tsx` with a basic chat interface:
+
+<CodeGroup>
+  <CodeGroupItem title="app/page.tsx">
+    ```tsx
+    "use client";
+
+    import { useChat } from "@ai-sdk/react";
+    import { useState } from "react";
+
+    export default function Chat() {
+      const [input, setInput] = useState("");
+      const { messages, sendMessage, isLoading } = useChat();
+
+      const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (input.trim()) {
+          sendMessage({ text: input });
+          setInput("");
+        }
+      };
+
+      return (
+        <div className="flex flex-col w-full max-w-4xl mx-auto h-screen">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${
+                  message.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                    message.role === "user"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-800"
+                  }`}
+                >
+                  <div className="text-sm font-semibold mb-1">
+                    {message.role === "user" ? "You" : "Assistant"}
+                  </div>
+                  <div className="whitespace-pre-wrap">
+                    {message.parts.map((part) => {
+                      if (part.type === "text") {
+                        return <span key={part.id}>{part.text}</span>;
+                      }
+                      return null;
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">
+                  <div className="text-sm font-semibold mb-1">Assistant</div>
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-4 border-t">
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask me anything..."
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Send
+              </button>
+            </div>
+          </form>
+        </div>
+      );
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Understanding Message Types
+
+The AI SDK supports different message types:
+
+<CodeGroup>
+  <CodeGroupItem title="Message Types">
+    ```tsx
+    // Text messages
+    { type: "text", text: "Hello, how can I help you?" }
+
+    // Tool calls (we'll add these later)
+    { type: "tool-call", toolName: "addResource", input: {...} }
+
+    // Tool results
+    { type: "tool-result", toolName: "addResource", result: {...} }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Using shadcn-ui Components
+
+Enhance the interface with shadcn-ui components:
+
+<CodeGroup>
+  <CodeGroupItem title="Enhanced Chat Interface">
+    ```tsx
+    import { Button } from "@/components/ui/button";
+    import { Input } from "@/components/ui/input";
+    import { Card, CardContent } from "@/components/ui/card";
+    import { ScrollArea } from "@/components/ui/scroll-area";
+
+    // Use these components in your chat interface
+    <ScrollArea className="flex-1">
+      <Card>
+        <CardContent className="p-4">
+          {/* Message content */}
+        </CardContent>
+      </Card>
+    </ScrollArea>
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 6.2 Real-time Streaming Implementation
+
+**Duration**: 30 minutes
+
+### Understanding Streaming
+
+Real-time streaming allows users to see responses as they're being generated:
+
+<Callout type="info">
+  **Streaming Benefits**: Better user experience, faster perceived response times, and the ability to show progress.
+</Callout>
+
+### Configuring Streaming
+
+The `useChat` hook handles streaming automatically, but you can customize it:
+
+<CodeGroup>
+  <CodeGroupItem title="Streaming Configuration">
+    ```tsx
+    const { messages, sendMessage, isLoading } = useChat({
+      api: "/api/chat", // Your API endpoint
+      onResponse: (response) => {
+        // Handle response start
+        console.log("Response started");
+      },
+      onFinish: (message) => {
+        // Handle response completion
+        console.log("Response finished:", message);
+      },
+      onError: (error) => {
+        // Handle errors
+        console.error("Chat error:", error);
+      },
+    });
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Handling Different Message States
+
+Implement proper state handling for different message types:
+
+<CodeGroup>
+  <CodeGroupItem title="Message State Handling">
+    ```tsx
+    function MessageComponent({ message }: { message: any }) {
+      return (
+        <div className={`message ${message.role}`}>
+          <div className="message-header">
+            {message.role === "user" ? "You" : "Assistant"}
+          </div>
+          <div className="message-content">
+            {message.parts.map((part: any) => {
+              switch (part.type) {
+                case "text":
+                  return <TextMessage key={part.id} part={part} />;
+                case "tool-call":
+                  return <ToolCallMessage key={part.id} part={part} />;
+                case "tool-result":
+                  return <ToolResultMessage key={part.id} part={part} />;
+                default:
+                  return null;
+              }
+            })}
+          </div>
+        </div>
+      );
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Loading States and Feedback
+
+Implement proper loading states:
+
+<CodeGroup>
+  <CodeGroupItem title="Loading States">
+    ```tsx
+    function LoadingIndicator() {
+      return (
+        <div className="flex justify-start">
+          <div className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">
+            <div className="text-sm font-semibold mb-1">Assistant</div>
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Error Handling
+
+Implement comprehensive error handling:
+
+<CodeGroup>
+  <CodeGroupItem title="Error Handling">
+    ```tsx
+    const { messages, sendMessage, isLoading, error } = useChat({
+      onError: (error) => {
+        console.error("Chat error:", error);
+        // Show user-friendly error message
+        toast.error("Failed to send message. Please try again.");
+      },
+    });
+
+    // Display error messages
+    {error && (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <strong>Error:</strong> {error.message}
+      </div>
+    )}
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 6.3 UI/UX Enhancement and Accessibility
+
+**Duration**: 25 minutes
+
+### Responsive Design
+
+Make your chat interface work well on all devices:
+
+<CodeGroup>
+  <CodeGroupItem title="Responsive Design">
+    ```tsx
+    <div className="flex flex-col w-full max-w-4xl mx-auto h-screen">
+      {/* Header */}
+      <div className="bg-white border-b p-4">
+        <h1 className="text-xl font-semibold">RAG Agent</h1>
+        <p className="text-sm text-gray-600">Ask me anything about your knowledge base</p>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Messages here */}
+      </div>
+
+      {/* Input */}
+      <div className="bg-white border-t p-4">
+        {/* Input form here */}
+      </div>
+    </div>
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Accessibility Features
+
+Implement accessibility best practices:
+
+<CodeGroup>
+  <CodeGroupItem title="Accessibility">
+    ```tsx
+    <div role="log" aria-live="polite" aria-label="Chat messages">
+      {messages.map((message) => (
+        <div
+          key={message.id}
+          role="article"
+          aria-label={`${message.role} message`}
+        >
+          {/* Message content */}
+        </div>
+      ))}
+    </div>
+
+    <form onSubmit={handleSubmit} role="form" aria-label="Chat input">
+      <input
+        type="text"
+        aria-label="Message input"
+        aria-describedby="send-button"
+        // ... other props
+      />
+      <button
+        id="send-button"
+        type="submit"
+        aria-label="Send message"
+        // ... other props
+      >
+        Send
+      </button>
+    </form>
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Keyboard Shortcuts
+
+Add keyboard shortcuts for better UX:
+
+<CodeGroup>
+  <CodeGroupItem title="Keyboard Shortcuts">
+    ```tsx
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        // Send message on Enter (without Shift)
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          if (input.trim() && !isLoading) {
+            sendMessage({ text: input });
+            setInput("");
+          }
+        }
+        
+        // Focus input on Cmd/Ctrl + K
+        if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+          e.preventDefault();
+          inputRef.current?.focus();
+        }
+      };
+
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [input, isLoading, sendMessage]);
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Visual Feedback
+
+Add visual feedback for different states:
+
+<CodeGroup>
+  <CodeGroupItem title="Visual Feedback">
+    ```tsx
+    // Tool call indicator
+    function ToolCallIndicator({ toolName }: { toolName: string }) {
+      return (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <span className="text-sm text-blue-700">
+              Using {toolName}...
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    // Success indicator
+    function SuccessIndicator() {
+      return (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-2">
+          <div className="flex items-center space-x-2">
+            <CheckCircle className="w-4 h-4 text-green-600" />
+            <span className="text-sm text-green-700">
+              Operation completed successfully
+            </span>
+          </div>
+        </div>
+      );
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Styling with TailwindCSS
+
+Enhance the visual design:
+
+<CodeGroup>
+  <CodeGroupItem title="Enhanced Styling">
+    ```tsx
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-4xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
+          <h1 className="text-2xl font-bold">RAG Agent</h1>
+          <p className="text-blue-100">Your intelligent knowledge assistant</p>
+        </div>
+
+        {/* Messages */}
+        <div className="h-96 overflow-y-auto p-6 space-y-4">
+          {/* Messages here */}
+        </div>
+
+        {/* Input */}
+        <div className="border-t bg-gray-50 p-6">
+          {/* Input form here */}
+        </div>
+      </div>
+    </div>
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Practical Exercise
+
+<Callout type="info">
+  **Exercise**: Build and test the chat interface
+</Callout>
+
+<Steps>
+  <Step title="1. Create Basic Interface">
+    Implement the basic chat interface with useChat hook
+  </Step>
+  <Step title="2. Add Streaming">
+    Test real-time streaming functionality
+  </Step>
+  <Step title="3. Enhance UI">
+    Add responsive design and accessibility features
+  </Step>
+  <Step title="4. Test Interactions">
+    Test keyboard shortcuts and error handling
+  </Step>
+</Steps>
+
+### Reflection Questions
+
+<Callout type="warning">
+  Take a moment to reflect on these questions:
+</Callout>
+
+1. **How would you implement message persistence?**
+   - Consider local storage, database storage, and session management
+
+2. **What accessibility features are most important for chat interfaces?**
+   - Think about screen readers, keyboard navigation, and color contrast
+
+3. **How would you handle offline functionality?**
+   - Consider service workers, local caching, and sync strategies
+
+### Next Steps
+
+<Callout type="info">
+  **Ready to continue?** In the next module, you'll implement API routes for AI model integration.
+</Callout>
+
+---
+
+## Module Summary
+
+In this module, you successfully:
+
+- **Chat Interface Setup**: Created a responsive chat interface using AI SDK
+- **Real-time Streaming**: Implemented streaming for better user experience
+- **UI/UX Enhancement**: Added accessibility features and visual feedback
+- **Error Handling**: Implemented comprehensive error handling and loading states
+
+### Key Takeaways
+
+- AI SDK's useChat hook simplifies chat interface development
+- Real-time streaming improves perceived performance
+- Accessibility features make your app usable by everyone
+- Proper error handling and loading states improve user experience
+
+### Resources
+
+- [AI SDK React Documentation](https://sdk.vercel.ai/docs/api-reference/react) - React hooks guide
+- [shadcn/ui Components](https://ui.shadcn.com/) - UI component library
+- [TailwindCSS Documentation](https://tailwindcss.com/docs) - CSS framework
+- [Web Accessibility Guidelines](https://www.w3.org/WAI/WCAG21/quickref/) - Accessibility standards
+
+### Troubleshooting
+
+If you encounter issues:
+
+1. **Streaming Issues**: Check that your API route supports streaming
+2. **UI Problems**: Verify TailwindCSS is properly configured
+3. **Accessibility Issues**: Test with screen readers and keyboard navigation
+4. **Performance Issues**: Monitor message rendering and optimize if needed
+
+<Callout type="success">
+  **Module Complete!** Your chat interface is ready. Continue to [Module 7: API Routes and Model Integration](/learning-paths/rag-chatbot/module-7) to connect your interface to the AI model.
+</Callout>

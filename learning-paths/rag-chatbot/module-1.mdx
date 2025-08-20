@@ -1,12 +1,292 @@
 ---
-title: "What is RAG and What We'll Build"
-description: "Understand Retrieval-Augmented Generation and explore the AI SDK RAG starter repository that we'll use throughout this program."
+title: "Understanding RAG Fundamentals"
+description: "Learn the core concepts of Retrieval-Augmented Generation and why it's revolutionizing AI applications. Understand embeddings, vector databases, and semantic search."
 ---
 
 import WhatIsRag from "/snippets/conceptual/what-is-rag.mdx";
 import VectorEmbeddings from "/snippets/conceptual/vector-embeddings.mdx";
 
-## Key concepts
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Explain what RAG is and why it's important for AI applications
+- Understand the relationship between embeddings, vector databases, and semantic search
+- Describe the chunking process and its role in RAG systems
+- Identify real-world use cases for RAG applications
+
+## Module Overview
+
+This module introduces you to the foundational concepts of Retrieval-Augmented Generation (RAG). You'll learn how RAG combines the power of large language models with external knowledge retrieval to create more accurate and contextually relevant AI responses.
+
+<Callout>
+  **Time Estimate**: 80 minutes (25 + 35 + 20 minutes for each section)
+</Callout>
+
+---
+
+## 1.1 What is RAG and Why It Matters
+
+**Duration**: 25 minutes
+
+### Understanding RAG
 
 <WhatIsRag />
+
+### Why RAG Matters
+
+Traditional large language models have a significant limitation: they can only work with the information they were trained on. This creates several problems:
+
+<Columns cols={2}>
+  <Card title="Knowledge Cutoff" icon="calendar">
+    Models can't access information after their training date
+  </Card>
+  <Card title="No Personal Data" icon="user">
+    Models can't access your private or proprietary information
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Hallucinations" icon="warning">
+    Models may make up information when they don't know the answer
+  </Card>
+  <Card title="Limited Context" icon="database">
+    Models can't access real-time or domain-specific data
+  </Card>
+</Columns>
+
+### RAG Architecture Overview
+
+RAG solves these problems by following a specific process:
+
+<Steps>
+  <Step title="1. User Query">A user asks a question or makes a request</Step>
+  <Step title="2. Query Processing">
+    The system processes the query and identifies what information is needed
+  </Step>
+  <Step title="3. Information Retrieval">
+    Relevant information is retrieved from external sources (documents,
+    databases, etc.)
+  </Step>
+  <Step title="4. Context Augmentation">
+    The retrieved information is added to the user's query as context
+  </Step>
+  <Step title="5. Response Generation">
+    The language model generates a response using both the original query and
+    the retrieved context
+  </Step>
+</Steps>
+
+<MDXImage
+  srcLight="/images/rag-architecture-light.png"
+  srcDark="/images/rag-architecture-dark.png"
+  width={800}
+  height={400}
+  alt="RAG Architecture Flow Diagram"
+/>
+
+### Real-World Examples
+
+<Callout type="info">
+  **Customer Support**: A RAG system can access a company's knowledge base to
+  provide accurate, up-to-date support information.
+</Callout>
+
+<Callout type="info">
+  **Research Assistant**: A RAG system can search through academic papers and
+  provide relevant citations and information.
+</Callout>
+
+<Callout type="info">
+  **Document Q&A**: A RAG system can answer questions about specific documents
+  by retrieving relevant sections.
+</Callout>
+
+---
+
+## 1.2 Embeddings Deep Dive: Vector Space and Similarity
+
+**Duration**: 35 minutes
+
+### Understanding Embeddings
+
 <VectorEmbeddings />
+
+### Vector Space Concepts
+
+Embeddings represent text as vectors in a high-dimensional space where similar concepts are positioned close together:
+
+<MDXImage
+  srcLight="/images/vector-space-light.png"
+  srcDark="/images/vector-space-dark.png"
+  width={600}
+  height={400}
+  alt="Vector Space Representation"
+/>
+
+### Similarity Metrics
+
+The most common way to measure similarity between embeddings is **cosine similarity**:
+
+<CodeGroup>
+  <CodeGroupItem title="Cosine Similarity Formula">
+    ```python similarity = (A · B) / (||A|| × ||B||) ```
+  </CodeGroupItem>
+  <CodeGroupItem title="Example Calculation">
+    ```python # Example vectors vector_a = [0.5, 0.8, 0.2] vector_b = [0.6, 0.7,
+    0.3] # Cosine similarity ranges from -1 to 1 # 1 = identical, 0 = unrelated,
+    -1 = opposite ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Interactive Similarity Calculator
+
+<Callout>
+  **Try it yourself**: Use our interactive similarity calculator to see how
+  different words relate to each other in vector space.
+</Callout>
+
+| Word Pair           | Expected Similarity  | Reasoning                     |
+| ------------------- | -------------------- | ----------------------------- |
+| "cat" vs "dog"      | High (0.8-0.9)       | Both are pets, animals        |
+| "cat" vs "computer" | Low (0.1-0.3)        | Unrelated concepts            |
+| "happy" vs "joyful" | Very High (0.9+)     | Synonyms                      |
+| "happy" vs "sad"    | Low/Medium (0.3-0.5) | Related but opposite emotions |
+
+### Chunking Strategies
+
+When working with long documents, we need to break them into smaller pieces (chunks) for effective embedding:
+
+<Columns cols={2}>
+  <Card title="Sentence-based Chunking" icon="text">
+    Split by sentences or paragraphs. Good for narrative content.
+  </Card>
+  <Card title="Token-based Chunking" icon="hash">
+    Split by token count. Good for consistent chunk sizes.
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Semantic Chunking" icon="brain">
+    Split by meaning boundaries. Most sophisticated approach.
+  </Card>
+  <Card title="Fixed-size Chunking" icon="ruler">
+    Split into equal-sized pieces. Simple but may break context.
+  </Card>
+</Columns>
+
+### Chunking Best Practices
+
+<Steps>
+  <Step title="1. Maintain Context">
+    Ensure chunks contain enough context to be meaningful on their own
+  </Step>
+  <Step title="2. Avoid Breaking Sentences">
+    Don't split in the middle of sentences or important phrases
+  </Step>
+  <Step title="3. Consider Overlap">
+    Use overlapping chunks to maintain continuity between pieces
+  </Step>
+  <Step title="4. Size Appropriately">
+    Balance chunk size with embedding quality and retrieval accuracy
+  </Step>
+</Steps>
+
+---
+
+## 1.3 Practical Exercise: Embedding Exploration
+
+**Duration**: 20 minutes
+
+### Exercise Overview
+
+In this hands-on exercise, you'll explore embeddings using a simple playground to understand how they work in practice.
+
+### Setup Instructions
+
+<Snippet text="npm install -g @ai-sdk/playground" />
+
+### Exercise Tasks
+
+<Steps>
+  <Step title="1. Generate Embeddings">
+    Create embeddings for different types of text: - Short phrases: "machine
+    learning", "artificial intelligence" - Sentences: "The weather is sunny
+    today", "It's raining outside" - Paragraphs: A short story or article
+    excerpt
+  </Step>
+  <Step title="2. Compare Similarities">
+    Calculate similarity scores between: - Related concepts (e.g., "car" vs
+    "automobile") - Unrelated concepts (e.g., "car" vs "philosophy") - Opposite
+    concepts (e.g., "hot" vs "cold")
+  </Step>
+  <Step title="3. Experiment with Chunking">
+    Try different chunking strategies on a longer text: - Split by sentences -
+    Split by fixed character count - Split by semantic boundaries
+  </Step>
+</Steps>
+
+### Expected Results
+
+You should observe:
+
+- **High similarity** (0.7-0.9) for related concepts
+- **Low similarity** (0.1-0.3) for unrelated concepts
+- **Medium similarity** (0.4-0.6) for concepts that are related but not identical
+
+### Reflection Questions
+
+<Callout type="warning">
+  Take a moment to reflect on these questions before moving to the next module:
+</Callout>
+
+1. **How does chunk size affect embedding quality?**
+
+   - What happens when chunks are too small?
+   - What happens when chunks are too large?
+
+2. **What types of content would benefit most from RAG?**
+
+   - Consider different industries and use cases
+   - Think about content that changes frequently
+
+3. **How would you design a chunking strategy for your specific use case?**
+   - What factors would you consider?
+   - How would you test and validate your approach?
+
+### Next Steps
+
+<Callout type="info">
+  **Ready to move forward?** In the next module, you'll set up the Vercel AI SDK
+  RAG starter repository and begin building your own RAG agent.
+</Callout>
+
+---
+
+## Module Summary
+
+In this module, you learned:
+
+- **RAG Fundamentals**: How RAG combines language models with external knowledge retrieval
+- **Embeddings**: How text is converted to vectors and how similarity is calculated
+- **Chunking**: Different strategies for breaking down documents into manageable pieces
+- **Practical Application**: Hands-on experience with embedding generation and similarity calculation
+
+### Key Takeaways
+
+- RAG solves the knowledge cutoff and hallucination problems of traditional LLMs
+- Embeddings represent text as vectors in high-dimensional space
+- Cosine similarity measures how related two pieces of text are
+- Effective chunking is crucial for RAG performance
+- The right chunking strategy depends on your specific use case
+
+### Resources
+
+- [What is RAG?](/snippets/conceptual/what-is-rag) - Detailed explanation of RAG concepts
+- [Vector Embeddings](/snippets/conceptual/vector-embeddings) - Deep dive into embeddings
+- [AI SDK Documentation](https://sdk.vercel.ai/docs) - Official AI SDK documentation
+- [OpenAI Embeddings Guide](https://platform.openai.com/docs/guides/embeddings) - OpenAI's embedding documentation
+
+<Callout type="success">
+  **Module Complete!** You now understand the fundamental concepts of RAG. Ready
+  to start building? Continue to [Module 2: Project Setup and Environment
+  Configuration](/learning-paths/rag-chatbot/module-2).
+</Callout>

@@ -1,0 +1,416 @@
+---
+title: "4.1 AI SDK Setup"
+description: "Install AI SDK dependencies, configure OpenAI integration, and set up the foundation for embedding generation."
+---
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Install and configure the Vercel AI SDK
+- Set up OpenAI API integration for embedding generation
+- Configure environment variables and API keys
+- Test the AI SDK connection
+
+<Callout>**Duration**: 25 minutes</Callout>
+
+---
+
+## AI SDK Overview
+
+The Vercel AI SDK provides a unified interface for working with various AI providers:
+
+<Columns cols={2}>
+  <Card title="Unified Interface" icon="link">
+    Consistent API across different AI providers
+  </Card>
+  <Card title="Embedding Support" icon="layers">
+    Built-in support for text embeddings
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Streaming" icon="zap">
+    Real-time streaming responses
+  </Card>
+  <Card title="Type Safety" icon="shield">
+    Full TypeScript support
+  </Card>
+</Columns>
+
+### Key Features for RAG
+
+<Callout type="info">
+  **Embedding Generation**: Generate embeddings using OpenAI's
+  text-embedding-ada-002 model
+</Callout>
+
+<Callout type="info">
+  **Batch Processing**: Efficiently process multiple texts at once
+</Callout>
+
+<Callout type="info">
+  **Error Handling**: Robust error handling and retry logic
+</Callout>
+
+---
+
+## Installation and Setup
+
+### Step 1: Install Dependencies
+
+<Steps>
+  <Step title="1. Install AI SDK">Add the AI SDK to your project</Step>
+  <Step title="2. Install OpenAI">Add OpenAI client for direct API access</Step>
+  <Step title="3. Verify installation">
+    Check that all dependencies are installed correctly
+  </Step>
+</Steps>
+
+<Snippet>
+```bash
+# Install AI SDK and OpenAI client
+npm install ai @ai-sdk/react @ai-sdk/openai
+
+# Verify installation
+
+npm list ai @ai-sdk/react @ai-sdk/openai
+
+````
+</Snippet>
+
+### Step 2: Configure Environment Variables
+
+<CodeGroup>
+  <CodeGroupItem title="Environment Setup">
+```bash
+# .env.local
+OPENAI_API_KEY=sk-your-openai-api-key-here
+OPENAI_MODEL=text-embedding-ada-002
+````
+
+  </CodeGroupItem>
+  <CodeGroupItem title="API Key Security">
+```bash
+# Never commit API keys to version control
+# .env.local is already in .gitignore
+# Use different keys for development and production
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+<Callout type="warning">
+  **Security**: Keep your API keys secure and never expose them in client-side
+  code
+</Callout>
+
+---
+
+## AI SDK Configuration
+
+### Basic Setup
+
+<CodeGroup>
+  <CodeGroupItem title="AI SDK Configuration">
+```typescript
+// lib/ai.ts
+import { openai } from '@ai-sdk/openai'
+
+// Configure the embedding model
+const embeddingModel = openai.embedding("text-embedding-ada-002");
+
+// Configure the chat model (for later use)
+const chatModel = openai("gpt-4o");
+
+export { embeddingModel, chatModel };
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Environment Validation">
+```typescript
+// lib/utils/env.ts
+export function validateEnv() {
+  const required = ['OPENAI_API_KEY', 'DATABASE_URL'];
+  
+  for (const var_name of required) {
+    if (!process.env[var_name]) {
+      throw new Error(`Missing required environment variable: ${var_name}`);
+    }
+  }
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Configuration Options
+
+<Columns cols={2}>
+  <Card title="API Key" icon="key">
+    **Required**: Your OpenAI API key **Source**: Environment variable
+  </Card>
+  <Card title="Model" icon="bot">
+    **Default**: text-embedding-ada-002 **Configurable**: For different
+    embedding models
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Base URL" icon="server">
+    **Optional**: Custom API endpoint **Use case**: Azure OpenAI or custom
+    deployments
+  </Card>
+  <Card title="Timeout" icon="clock">
+    **Configurable**: Request timeout settings **Default**: 60 seconds
+  </Card>
+</Columns>
+
+---
+
+## Embedding Model Selection
+
+### OpenAI Embedding Models
+
+<CodeGroup>
+  <CodeGroupItem title="text-embedding-ada-002">
+```typescript
+// Most commonly used model
+// 1536 dimensions
+// Good performance and cost
+const embedding = await openai.embeddings.create({
+  model: 'text-embedding-ada-002',
+  input: 'Your text here',
+})
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="text-embedding-3-small">
+```typescript
+// Newer, more efficient model
+// 1536 dimensions
+// Better performance, lower cost
+const embedding = await openai.embeddings.create({
+  model: 'text-embedding-3-small',
+  input: 'Your text here',
+})
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Model Comparison
+
+<Columns cols={3}>
+  <Card title="text-embedding-ada-002" icon="database">
+    **Dimensions**: 1536 **Cost**: $0.0001/1K tokens **Performance**: Good
+  </Card>
+  <Card title="text-embedding-3-small" icon="zap">
+    **Dimensions**: 1536 **Cost**: $0.00002/1K tokens **Performance**: Better
+  </Card>
+  <Card title="text-embedding-3-large" icon="trending-up">
+    **Dimensions**: 3072 **Cost**: $0.00013/1K tokens **Performance**: Best
+  </Card>
+</Columns>
+
+---
+
+## Testing the Setup
+
+### Step 1: Test API Connection
+
+<Steps>
+  <Step title="1. Create test script">
+    Create a simple test to verify API connectivity
+  </Step>
+  <Step title="2. Test embedding generation">Generate a test embedding</Step>
+  <Step title="3. Verify response">
+    Check that the embedding is generated correctly
+  </Step>
+</Steps>
+
+<Snippet>
+```typescript
+// test-embedding.ts
+import { openai } from './lib/openai'
+
+async function testEmbedding() {
+try {
+const response = await openai.embeddings.create({
+model: 'text-embedding-ada-002',
+input: 'Hello, world!',
+})
+
+    console.log('Embedding generated successfully!')
+    console.log('Dimensions:', response.data[0].embedding.length)
+    console.log('First few values:', response.data[0].embedding.slice(0, 5))
+
+} catch (error) {
+console.error('Error generating embedding:', error)
+}
+}
+
+testEmbedding()
+
+````
+</Snippet>
+
+### Step 2: Run the Test
+
+<Snippet>
+```bash
+# Run the test script
+npx tsx test-embedding.ts
+
+# Expected output:
+# Embedding generated successfully!
+# Dimensions: 1536
+# First few values: [0.0123, -0.0456, 0.0789, ...]
+````
+
+</Snippet>
+
+---
+
+## Error Handling and Validation
+
+### Common Error Scenarios
+
+<CodeGroup>
+  <CodeGroupItem title="API Key Issues">
+```typescript
+// Handle invalid API key
+try {
+  const embedding = await openai.embeddings.create({
+    model: 'text-embedding-ada-002',
+    input: 'test',
+  })
+} catch (error) {
+  if (error.status === 401) {
+    console.error('Invalid API key')
+  }
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Rate Limiting">
+```typescript
+// Handle rate limiting
+try {
+  const embedding = await openai.embeddings.create({
+    model: 'text-embedding-ada-002',
+    input: 'test',
+  })
+} catch (error) {
+  if (error.status === 429) {
+    console.error('Rate limit exceeded')
+    // Implement retry logic with exponential backoff
+  }
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Validation Functions
+
+<Snippet>
+```typescript
+// lib/validation.ts
+export function validateApiKey(apiKey: string): boolean {
+  return apiKey && apiKey.startsWith('sk-') && apiKey.length > 20
+}
+
+export function validateTextInput(text: string): boolean {
+  return text && text.trim().length > 0 && text.length < 8192
+}
+
+export async function testOpenAIConnection(): Promise<boolean> {
+  try {
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-ada-002',
+      input: 'test',
+    })
+    return response.data[0].embedding.length === 1536
+  } catch (error) {
+    console.error('OpenAI connection test failed:', error)
+    return false
+  }
+}
+```
+</Snippet>
+
+---
+
+## Interactive Elements
+
+### Setup Verification Checklist
+
+<Callout type="info">
+  **Complete this checklist to verify your AI SDK setup**: ✅ AI SDK installed
+  successfully ✅ OpenAI client installed ✅ Environment variables configured ✅
+  API key validated ✅ Connection test passed ✅ Embedding generation working ✅
+  Error handling implemented ✅ Model selection configured
+</Callout>
+
+### API Key Management
+
+<Callout type="warning">
+  **Best Practices for API Key Management**: 1. Use different keys for
+  development and production 2. Set up usage limits and monitoring 3. Rotate
+  keys regularly 4. Monitor API usage and costs 5. Use environment-specific
+  configurations
+</Callout>
+
+---
+
+## Troubleshooting Common Issues
+
+<Callout type="warning">
+  **Issue**: "Invalid API key" error **Solution**: Check your OPENAI_API_KEY
+  environment variable and ensure it's valid
+</Callout>
+
+<Callout type="warning">
+  **Issue**: "Rate limit exceeded" error **Solution**: Implement retry logic
+  with exponential backoff
+</Callout>
+
+<Callout type="warning">
+  **Issue**: "Model not found" error **Solution**: Verify the model name and
+  ensure you have access to it
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Environment variables not loading **Solution**: Restart your
+  development server after adding environment variables
+</Callout>
+
+---
+
+## Reflection Questions
+
+Take a moment to reflect on what you've learned:
+
+1. **What are the benefits of using the AI SDK over direct API calls?**
+
+   - Consider developer experience and consistency
+   - Think about error handling and type safety
+
+2. **How would you handle API rate limiting in a production environment?**
+
+   - Consider retry strategies and queuing
+   - Think about cost management
+
+3. **What security considerations are important when working with API keys?**
+   - Consider key management and rotation
+   - Think about environment-specific configurations
+
+---
+
+## Next Steps
+
+You've successfully set up the AI SDK! In the next section, you'll:
+
+- **Implement chunking strategies** for text processing
+- **Create batch embedding generation** functions
+- **Build error handling and retry logic**
+
+Ready to continue? Proceed to [Section 4.2: Embedding Generation](/learning-paths/rag-chatbot/module-4-2).
+
+<Callout>
+  **Key Takeaway**: Proper AI SDK setup with robust error handling and
+  validation provides the foundation for reliable embedding generation in your
+  RAG application.
+</Callout>
