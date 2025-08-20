@@ -1,0 +1,407 @@
+---
+title: "2.3 Development Environment"
+description: "Start the development server, explore the project structure, and test the basic application functionality."
+---
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Start the Next.js development server
+- Explore the application structure and existing functionality
+- Use Drizzle Studio for database management
+- Test the basic application to ensure everything works
+
+<Callout>**Duration**: 25 minutes</Callout>
+
+---
+
+## Starting the Development Server
+
+<Steps>
+  <Step title="1. Start the development server">
+    Run the Next.js development server
+  </Step>
+  <Step title="2. Access the application">
+    Open your browser and navigate to the local development URL
+  </Step>
+  <Step title="3. Verify functionality">
+    Test the basic application features
+  </Step>
+</Steps>
+
+<Snippet>
+```bash
+# Start the development server
+npm run dev
+
+# You should see output like:
+
+# - ready started server on 0.0.0.0:3000, url: http://localhost:3000
+
+# - event compiled client and server successfully
+
+````
+</Snippet>
+
+<Callout type="info">
+  **Development URL**: The application will be available at `http://localhost:3000`
+</Callout>
+
+<Callout type="info">
+  **Hot Reload**: Any changes you make to the code will automatically refresh the browser
+</Callout>
+
+---
+
+## Exploring the Application
+
+### Main Application Page
+
+<MDXImage
+  srcLight="/images/app-homepage-light.png"
+  srcDark="/images/app-homepage-dark.png"
+  width={800}
+  height={500}
+  alt="Application Homepage"
+/>
+
+<Callout type="info">
+  **What You'll See**: A clean interface with a chat component and resource management section
+</Callout>
+
+### Key Features Available
+
+<Columns cols={2}>
+  <Card title="Chat Interface" icon="message-circle">
+    Basic chat functionality with AI responses
+  </Card>
+  <Card title="Resource Management" icon="database">
+    Add and manage knowledge base content
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Database Integration" icon="server">
+    Connected to PostgreSQL with Drizzle ORM
+  </Card>
+  <Card title="Development Tools" icon="wrench">
+    Hot reload, TypeScript, and debugging support
+  </Card>
+</Columns>
+
+---
+
+## Using Drizzle Studio
+
+Drizzle Studio provides a web interface for managing your database:
+
+<Steps>
+  <Step title="1. Start Drizzle Studio">
+    Open Drizzle Studio in a separate terminal
+  </Step>
+  <Step title="2. Access the interface">
+    Navigate to the provided URL
+  </Step>
+  <Step title="3. Explore your database">
+    View tables, data, and run queries
+  </Step>
+</Steps>
+
+<Snippet>
+```bash
+# In a new terminal window
+npm run db:studio
+
+# You should see output like:
+# - Drizzle Studio is running on http://localhost:4983
+````
+
+</Snippet>
+
+<MDXImage
+  srcLight="/images/drizzle-studio-light.png"
+  srcDark="/images/drizzle-studio-dark.png"
+  width={800}
+  height={500}
+  alt="Drizzle Studio Interface"
+/>
+
+### Drizzle Studio Features
+
+<Columns cols={2}>
+  <Card title="Table View" icon="table">
+    Browse and edit table data
+  </Card>
+  <Card title="Query Editor" icon="code">
+    Run SQL queries directly
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Schema View" icon="database">
+    View table structure and relationships
+  </Card>
+  <Card title="Data Export" icon="download">
+    Export data in various formats
+  </Card>
+</Columns>
+
+---
+
+## Testing Basic Functionality
+
+### Test 1: Add a Resource
+
+<Steps>
+  <Step title="1. Navigate to the resource section">
+    Find the "Add Resource" or similar section
+  </Step>
+  <Step title="2. Add test content">
+    Add a simple text resource to test the functionality
+  </Step>
+  <Step title="3. Verify storage">
+    Check that the resource is saved to the database
+  </Step>
+</Steps>
+
+<Callout type="info">
+  **Test Content**: Try adding a simple paragraph about a topic you're familiar
+  with
+</Callout>
+
+### Test 2: Chat Functionality
+
+<Steps>
+  <Step title="1. Open the chat interface">Navigate to the chat component</Step>
+  <Step title="2. Send a test message">
+    Ask a simple question to test the AI response
+  </Step>
+  <Step title="3. Verify response">
+    Check that you receive a response from the AI
+  </Step>
+</Steps>
+
+<Callout type="warning">
+  **Note**: The chat may not have RAG functionality yet - that's what we'll
+  build in the coming modules
+</Callout>
+
+---
+
+## Understanding the Project Structure
+
+### Key Files and Their Purpose
+
+<CodeGroup>
+  <CodeGroupItem title="app/page.tsx">
+```typescript
+// Main application page
+// Contains the chat interface and resource management
+export default function Home() {
+  return (
+    <div>
+      <Chat />
+      <ResourceManager />
+    </div>
+  )
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="lib/db.ts">
+```typescript
+// Database configuration
+// Sets up Drizzle ORM with PostgreSQL
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+
+const client = postgres(process.env.DATABASE_URL!)
+export const db = drizzle(client)
+
+````
+  </CodeGroupItem>
+  <CodeGroupItem title="drizzle/schema.ts">
+```typescript
+// Database schema definition
+// Defines tables and their relationships
+import { pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+
+export const resources = pgTable('resources', {
+  id: text('id').primaryKey(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+````
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Component Structure
+
+<Columns cols={2}>
+  <Card title="components/chat.tsx" icon="message-circle">
+    **Chat Interface** - Message display - Input handling - AI integration
+  </Card>
+  <Card title="components/resource-manager.tsx" icon="database">
+    **Resource Management** - Add resources - List resources - Delete resources
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="app/api/chat/route.ts" icon="server">
+    **Chat API Route** - Handles chat requests - AI model integration - Response
+    streaming
+  </Card>
+  <Card title="app/actions.ts" icon="zap">
+    **Server Actions** - Database operations - Resource management - Form
+    handling
+  </Card>
+</Columns>
+
+---
+
+## Development Tools and Debugging
+
+### Browser Developer Tools
+
+<Callout type="info">
+  **Console**: Check for JavaScript errors and debug information
+</Callout>
+
+<Callout type="info">
+  **Network Tab**: Monitor API requests and responses
+</Callout>
+
+<Callout type="info">
+  **React DevTools**: Inspect component state and props
+</Callout>
+
+### Terminal Output
+
+<Callout type="info">
+  **Build Information**: TypeScript compilation status
+</Callout>
+
+<Callout type="info">**API Logs**: Server-side request handling</Callout>
+
+<Callout type="info">
+  **Database Logs**: Connection and query information
+</Callout>
+
+---
+
+## Interactive Elements
+
+### Development Environment Checklist
+
+<Callout type="info">
+  **Complete this checklist to verify your development environment**: ✅
+  Development server starts without errors ✅ Application loads in browser ✅ No
+  console errors ✅ Drizzle Studio accessible ✅ Can add resources to database
+  ✅ Chat interface responds ✅ Hot reload working ✅ TypeScript compilation
+  successful
+</Callout>
+
+### Common Development Commands
+
+<CodeGroup>
+  <CodeGroupItem title="Development">
+```bash
+# Start development server
+npm run dev
+
+# Build for production
+
+npm run build
+
+# Start production server
+
+npm start
+
+````
+  </CodeGroupItem>
+  <CodeGroupItem title="Database">
+```bash
+# Generate migrations
+npm run db:generate
+
+# Run migrations
+npm run db:migrate
+
+# Open Drizzle Studio
+npm run db:studio
+````
+
+  </CodeGroupItem>
+  <CodeGroupItem title="Code Quality">
+```bash
+# Run linter
+npm run lint
+
+# Format code
+
+npm run format
+
+# Type check
+
+npm run type-check
+
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Troubleshooting Common Issues
+
+<Callout type="warning">
+  **Issue**: Development server won't start
+  **Solution**: Check for port conflicts, ensure all dependencies are installed
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Database connection errors
+  **Solution**: Verify DATABASE_URL in .env.local, ensure PostgreSQL is running
+</Callout>
+
+<Callout type="warning">
+  **Issue**: TypeScript compilation errors
+  **Solution**: Check for missing dependencies, verify type definitions
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Hot reload not working
+  **Solution**: Check file permissions, restart the development server
+</Callout>
+
+---
+
+## Reflection Questions
+
+Take a moment to reflect on what you've learned:
+
+1. **How does the development environment support rapid iteration?**
+   - Consider hot reload and development tools
+   - Think about debugging capabilities
+
+2. **What role does Drizzle Studio play in development?**
+   - Consider database management and debugging
+   - Think about data inspection and testing
+
+3. **How does the current application structure support future development?**
+   - Consider modularity and separation of concerns
+   - Think about scalability and maintainability
+
+---
+
+## Next Steps
+
+Congratulations! You've successfully set up your development environment. In the next module, you'll:
+
+- **Understand the database schema** and existing table structure
+- **Add vector storage capabilities** to support embeddings
+- **Implement database migrations** for the enhanced schema
+
+Ready to continue? Proceed to [Module 3: Database Schema and Data Modeling](/learning-paths/rag-chatbot/module-3-home).
+
+<Callout>
+  **Key Takeaway**: A well-configured development environment with proper tools and debugging capabilities is essential for efficient RAG application development.
+</Callout>
+```

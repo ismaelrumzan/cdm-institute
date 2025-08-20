@@ -1,0 +1,310 @@
+---
+title: "3.1 Schema Analysis"
+description: "Review existing database schemas and understand the resources table structure. Analyze relationships and data modeling patterns."
+---
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Understand the existing database schema in the starter project
+- Analyze table relationships and data modeling patterns
+- Identify areas for enhancement to support RAG functionality
+- Plan the vector storage implementation
+
+<Callout>**Duration**: 30 minutes</Callout>
+
+---
+
+## Current Schema Overview
+
+Let's examine the existing database schema in the Vercel AI SDK RAG Starter project:
+
+<MDXImage
+  srcLight="/images/current-schema-light.png"
+  srcDark="/images/current-schema-dark.png"
+  width={700}
+  height={400}
+  alt="Current Database Schema"
+/>
+
+<Callout type="info">
+  **Starting Point**: The starter project includes a basic schema for storing
+  resources and managing data
+</Callout>
+
+---
+
+## Existing Schema Analysis
+
+### Resources Table
+
+<CodeGroup>
+  <CodeGroupItem title="Current Schema">
+```typescript
+// drizzle/schema.ts
+import { pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+
+export const resources = pgTable('resources', {
+  id: text('id').primaryKey(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Generated SQL">
+```sql
+CREATE TABLE resources (
+  id TEXT PRIMARY KEY,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Schema Components Analysis
+
+<Columns cols={2}>
+  <Card title="id" icon="hash">
+    **Primary Key** - Text-based unique identifier - Auto-generated or
+    user-provided - Used for resource identification
+  </Card>
+  <Card title="content" icon="file-text">
+    **Content Storage** - Text content of the resource - Knowledge base
+    information - Raw text for processing
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="created_at" icon="calendar">
+    **Timestamp** - Automatic creation timestamp - Audit trail and ordering -
+    Default value from database
+  </Card>
+  <Card title="Relationships" icon="link">
+    **Future Enhancement** - Will link to embeddings table - One-to-many
+    relationship - Foreign key constraints
+  </Card>
+</Columns>
+
+---
+
+## Schema Design Patterns
+
+### Current Design Decisions
+
+<Callout type="info">
+  **Simple Structure**: The current schema is intentionally simple to get
+  started quickly
+</Callout>
+
+<Callout type="info">
+  **Text Storage**: Content is stored as plain text, suitable for basic
+  operations
+</Callout>
+
+<Callout type="info">
+  **Minimal Metadata**: Limited metadata to keep the schema focused
+</Callout>
+
+### Design Considerations for RAG
+
+<Columns cols={2}>
+  <Card title="Vector Storage" icon="layers">
+    **Need**: Store embeddings for semantic search **Solution**: Add embeddings
+    table with vector columns
+  </Card>
+  <Card title="Chunking Support" icon="scissors">
+    **Need**: Support for text chunking **Solution**: Add chunk metadata and
+    relationships
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Metadata Enhancement" icon="info">
+    **Need**: Rich metadata for filtering **Solution**: Add source, type, and
+    tags fields
+  </Card>
+  <Card title="Performance" icon="zap">
+    **Need**: Fast similarity search **Solution**: Add HNSW indexes on vectors
+  </Card>
+</Columns>
+
+---
+
+## Schema Enhancement Plan
+
+### Phase 1: Vector Storage
+
+<Steps>
+  <Step title="1. Add embeddings table">
+    Create table for storing vector embeddings
+  </Step>
+  <Step title="2. Establish relationships">
+    Link resources to their embeddings
+  </Step>
+  <Step title="3. Add indexes">
+    Create HNSW indexes for fast similarity search
+  </Step>
+</Steps>
+
+### Phase 2: Enhanced Metadata
+
+<Steps>
+  <Step title="1. Add metadata fields">
+    Source, type, tags, and other metadata
+  </Step>
+  <Step title="2. Implement chunking">
+    Support for text chunking and chunk metadata
+  </Step>
+  <Step title="3. Add search optimization">
+    Full-text search indexes and filters
+  </Step>
+</Steps>
+
+---
+
+## Database Relationships
+
+### Current Relationships
+
+<Callout type="info">
+  **No Relationships**: The current schema has no foreign key relationships
+</Callout>
+
+### Planned Relationships
+
+<MDXImage
+  srcLight="/images/planned-relationships-light.png"
+  srcDark="/images/planned-relationships-dark.png"
+  width={600}
+  height={400}
+  alt="Planned Database Relationships"
+/>
+
+<CodeGroup>
+  <CodeGroupItem title="One-to-Many">
+    ```sql -- One resource can have multiple embeddings (chunks) resources.id ->
+    embeddings.resource_id ```
+  </CodeGroupItem>
+  <CodeGroupItem title="Cascade Operations">
+    ```sql -- When a resource is deleted, delete its embeddings FOREIGN KEY
+    (resource_id) REFERENCES resources(id) ON DELETE CASCADE ```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Data Flow Analysis
+
+### Current Data Flow
+
+<Steps>
+  <Step title="1. User Input">User adds content through the interface</Step>
+  <Step title="2. Storage">Content is stored directly in resources table</Step>
+  <Step title="3. Retrieval">
+    Content is retrieved for display or basic operations
+  </Step>
+</Steps>
+
+### Enhanced Data Flow (After RAG Implementation)
+
+<Steps>
+  <Step title="1. User Input">User adds content through the interface</Step>
+  <Step title="2. Chunking">Content is split into manageable chunks</Step>
+  <Step title="3. Embedding Generation">
+    Each chunk is converted to vector embeddings
+  </Step>
+  <Step title="4. Storage">
+    Content and embeddings are stored in respective tables
+  </Step>
+  <Step title="5. Indexing">
+    HNSW indexes are created for fast similarity search
+  </Step>
+</Steps>
+
+---
+
+## Performance Considerations
+
+### Current Performance
+
+<Columns cols={2}>
+  <Card title="Storage" icon="database">
+    **Simple**: Direct text storage **Performance**: Good for basic operations
+  </Card>
+  <Card title="Retrieval" icon="search">
+    **Basic**: Text-based search only **Performance**: Limited to exact matches
+  </Card>
+</Columns>
+
+### Enhanced Performance (Planned)
+
+<Columns cols={2}>
+  <Card title="Vector Search" icon="zap">
+    **Semantic**: Similarity-based search **Performance**: Fast with HNSW
+    indexes
+  </Card>
+  <Card title="Scalability" icon="trending-up">
+    **Optimized**: Efficient for large datasets **Performance**: Handles
+    millions of embeddings
+  </Card>
+</Columns>
+
+---
+
+## Interactive Elements
+
+### Schema Analysis Checklist
+
+<Callout type="info">
+  **Complete this checklist to understand the current schema**: ✅ Resources
+  table structure analyzed ✅ Current relationships identified ✅ Performance
+  characteristics understood ✅ Enhancement areas identified ✅ Vector storage
+  requirements planned ✅ Migration strategy outlined
+</Callout>
+
+### Schema Design Questions
+
+<Callout type="warning">
+  **Consider these questions for your schema design**: 1. What metadata fields
+  would be useful for your use case? 2. How will you handle different content
+  types (text, PDF, etc.)? 3. What chunking strategy will work best for your
+  content? 4. How will you handle embedding model updates?
+</Callout>
+
+---
+
+## Reflection Questions
+
+Take a moment to reflect on what you've learned:
+
+1. **What are the limitations of the current schema for RAG applications?**
+
+   - Consider vector storage requirements
+   - Think about semantic search capabilities
+
+2. **How does the current design support or hinder scalability?**
+
+   - Consider performance implications
+   - Think about data growth patterns
+
+3. **What additional metadata would be valuable for your specific use case?**
+   - Consider content categorization
+   - Think about search and filtering needs
+
+---
+
+## Next Steps
+
+You've analyzed the current schema! In the next section, you'll:
+
+- **Implement vector storage** with pgvector columns
+- **Create the embeddings table** with proper relationships
+- **Add HNSW indexes** for fast similarity search
+
+Ready to continue? Proceed to [Section 3.2: Vector Database Implementation](/learning-paths/rag-chatbot/module-3-2).
+
+<Callout>
+  **Key Takeaway**: Understanding the current schema is crucial for planning
+  effective enhancements that support RAG functionality while maintaining good
+  performance and scalability.
+</Callout>

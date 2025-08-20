@@ -1,0 +1,562 @@
+---
+title: "API Routes and Model Integration"
+description: "Create Next.js API routes for AI model integration. Implement streaming responses with proper error handling and configure model parameters for optimal performance."
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Create Next.js API routes for AI model integration
+- Implement streaming responses with proper error handling
+- Configure model parameters and system prompts
+- Handle different response formats and states
+
+## Module Overview
+
+This module focuses on creating the API routes that connect your chat interface to the AI model. You'll implement streaming responses, configure model parameters, and handle different types of responses effectively.
+
+<Callout>
+  **Time Estimate**: 90 minutes (30 + 35 + 25 minutes for each section)
+</Callout>
+
+---
+
+## 7.1 API Route Setup and Configuration
+
+**Duration**: 30 minutes
+
+### Understanding Next.js API Routes
+
+Next.js 14 App Router uses Route Handlers for API endpoints:
+
+<Callout type="info">
+  **Route Handlers** are the new way to create API endpoints in Next.js 14, replacing the older API Routes from the Pages Router.
+</Callout>
+
+### Creating the Chat API Route
+
+Create a new file `app/api/chat/route.ts`:
+
+<CodeGroup>
+  <CodeGroupItem title="app/api/chat/route.ts">
+    ```tsx
+    import { openai } from "@ai-sdk/openai";
+    import { convertToModelMessages, streamText, UIMessage } from "ai";
+
+    // Allow streaming responses up to 30 seconds
+    export const maxDuration = 30;
+
+    export async function POST(req: Request) {
+      try {
+        const { messages }: { messages: UIMessage[] } = await req.json();
+
+        const result = streamText({
+          model: openai("gpt-4o"),
+          messages: convertToModelMessages(messages),
+        });
+
+        return result.toUIMessageStreamResponse();
+      } catch (error) {
+        console.error("Chat API error:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to process request" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Understanding the Components
+
+<Columns cols={2}>
+  <Card title="streamText" icon="stream">
+    Creates a streaming text response from the AI model
+  </Card>
+  <Card title="convertToModelMessages" icon="convert">
+    Converts UI messages to model-compatible format
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="toUIMessageStreamResponse" icon="response">
+    Converts the stream to a UI-compatible response
+  </Card>
+  <Card title="maxDuration" icon="time">
+    Sets the maximum duration for the API route
+  </Card>
+</Columns>
+
+### Error Handling and Validation
+
+Implement comprehensive error handling:
+
+<CodeGroup>
+  <CodeGroupItem title="Enhanced Error Handling">
+    ```tsx
+    export async function POST(req: Request) {
+      try {
+        // Validate request method
+        if (req.method !== "POST") {
+          return new Response(
+            JSON.stringify({ error: "Method not allowed" }),
+            { status: 405, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        // Parse and validate request body
+        let body;
+        try {
+          body = await req.json();
+        } catch (e) {
+          return new Response(
+            JSON.stringify({ error: "Invalid JSON" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        const { messages } = body;
+
+        // Validate messages
+        if (!Array.isArray(messages)) {
+          return new Response(
+            JSON.stringify({ error: "Messages must be an array" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        // Process the request
+        const result = streamText({
+          model: openai("gpt-4o"),
+          messages: convertToModelMessages(messages),
+        });
+
+        return result.toUIMessageStreamResponse();
+      } catch (error) {
+        console.error("Chat API error:", error);
+        
+        // Return appropriate error response
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        return new Response(
+          JSON.stringify({ error: errorMessage }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Request Processing
+
+Understand how requests are processed:
+
+<Steps>
+  <Step title="1. Request Validation">
+    Validate the HTTP method and request body
+  </Step>
+  <Step title="2. Message Conversion">
+    Convert UI messages to model-compatible format
+  </Step>
+  <Step title="3. Model Processing">
+    Send messages to the AI model for processing
+  </Step>
+  <Step title="4. Stream Response">
+    Return the streaming response to the client
+  </Step>
+</Steps>
+
+---
+
+## 7.2 Model Configuration and System Prompts
+
+**Duration**: 35 minutes
+
+### Model Selection
+
+Choose the appropriate model for your use case:
+
+<Columns cols={2}>
+  <Card title="GPT-4o" icon="gpt4">
+    **Best for**: Complex reasoning, code generation
+    **Cost**: Higher
+    **Speed**: Slower
+  </Card>
+  <Card title="GPT-3.5-turbo" icon="gpt3">
+    **Best for**: General conversation, simple tasks
+    **Cost**: Lower
+    **Speed**: Faster
+  </Card>
+</Columns>
+
+### System Prompt Configuration
+
+Configure the system prompt to define your agent's behavior:
+
+<CodeGroup>
+  <CodeGroupItem title="System Prompt">
+    ```tsx
+    const systemPrompt = `You are a helpful AI assistant with access to a knowledge base.
+    
+    Your capabilities:
+    - Answer questions based on your knowledge base
+    - Add new information to your knowledge base when users provide it
+    - Search for relevant information when needed
+    
+    Guidelines:
+    - Always be helpful and accurate
+    - If you don't know something, say so
+    - Use your knowledge base to provide specific, relevant answers
+    - Be concise but thorough in your responses`;
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Parameter Tuning
+
+Configure model parameters for optimal performance:
+
+<CodeGroup>
+  <CodeGroupItem title="Model Configuration">
+    ```tsx
+    const result = streamText({
+      model: openai("gpt-4o"),
+      messages: convertToModelMessages(messages),
+      system: systemPrompt,
+      temperature: 0.7, // Controls creativity (0.0 = deterministic, 1.0 = creative)
+      maxTokens: 1000, // Maximum tokens in response
+      topP: 0.9, // Nucleus sampling parameter
+      frequencyPenalty: 0.1, // Reduces repetition
+      presencePenalty: 0.1, // Encourages new topics
+    });
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### RAG-Specific Configuration
+
+Optimize the model for RAG applications:
+
+<CodeGroup>
+  <CodeGroupItem title="RAG-Optimized Configuration">
+    ```tsx
+    const ragSystemPrompt = `You are a RAG (Retrieval-Augmented Generation) assistant.
+    
+    Your primary function is to:
+    1. Answer questions using information from your knowledge base
+    2. Add new information to your knowledge base when users provide it
+    3. Search for relevant information when needed
+    
+    Important guidelines:
+    - Only use information from your knowledge base to answer questions
+    - If you don't have relevant information, say "I don't have information about that in my knowledge base"
+    - When users provide new information, add it to your knowledge base
+    - Be specific and cite information when possible
+    - If you need to search for information, use the appropriate tools`;
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Environment-Based Configuration
+
+Use environment variables for different configurations:
+
+<CodeGroup>
+  <CodeGroupItem title="Environment Configuration">
+    ```tsx
+    const modelConfig = {
+      model: process.env.OPENAI_MODEL || "gpt-4o",
+      temperature: parseFloat(process.env.OPENAI_TEMPERATURE || "0.7"),
+      maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || "1000"),
+      systemPrompt: process.env.SYSTEM_PROMPT || defaultSystemPrompt,
+    };
+
+    const result = streamText({
+      model: openai(modelConfig.model),
+      messages: convertToModelMessages(messages),
+      system: modelConfig.systemPrompt,
+      temperature: modelConfig.temperature,
+      maxTokens: modelConfig.maxTokens,
+    });
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 7.3 Response Handling and Error Recovery
+
+**Duration**: 25 minutes
+
+### Message Formatting
+
+Handle different message formats and conversions:
+
+<CodeGroup>
+  <CodeGroupItem title="Message Formatting">
+    ```tsx
+    import { convertToModelMessages, UIMessage, CoreMessage } from "ai";
+
+    // Convert UI messages to model messages
+    const modelMessages: CoreMessage[] = convertToModelMessages(messages);
+
+    // Handle different message types
+    const processedMessages = modelMessages.map((message) => {
+      if (message.role === "user") {
+        return {
+          ...message,
+          content: message.content.trim(), // Clean user input
+        };
+      }
+      return message;
+    });
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Error Recovery Strategies
+
+Implement robust error recovery:
+
+<CodeGroup>
+  <CodeGroupItem title="Error Recovery">
+    ```tsx
+    export async function POST(req: Request) {
+      try {
+        // ... existing code ...
+      } catch (error) {
+        // Log the error for debugging
+        console.error("Chat API error:", error);
+        
+        // Determine error type and provide appropriate response
+        if (error instanceof Error) {
+          if (error.message.includes("rate limit")) {
+            return new Response(
+              JSON.stringify({ 
+                error: "Rate limit exceeded. Please try again later." 
+              }),
+              { status: 429, headers: { "Content-Type": "application/json" } }
+            );
+          }
+          
+          if (error.message.includes("authentication")) {
+            return new Response(
+              JSON.stringify({ 
+                error: "Authentication failed. Please check your API key." 
+              }),
+              { status: 401, headers: { "Content-Type": "application/json" } }
+            );
+          }
+        }
+        
+        // Generic error response
+        return new Response(
+          JSON.stringify({ 
+            error: "An unexpected error occurred. Please try again." 
+          }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Streaming Optimization
+
+Optimize streaming for better performance:
+
+<CodeGroup>
+  <CodeGroupItem title="Streaming Optimization">
+    ```tsx
+    const result = streamText({
+      model: openai("gpt-4o"),
+      messages: convertToModelMessages(messages),
+      system: systemPrompt,
+      temperature: 0.7,
+      maxTokens: 1000,
+      // Enable streaming optimization
+      stream: true,
+      // Add response headers for better streaming
+      headers: {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
+
+    // Add custom headers to the response
+    const response = result.toUIMessageStreamResponse();
+    response.headers.set("X-Streaming", "true");
+    response.headers.set("X-Model", "gpt-4o");
+    
+    return response;
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Response Validation
+
+Validate responses before sending them:
+
+<CodeGroup>
+  <CodeGroupItem title="Response Validation">
+    ```tsx
+    function validateResponse(response: any): boolean {
+      // Check if response has required fields
+      if (!response || typeof response !== "object") {
+        return false;
+      }
+      
+      // Validate message structure
+      if (response.messages && Array.isArray(response.messages)) {
+        for (const message of response.messages) {
+          if (!message.role || !message.content) {
+            return false;
+          }
+        }
+      }
+      
+      return true;
+    }
+
+    // Use validation in your API route
+    const result = streamText({
+      // ... configuration ...
+    });
+
+    // Validate the result before returning
+    if (!validateResponse(result)) {
+      throw new Error("Invalid response format");
+    }
+
+    return result.toUIMessageStreamResponse();
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Practical Exercise
+
+<Callout type="info">
+  **Exercise**: Test the API route and model integration
+</Callout>
+
+<Steps>
+  <Step title="1. Test Basic Functionality">
+    Send a simple message and verify the response
+  </Step>
+  <Step title="2. Test Error Handling">
+    Send invalid requests and verify error responses
+  </Step>
+  <Step title="3. Test Streaming">
+    Verify that responses are streaming correctly
+  </Step>
+  <Step title="4. Test Model Configuration">
+    Try different temperature and maxTokens settings
+  </Step>
+</Steps>
+
+### Testing the API Route
+
+Create a simple test script:
+
+<CodeGroup>
+  <CodeGroupItem title="Test Script">
+    ```tsx
+    async function testChatAPI() {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              id: "1",
+              role: "user",
+              content: "Hello, how are you?",
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body");
+      }
+
+      // Read the streaming response
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = new TextDecoder().decode(value);
+        console.log("Received chunk:", chunk);
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Reflection Questions
+
+<Callout type="warning">
+  Take a moment to reflect on these questions:
+</Callout>
+
+1. **How would you implement response caching?**
+   - Consider caching strategies and cache invalidation
+
+2. **What strategies would you use for model fallbacks?**
+   - Think about multiple models and failover mechanisms
+
+3. **How would you handle rate limiting and costs?**
+   - Consider API limits, cost optimization, and user quotas
+
+### Next Steps
+
+<Callout type="info">
+  **Ready to continue?** In the next module, you'll implement AI tools for dynamic knowledge base management.
+</Callout>
+
+---
+
+## Module Summary
+
+In this module, you successfully:
+
+- **API Route Setup**: Created Next.js API routes for AI model integration
+- **Model Configuration**: Configured model parameters and system prompts
+- **Response Handling**: Implemented streaming responses and error handling
+- **Optimization**: Added performance optimizations and validation
+
+### Key Takeaways
+
+- Next.js Route Handlers provide a clean way to create API endpoints
+- Proper model configuration is crucial for RAG applications
+- Streaming responses improve user experience
+- Comprehensive error handling ensures reliability
+
+### Resources
+
+- [Next.js Route Handlers](https://nextjs.org/docs/app/building-your-application/routing/route-handlers) - Official documentation
+- [AI SDK Streaming](https://sdk.vercel.ai/docs/api-reference/stream-text) - Streaming guide
+- [OpenAI API Documentation](https://platform.openai.com/docs/api-reference) - Model parameters
+- [Error Handling Best Practices](https://nextjs.org/docs/app/building-your-application/data-fetching/error-handling) - Next.js error handling
+
+### Troubleshooting
+
+If you encounter issues:
+
+1. **API Route Errors**: Check that the route file is in the correct location
+2. **Streaming Issues**: Verify that the response is properly formatted
+3. **Model Errors**: Check API key and model configuration
+4. **Performance Issues**: Monitor response times and optimize parameters
+
+<Callout type="success">
+  **Module Complete!** Your API routes are working. Continue to [Module 8: Tool Integration and Multi-Step Reasoning](/learning-paths/rag-chatbot/module-8) to add AI tools for knowledge management.
+</Callout>

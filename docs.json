@@ -8,6 +8,7 @@
     "dark": "#15803D"
   },
   "favicon": "/favicon.svg",
+  "icons": { "library": "lucide" },
   "navigation": {
     "tabs": [
       {
@@ -27,19 +28,13 @@
                 "pages": [
                   "learning-paths/rag-chatbot/home",
                   {
-                    "group": "Introduction & Setup",
-                    "icon": "book",
-                    "pages": ["learning-paths/rag-chatbot/module-1"]
-                  },
-                  {
-                    "group": "Understanding RAG Concepts",
-                    "icon": "book",
-                    "pages": ["learning-paths/rag-chatbot/module-1"]
-                  },
-                  {
-                    "group": "Building the Chat Interface",
-                    "icon": "book",
-                    "pages": ["learning-paths/rag-chatbot/module-1"]
+                    "group": "Module 1: Understanding RAG Fundamentals",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-1-home",
+                      "learning-paths/rag-chatbot/module-1-1",
+                      "learning-paths/rag-chatbot/module-1-2",
+                      "learning-paths/rag-chatbot/module-1-3"
+                    ]
                   }
                 ]
               }

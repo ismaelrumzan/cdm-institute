@@ -1,0 +1,195 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "Cordoba Institute of Knowledge",
+  "colors": {
+    "primary": "#16A34A",
+    "light": "#07C983",
+    "dark": "#15803D"
+  },
+  "favicon": "/favicon.svg",
+  "icons": { "library": "lucide" },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Home",
+        "pages": ["index"]
+      },
+      {
+        "tab": "Learning Paths",
+        "menu": [
+          {
+            "item": "RAG Chatbot",
+            "icon": "brain-circuit",
+            "groups": [
+              {
+                "group": "RAG Chatbot",
+                "icon": "brain-circuit",
+                "pages": [
+                  "learning-paths/rag-chatbot/home",
+                  {
+                    "group": "Module 1: Understanding RAG Fundamentals",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-1-home",
+                      "learning-paths/rag-chatbot/module-1-1",
+                      "learning-paths/rag-chatbot/module-1-2",
+                      "learning-paths/rag-chatbot/module-1-3"
+                    ]
+                  },
+
+                  {
+                    "group": "Module 2: Project Setup and Environment Configuration",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-2-home",
+                      "learning-paths/rag-chatbot/module-2-1",
+                      "learning-paths/rag-chatbot/module-2-2",
+                      "learning-paths/rag-chatbot/module-2-3"
+                    ]
+                  },
+                  {
+                    "group": "Module 3: Database Schema and Data Modeling",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-3-home",
+                      "learning-paths/rag-chatbot/module-3-1",
+                      "learning-paths/rag-chatbot/module-3-2",
+                      "learning-paths/rag-chatbot/module-3-3"
+                    ]
+                  },
+                  {
+                    "group": "Module 4: AI SDK Integration and Embedding Generation",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-4-home",
+                      "learning-paths/rag-chatbot/module-4-1",
+                      "learning-paths/rag-chatbot/module-4-2",
+                      "learning-paths/rag-chatbot/module-4-3"
+                    ]
+                  },
+                  {
+                    "group": "Module 5: Server Actions and Data Management",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-5-home",
+                      "learning-paths/rag-chatbot/module-5-1",
+                      "learning-paths/rag-chatbot/module-5-2",
+                      "learning-paths/rag-chatbot/module-5-3"
+                    ]
+                  },
+                  {
+                    "group": "Module 6: Building the Chat Interface",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-6-home",
+                      "learning-paths/rag-chatbot/module-6-1",
+                      "learning-paths/rag-chatbot/module-6-2",
+                      "learning-paths/rag-chatbot/module-6-3"
+                    ]
+                  },
+                  {
+                    "group": "Module 7: API Routes and Model Integration",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-7-home",
+                      "learning-paths/rag-chatbot/module-7-1",
+                      "learning-paths/rag-chatbot/module-7-2",
+                      "learning-paths/rag-chatbot/module-7-3"
+                    ]
+                  },
+                  {
+                    "group": "Module 8: Tool Integration and Multi-Step Reasoning",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-8-home",
+                      "learning-paths/rag-chatbot/module-8-1",
+                      "learning-paths/rag-chatbot/module-8-2",
+                      "learning-paths/rag-chatbot/module-8-3"
+                    ]
+                  },
+                  {
+                    "group": "Module 9: Semantic Search and Retrieval",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-9-home",
+                      "learning-paths/rag-chatbot/module-9-1",
+                      "learning-paths/rag-chatbot/module-9-2",
+                      "learning-paths/rag-chatbot/module-9-3"
+                    ]
+                  },
+                  {
+                    "group": "Module 10: Production Deployment and Optimization",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-10-home",
+                      "learning-paths/rag-chatbot/module-10-1",
+                      "learning-paths/rag-chatbot/module-10-2",
+                      "learning-paths/rag-chatbot/module-10-3"
+                    ]
+                  },
+                  {
+                    "group": "Module 11: Testing and Quality Assurance",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-11-home",
+                      "learning-paths/rag-chatbot/module-11-1",
+                      "learning-paths/rag-chatbot/module-11-2",
+                      "learning-paths/rag-chatbot/module-11-3"
+                    ]
+                  },
+                  {
+                    "group": "Module 12: Real-World Applications and Best Practices",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-12-home",
+                      "learning-paths/rag-chatbot/module-12-1",
+                      "learning-paths/rag-chatbot/module-12-2",
+                      "learning-paths/rag-chatbot/module-12-3"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Topics",
+        "pages": ["topics/ai/concepts"]
+      },
+      {
+        "tab": "Reference",
+        "pages": [
+          "reference/cursor",
+          "reference/claude-code",
+          "reference/windsurf"
+        ]
+      },
+      {
+        "tab": "Tutorials",
+        "pages": [
+          "tutorials/cursor",
+          "tutorials/claude-code",
+          "tutorials/windsurf"
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/lawh-logo.png",
+    "dark": "/logo/lawh-logo.png"
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "About Cordoba",
+      "href": "https://cordoba.institute/about"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/ismaelrumzan/cdm-institute"
+    }
+  }
+}

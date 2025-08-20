@@ -1,0 +1,533 @@
+---
+title: "Server Actions and Data Management"
+description: "Understand and extend the existing Server Actions in the starter project. Create robust error handling and validation for data management operations."
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Understand and extend the existing Server Actions in the starter project
+- Create robust error handling and validation
+- Design efficient data flow patterns
+- Implement proper TypeScript types and schemas
+
+## Module Overview
+
+This module focuses on enhancing the server actions for better data management. You'll extend the existing functionality, add comprehensive error handling, and implement proper validation for your RAG agent.
+
+<Callout>
+  **Time Estimate**: 90 minutes (30 + 35 + 25 minutes for each section)
+</Callout>
+
+---
+
+## 5.1 Server Actions Fundamentals
+
+**Duration**: 30 minutes
+
+### Understanding Server Actions
+
+Server Actions are Next.js 14's solution for handling form submissions and data mutations on the server side:
+
+<Callout type="info">
+  **Server Actions** allow you to run asynchronous code directly on the server, making them perfect for database operations and API calls.
+</Callout>
+
+### The "use server" Directive
+
+<CodeGroup>
+  <CodeGroupItem title="Server Action Structure">
+    ```tsx
+    "use server"; // This directive marks the file as server-only code
+
+    import { z } from "zod";
+    import { db } from "@/lib/db";
+
+    export async function createResource(input: FormData) {
+      // Server-side code here
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Existing Implementation Review
+
+Let's examine the current `createResource` function:
+
+<CodeGroup>
+  <CodeGroupItem title="Current Implementation">
+    ```tsx
+    "use server";
+
+    import {
+      NewResourceParams,
+      insertResourceSchema,
+      resources,
+    } from "@/lib/db/schema/resources";
+    import { db } from "../db";
+
+    export const createResource = async (input: NewResourceParams) => {
+      try {
+        const { content } = insertResourceSchema.parse(input);
+
+        const [resource] = await db
+          .insert(resources)
+          .values({ content })
+          .returning();
+
+        return "Resource successfully created.";
+      } catch (e) {
+        if (e instanceof Error)
+          return e.message.length > 0 ? e.message : "Error, please try again.";
+      }
+    };
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Type Safety with Zod
+
+The starter uses Zod for runtime type validation:
+
+<Columns cols={2}>
+  <Card title="Schema Definition" icon="schema">
+    Defines the expected structure of input data
+  </Card>
+  <Card title="Runtime Validation" icon="check">
+    Validates data at runtime, not just compile time
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Error Messages" icon="message">
+    Provides clear error messages for invalid data
+  </Card>
+  <Card title="TypeScript Integration" icon="typescript">
+    Generates TypeScript types automatically
+  </Card>
+</Columns>
+
+### Understanding the Schema
+
+<CodeGroup>
+  <CodeGroupItem title="Resource Schema">
+    ```tsx
+    import { z } from "zod";
+
+    export const insertResourceSchema = z.object({
+      content: z.string().min(1, "Content is required"),
+    });
+
+    export type NewResourceParams = z.infer<typeof insertResourceSchema>;
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 5.2 Resource Management Enhancement
+
+**Duration**: 35 minutes
+
+### Extending the createResource Function
+
+Now let's enhance the `createResource` function to include embedding generation:
+
+<CodeGroup>
+  <CodeGroupItem title="Enhanced createResource">
+    ```tsx
+    "use server";
+
+    import {
+      NewResourceParams,
+      insertResourceSchema,
+      resources,
+    } from "@/lib/db/schema/resources";
+    import { db } from "../db";
+    import { storeEmbeddings } from "../ai/embedding-storage";
+
+    export const createResource = async (input: NewResourceParams) => {
+      try {
+        // Validate input
+        const { content } = insertResourceSchema.parse(input);
+
+        // Create the resource
+        const [resource] = await db
+          .insert(resources)
+          .values({ content })
+          .returning();
+
+        // Generate and store embeddings
+        await storeEmbeddings(resource.id, content);
+
+        return {
+          success: true,
+          message: "Resource successfully created and embedded.",
+          resourceId: resource.id,
+        };
+      } catch (error) {
+        console.error("Error creating resource:", error);
+        
+        if (error instanceof Error) {
+          return {
+            success: false,
+            message: error.message.length > 0 
+              ? error.message 
+              : "Error, please try again.",
+          };
+        }
+        
+        return {
+          success: false,
+          message: "An unexpected error occurred.",
+        };
+      }
+    };
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Adding Resource Retrieval
+
+Create a function to retrieve resources:
+
+<CodeGroup>
+  <CodeGroupItem title="getResource Function">
+    ```tsx
+    export const getResource = async (id: string) => {
+      try {
+        const resource = await db
+          .select()
+          .from(resources)
+          .where(eq(resources.id, id))
+          .limit(1);
+
+        if (resource.length === 0) {
+          return {
+            success: false,
+            message: "Resource not found.",
+          };
+        }
+
+        return {
+          success: true,
+          resource: resource[0],
+        };
+      } catch (error) {
+        console.error("Error retrieving resource:", error);
+        return {
+          success: false,
+          message: "Error retrieving resource.",
+        };
+      }
+    };
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Adding Resource Listing
+
+Create a function to list all resources:
+
+<CodeGroup>
+  <CodeGroupItem title="listResources Function">
+    ```tsx
+    export const listResources = async (limit: number = 10, offset: number = 0) => {
+      try {
+        const resourceList = await db
+          .select()
+          .from(resources)
+          .limit(limit)
+          .offset(offset)
+          .orderBy(desc(resources.createdAt));
+
+        const totalCount = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(resources);
+
+        return {
+          success: true,
+          resources: resourceList,
+          totalCount: totalCount[0].count,
+          hasMore: totalCount[0].count > offset + limit,
+        };
+      } catch (error) {
+        console.error("Error listing resources:", error);
+        return {
+          success: false,
+          message: "Error listing resources.",
+        };
+      }
+    };
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Enhanced Error Recovery
+
+Implement better error handling with specific error types:
+
+<CodeGroup>
+  <CodeGroupItem title="Error Types">
+    ```tsx
+    export class ResourceError extends Error {
+      constructor(
+        message: string,
+        public code: 'VALIDATION_ERROR' | 'DATABASE_ERROR' | 'EMBEDDING_ERROR' | 'NOT_FOUND'
+      ) {
+        super(message);
+        this.name = 'ResourceError';
+      }
+    }
+
+    export const handleResourceError = (error: unknown) => {
+      if (error instanceof ResourceError) {
+        return {
+          success: false,
+          message: error.message,
+          code: error.code,
+        };
+      }
+      
+      if (error instanceof Error) {
+        return {
+          success: false,
+          message: error.message,
+          code: 'UNKNOWN_ERROR' as const,
+        };
+      }
+      
+      return {
+        success: false,
+        message: "An unexpected error occurred.",
+        code: 'UNKNOWN_ERROR' as const,
+      };
+    };
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 5.3 Testing and Validation
+
+**Duration**: 25 minutes
+
+### Testing the Enhanced Pipeline
+
+Create comprehensive tests for your server actions:
+
+<CodeGroup>
+  <CodeGroupItem title="Test Function">
+    ```tsx
+    export async function testResourcePipeline() {
+      const testContent = "This is a test resource for RAG. It will be chunked and embedded.";
+      
+      try {
+        // Test resource creation
+        const createResult = await createResource({ content: testContent });
+        console.log("Create result:", createResult);
+        
+        if (!createResult.success) {
+          throw new Error(`Failed to create resource: ${createResult.message}`);
+        }
+        
+        // Test resource retrieval
+        const getResult = await getResource(createResult.resourceId);
+        console.log("Get result:", getResult);
+        
+        if (!getResult.success) {
+          throw new Error(`Failed to retrieve resource: ${getResult.message}`);
+        }
+        
+        // Test resource listing
+        const listResult = await listResources(5, 0);
+        console.log("List result:", listResult);
+        
+        return {
+          success: true,
+          message: "All tests passed!",
+          resourceId: createResult.resourceId,
+        };
+      } catch (error) {
+        console.error("Test failed:", error);
+        return {
+          success: false,
+          message: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Database Inspection
+
+Use Drizzle Studio to verify your data:
+
+<Steps>
+  <Step title="1. Open Drizzle Studio">
+    Run `npm run db:studio` to open the database interface
+  </Step>
+  <Step title="2. Check Resources Table">
+    Verify that resources are being created correctly
+  </Step>
+  <Step title="3. Check Embeddings Table">
+    Confirm that embeddings are being generated and stored
+  </Step>
+  <Step title="4. Verify Relationships">
+    Check that foreign key relationships are working
+  </Step>
+</Steps>
+
+### Error Scenarios Testing
+
+Test various error conditions:
+
+<CodeGroup>
+  <CodeGroupItem title="Error Testing">
+    ```tsx
+    export async function testErrorScenarios() {
+      const tests = [
+        {
+          name: "Empty content",
+          input: { content: "" },
+          expectedError: "Content is required",
+        },
+        {
+          name: "Very long content",
+          input: { content: "a".repeat(10000) },
+          expectedError: null, // Should succeed
+        },
+        {
+          name: "Invalid input type",
+          input: { content: 123 as any },
+          expectedError: "Expected string, received number",
+        },
+      ];
+      
+      for (const test of tests) {
+        try {
+          const result = await createResource(test.input);
+          console.log(`${test.name}: ${result.success ? 'PASS' : 'FAIL'}`);
+        } catch (error) {
+          console.log(`${test.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Performance Monitoring
+
+Add performance tracking to your server actions:
+
+<CodeGroup>
+  <CodeGroupItem title="Performance Tracking">
+    ```tsx
+    export const createResourceWithMetrics = async (input: NewResourceParams) => {
+      const startTime = Date.now();
+      
+      try {
+        const result = await createResource(input);
+        const duration = Date.now() - startTime;
+        
+        console.log(`Resource creation took ${duration}ms`);
+        
+        return {
+          ...result,
+          metrics: {
+            duration,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        console.error(`Resource creation failed after ${duration}ms:`, error);
+        throw error;
+      }
+    };
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Practical Exercise
+
+<Callout type="info">
+  **Exercise**: Test the enhanced server actions
+</Callout>
+
+<Steps>
+  <Step title="1. Test Resource Creation">
+    Create a resource and verify it's stored correctly
+  </Step>
+  <Step title="2. Test Error Handling">
+    Try creating resources with invalid data
+  </Step>
+  <Step title="3. Test Resource Retrieval">
+    Retrieve the created resource and verify its content
+  </Step>
+  <Step title="4. Test Resource Listing">
+    List resources and verify pagination works
+  </Step>
+</Steps>
+
+### Reflection Questions
+
+<Callout type="warning">
+  Take a moment to reflect on these questions:
+</Callout>
+
+1. **How would you implement optimistic updates?**
+   - Consider UI responsiveness and error handling
+
+2. **What caching strategies would you use for frequently accessed data?**
+   - Think about Redis, in-memory caching, and cache invalidation
+
+3. **How would you handle concurrent modifications?**
+   - Consider database transactions and conflict resolution
+
+### Next Steps
+
+<Callout type="info">
+  **Ready to continue?** In the next module, you'll build the chat interface with real-time streaming.
+</Callout>
+
+---
+
+## Module Summary
+
+In this module, you successfully:
+
+- **Server Actions Understanding**: Learned about Next.js Server Actions and their benefits
+- **Resource Management**: Enhanced the createResource function with embedding generation
+- **Error Handling**: Implemented comprehensive error handling and validation
+- **Testing**: Created tests to verify the enhanced functionality
+
+### Key Takeaways
+
+- Server Actions provide a clean way to handle server-side operations
+- Zod validation ensures data integrity at runtime
+- Proper error handling improves user experience and debugging
+- Performance monitoring helps identify bottlenecks
+
+### Resources
+
+- [Next.js Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations) - Official documentation
+- [Zod Validation](https://zod.dev/) - Runtime type validation library
+- [Drizzle ORM](https://orm.drizzle.team/) - Type-safe database toolkit
+- [Error Handling Best Practices](https://nextjs.org/docs/app/building-your-application/data-fetching/error-handling) - Next.js error handling
+
+### Troubleshooting
+
+If you encounter issues:
+
+1. **Server Action Errors**: Check that the "use server" directive is at the top of the file
+2. **Validation Errors**: Verify your Zod schema matches your expected input
+3. **Database Errors**: Check database connectivity and schema compatibility
+4. **Embedding Errors**: Verify OpenAI API key and rate limits
+
+<Callout type="success">
+  **Module Complete!** Your server actions are enhanced and tested. Continue to [Module 6: Building the Chat Interface](/learning-paths/rag-chatbot/module-6) to create the user interface.
+</Callout>

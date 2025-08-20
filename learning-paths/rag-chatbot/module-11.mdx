@@ -1,0 +1,759 @@
+---
+title: "Testing and Quality Assurance"
+description: "Implement comprehensive testing strategies for RAG applications. Test embedding generation, search functionality, and ensure application reliability and performance."
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Implement comprehensive testing strategies for RAG applications
+- Test embedding generation and storage
+- Validate search functionality and relevance
+- Ensure application reliability and performance
+
+## Module Overview
+
+This module focuses on implementing comprehensive testing strategies for your RAG application. You'll learn how to test embedding generation, search functionality, user experience, and overall application reliability.
+
+<Callout>
+  **Time Estimate**: 90 minutes (30 + 35 + 25 minutes for each section)
+</Callout>
+
+---
+
+## 11.1 Testing Strategy and Best Practices
+
+**Duration**: 30 minutes
+
+### Understanding RAG Testing Challenges
+
+RAG applications present unique testing challenges:
+
+<Callout type="info">
+  **RAG Testing Complexity**: Unlike traditional applications, RAG systems
+  involve AI models, vector databases, and semantic search, making testing more
+  complex.
+</Callout>
+
+### Testing Pyramid for RAG Applications
+
+<MDXImage
+  srcLight="/images/testing-pyramid-light.png"
+  srcDark="/images/testing-pyramid-dark.png"
+  width={600}
+  height={400}
+  alt="Testing Pyramid for RAG Applications"
+/>
+
+**Testing Layers**:
+
+1. **Unit Tests**: Individual functions and components
+2. **Integration Tests**: Database and API interactions
+3. **End-to-End Tests**: Complete user workflows
+4. **Performance Tests**: Load and stress testing
+
+### Testing Categories
+
+<Columns cols={2}>
+  <Card title="Functional Testing" icon="function">
+    Test core functionality and features Verify embedding generation and search
+  </Card>
+  <Card title="Performance Testing" icon="speed">
+    Test response times and throughput Monitor resource usage and costs
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Quality Testing" icon="quality">
+    Test search relevance and accuracy Validate embedding quality
+  </Card>
+  <Card title="User Experience Testing" icon="user">
+    Test UI/UX and accessibility Verify error handling and feedback
+  </Card>
+</Columns>
+
+### Testing Tools and Frameworks
+
+Set up your testing environment:
+
+<CodeGroup>
+  <CodeGroupItem title="Testing Setup">
+    ```json
+    // package.json
+    {
+      "scripts": {
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "test:e2e": "playwright test",
+        "test:performance": "artillery run performance-tests.yml"
+      },
+      "devDependencies": {
+        "@testing-library/react": "^14.0.0",
+        "@testing-library/jest-dom": "^6.0.0",
+        "jest": "^29.0.0",
+        "playwright": "^1.40.0",
+        "artillery": "^2.0.0"
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Jest Configuration
+
+Configure Jest for your Next.js application:
+
+<CodeGroup>
+  <CodeGroupItem title="jest.config.js">
+    ```js
+    const nextJest = require('next/jest')
+
+    const createJestConfig = nextJest({
+      // Provide the path to your Next.js app to load next.config.js and .env files
+      dir: './',
+    })
+
+    // Add any custom config to be passed to Jest
+    const customJestConfig = {
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      testEnvironment: 'jest-environment-jsdom',
+      moduleNameMapping: {
+        '^@/(.*)$': '<rootDir>/$1',
+      },
+      collectCoverageFrom: [
+        'app/**/*.{js,jsx,ts,tsx}',
+        'lib/**/*.{js,jsx,ts,tsx}',
+        '!**/*.d.ts',
+        '!**/node_modules/**',
+      ],
+    }
+
+    // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
+    module.exports = createJestConfig(customJestConfig)
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 11.2 Embedding and Search Testing
+
+**Duration**: 35 minutes
+
+### Testing Embedding Generation
+
+Create tests for embedding generation functionality:
+
+<CodeGroup>
+  <CodeGroupItem title="Embedding Tests">
+    ```tsx
+    // __tests__/embedding.test.ts
+    import { generateEmbeddings, validateEmbedding } from '@/lib/ai/embedding';
+
+    describe('Embedding Generation', () => {
+      test('should generate embeddings for valid text', async () => {
+        const testText = 'This is a test document for RAG.';
+        const embeddings = await generateEmbeddings(testText);
+
+        expect(embeddings).toBeDefined();
+        expect(embeddings.length).toBeGreaterThan(0);
+        expect(embeddings[0]).toHaveProperty('content');
+        expect(embeddings[0]).toHaveProperty('embedding');
+      });
+
+      test('should generate valid embedding vectors', async () => {
+        const testText = 'Test content for embedding validation.';
+        const embeddings = await generateEmbeddings(testText);
+
+        for (const { embedding } of embeddings) {
+          expect(validateEmbedding(embedding)).toBe(true);
+          expect(embedding.length).toBe(1536); // OpenAI ada-002 dimensions
+          expect(embedding.every(val => typeof val === 'number')).toBe(true);
+        }
+      });
+
+      test('should handle empty text gracefully', async () => {
+        await expect(generateEmbeddings('')).rejects.toThrow();
+      });
+
+      test('should handle very long text', async () => {
+        const longText = 'a'.repeat(10000);
+        const embeddings = await generateEmbeddings(longText);
+
+        expect(embeddings.length).toBeGreaterThan(0);
+      });
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Testing Search Functionality
+
+Test your semantic search implementation:
+
+<CodeGroup>
+  <CodeGroupItem title="Search Tests">
+    ```tsx
+    // __tests__/search.test.ts
+    import { findRelevantContent, advancedSearch } from '@/lib/ai/search';
+
+    describe('Semantic Search', () => {
+      beforeEach(async () => {
+        // Set up test data
+        await setupTestData();
+      });
+
+      test('should find relevant content for queries', async () => {
+        const query = 'machine learning';
+        const results = await findRelevantContent(query, 5);
+
+        expect(results).toBeDefined();
+        expect(results.length).toBeGreaterThan(0);
+        expect(results[0]).toHaveProperty('content');
+        expect(results[0]).toHaveProperty('similarity');
+        expect(results[0].similarity).toBeGreaterThan(0.7);
+      });
+
+      test('should return results ordered by similarity', async () => {
+        const query = 'artificial intelligence';
+        const results = await findRelevantContent(query, 3);
+
+        for (let i = 1; i < results.length; i++) {
+          expect(results[i-1].similarity).toBeGreaterThanOrEqual(results[i].similarity);
+        }
+      });
+
+      test('should respect similarity threshold', async () => {
+        const query = 'unrelated topic';
+        const results = await findRelevantContent(query, 5, 0.9);
+
+        // Should return fewer results with high threshold
+        expect(results.length).toBeLessThanOrEqual(5);
+        for (const result of results) {
+          expect(result.similarity).toBeGreaterThan(0.9);
+        }
+      });
+
+      test('should handle advanced search with filters', async () => {
+        const query = 'programming';
+        const results = await advancedSearch({
+          query,
+          limit: 3,
+          similarityThreshold: 0.7,
+        });
+
+        expect(results).toBeDefined();
+        expect(results.length).toBeLessThanOrEqual(3);
+      });
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Testing Database Operations
+
+Test database interactions:
+
+<CodeGroup>
+  <CodeGroupItem title="Database Tests">
+    ```tsx
+    // __tests__/database.test.ts
+    import { db } from '@/lib/db';
+    import { resources, embeddings } from '@/lib/db/schema';
+    import { createResource, getResource } from '@/lib/actions/resources';
+
+    describe('Database Operations', () => {
+      beforeEach(async () => {
+        // Clean up test data
+        await db.delete(embeddings);
+        await db.delete(resources);
+      });
+
+      test('should create resource with embeddings', async () => {
+        const testContent = 'Test resource content for database testing.';
+        const result = await createResource({ content: testContent });
+
+        expect(result.success).toBe(true);
+
+        // Verify resource was created
+        const resources = await db.select().from(resources);
+        expect(resources.length).toBe(1);
+        expect(resources[0].content).toBe(testContent);
+
+        // Verify embeddings were created
+        const embeddings = await db.select().from(embeddings);
+        expect(embeddings.length).toBeGreaterThan(0);
+      });
+
+      test('should retrieve resource by ID', async () => {
+        // Create test resource
+        const [resource] = await db.insert(resources).values({
+          content: 'Test resource for retrieval.',
+        }).returning();
+
+        const result = await getResource(resource.id);
+
+        expect(result.success).toBe(true);
+        expect(result.resource).toBeDefined();
+        expect(result.resource.id).toBe(resource.id);
+      });
+
+      test('should handle database errors gracefully', async () => {
+        // Test with invalid data
+        const result = await createResource({ content: '' });
+
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('Content is required');
+      });
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Performance Testing
+
+Test application performance:
+
+<CodeGroup>
+  <CodeGroupItem title="Performance Tests">
+    ```tsx
+    // __tests__/performance.test.ts
+    import { findRelevantContent } from '@/lib/ai/search';
+
+    describe('Performance Tests', () => {
+      test('should complete search within acceptable time', async () => {
+        const startTime = Date.now();
+
+        await findRelevantContent('test query', 5);
+
+        const duration = Date.now() - startTime;
+        expect(duration).toBeLessThan(5000); // Should complete within 5 seconds
+      });
+
+      test('should handle concurrent searches', async () => {
+        const queries = [
+          'machine learning',
+          'artificial intelligence',
+          'deep learning',
+          'neural networks',
+        ];
+
+        const startTime = Date.now();
+
+        const promises = queries.map(query =>
+          findRelevantContent(query, 3)
+        );
+
+        const results = await Promise.all(promises);
+        const duration = Date.now() - startTime;
+
+        expect(results.length).toBe(queries.length);
+        expect(duration).toBeLessThan(10000); // Should complete within 10 seconds
+      });
+
+      test('should maintain performance with large datasets', async () => {
+        // This test would require a large dataset
+        // In practice, you'd set up test data with thousands of embeddings
+
+        const startTime = Date.now();
+        await findRelevantContent('test query', 5);
+        const duration = Date.now() - startTime;
+
+        // Performance should not degrade significantly
+        expect(duration).toBeLessThan(3000);
+      });
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 11.3 User Experience Testing
+
+**Duration**: 25 minutes
+
+### Testing Chat Interface
+
+Test the chat interface functionality:
+
+<CodeGroup>
+  <CodeGroupItem title="Chat Interface Tests">
+    ```tsx
+    // __tests__/chat.test.tsx
+    import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+    import { useChat } from '@ai-sdk/react';
+    import Chat from '@/app/page';
+
+    // Mock the useChat hook
+    jest.mock('@ai-sdk/react', () => ({
+      useChat: jest.fn(),
+    }));
+
+    describe('Chat Interface', () => {
+      const mockUseChat = useChat as jest.MockedFunction<typeof useChat>;
+
+      beforeEach(() => {
+        mockUseChat.mockReturnValue({
+          messages: [],
+          sendMessage: jest.fn(),
+          isLoading: false,
+          error: null,
+        });
+      });
+
+      test('should render chat interface', () => {
+        render(<Chat />);
+
+        expect(screen.getByPlaceholderText('Ask me anything...')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
+      });
+
+      test('should send message when form is submitted', async () => {
+        const mockSendMessage = jest.fn();
+        mockUseChat.mockReturnValue({
+          messages: [],
+          sendMessage: mockSendMessage,
+          isLoading: false,
+          error: null,
+        });
+
+        render(<Chat />);
+
+        const input = screen.getByPlaceholderText('Ask me anything...');
+        const sendButton = screen.getByRole('button', { name: /send/i });
+
+        fireEvent.change(input, { target: { value: 'Test message' } });
+        fireEvent.click(sendButton);
+
+        expect(mockSendMessage).toHaveBeenCalledWith({ text: 'Test message' });
+      });
+
+      test('should show loading state', () => {
+        mockUseChat.mockReturnValue({
+          messages: [],
+          sendMessage: jest.fn(),
+          isLoading: true,
+          error: null,
+        });
+
+        render(<Chat />);
+
+        expect(screen.getByText('Assistant')).toBeInTheDocument();
+        // Should show loading indicator
+        expect(screen.getByRole('button', { name: /send/i })).toBeDisabled();
+      });
+
+      test('should display messages correctly', () => {
+        const mockMessages = [
+          {
+            id: '1',
+            role: 'user',
+            content: 'Hello',
+          },
+          {
+            id: '2',
+            role: 'assistant',
+            content: 'Hi there! How can I help you?',
+          },
+        ];
+
+        mockUseChat.mockReturnValue({
+          messages: mockMessages,
+          sendMessage: jest.fn(),
+          isLoading: false,
+          error: null,
+        });
+
+        render(<Chat />);
+
+        expect(screen.getByText('Hello')).toBeInTheDocument();
+        expect(screen.getByText('Hi there! How can I help you?')).toBeInTheDocument();
+      });
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Testing API Routes
+
+Test your API endpoints:
+
+<CodeGroup>
+  <CodeGroupItem title="API Route Tests">
+    ```tsx
+    // __tests__/api.test.ts
+    import { createMocks } from 'node-mocks-http';
+    import { POST } from '@/app/api/chat/route';
+
+    describe('Chat API', () => {
+      test('should handle valid chat request', async () => {
+        const { req, res } = createMocks({
+          method: 'POST',
+          body: {
+            messages: [
+              {
+                id: '1',
+                role: 'user',
+                content: 'Hello',
+              },
+            ],
+          },
+        });
+
+        await POST(req);
+
+        expect(res._getStatusCode()).toBe(200);
+        // Check that response is a stream
+        expect(res._getHeaders()['content-type']).toContain('text/plain');
+      });
+
+      test('should handle invalid request method', async () => {
+        const { req, res } = createMocks({
+          method: 'GET',
+        });
+
+        await POST(req);
+
+        expect(res._getStatusCode()).toBe(405);
+      });
+
+      test('should handle invalid JSON', async () => {
+        const { req, res } = createMocks({
+          method: 'POST',
+          body: 'invalid json',
+        });
+
+        await POST(req);
+
+        expect(res._getStatusCode()).toBe(400);
+      });
+
+      test('should handle missing messages', async () => {
+        const { req, res } = createMocks({
+          method: 'POST',
+          body: {},
+        });
+
+        await POST(req);
+
+        expect(res._getStatusCode()).toBe(400);
+      });
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### End-to-End Testing
+
+Set up end-to-end tests with Playwright:
+
+<CodeGroup>
+  <CodeGroupItem title="E2E Tests">
+    ```tsx
+    // e2e/chat.spec.ts
+    import { test, expect } from '@playwright/test';
+
+    test.describe('Chat Application', () => {
+      test('should load chat interface', async ({ page }) => {
+        await page.goto('/');
+
+        await expect(page.getByPlaceholder('Ask me anything...')).toBeVisible();
+        await expect(page.getByRole('button', { name: /send/i })).toBeVisible();
+      });
+
+      test('should send and receive messages', async ({ page }) => {
+        await page.goto('/');
+
+        const input = page.getByPlaceholder('Ask me anything...');
+        const sendButton = page.getByRole('button', { name: /send/i });
+
+        await input.fill('What is machine learning?');
+        await sendButton.click();
+
+        // Wait for response
+        await expect(page.getByText('Assistant')).toBeVisible();
+
+        // Should show some response content
+        await expect(page.locator('.message-content')).toBeVisible();
+      });
+
+      test('should handle errors gracefully', async ({ page }) => {
+        // Mock API to return error
+        await page.route('/api/chat', async route => {
+          await route.fulfill({
+            status: 500,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'Internal server error' }),
+          });
+        });
+
+        await page.goto('/');
+
+        const input = page.getByPlaceholder('Ask me anything...');
+        const sendButton = page.getByRole('button', { name: /send/i });
+
+        await input.fill('Test message');
+        await sendButton.click();
+
+        // Should show error message
+        await expect(page.getByText(/error/i)).toBeVisible();
+      });
+
+      test('should be accessible', async ({ page }) => {
+        await page.goto('/');
+
+        // Check for proper ARIA labels
+        await expect(page.getByRole('textbox')).toHaveAttribute('aria-label');
+
+        // Check keyboard navigation
+        await page.keyboard.press('Tab');
+        await expect(page.getByPlaceholder('Ask me anything...')).toBeFocused();
+      });
+    });
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Test Data Management
+
+Set up test data and fixtures:
+
+<CodeGroup>
+  <CodeGroupItem title="Test Data Setup">
+    ```tsx
+    // __tests__/setup/test-data.ts
+    import { db } from '@/lib/db';
+    import { resources, embeddings } from '@/lib/db/schema';
+
+    export async function setupTestData() {
+      // Create test resources
+      const testResources = [
+        {
+          content: 'Machine learning is a subset of artificial intelligence.',
+        },
+        {
+          content: 'Deep learning uses neural networks with multiple layers.',
+        },
+        {
+          content: 'Natural language processing helps computers understand human language.',
+        },
+      ];
+
+      for (const resource of testResources) {
+        await db.insert(resources).values(resource);
+      }
+
+      // Create test embeddings (simplified for testing)
+      const testEmbeddings = [
+        {
+          resourceId: 'test-resource-1',
+          content: 'Machine learning is a subset of artificial intelligence.',
+          embedding: new Array(1536).fill(0.1), // Mock embedding
+        },
+      ];
+
+      for (const embedding of testEmbeddings) {
+        await db.insert(embeddings).values(embedding);
+      }
+    }
+
+    export async function cleanupTestData() {
+      await db.delete(embeddings);
+      await db.delete(resources);
+    }
+    ```
+
+  </CodeGroupItem>
+</CodeGroup>
+
+### Practical Exercise
+
+<Callout type="info">
+  **Exercise**: Implement comprehensive testing for your RAG application
+</Callout>
+
+<Steps>
+  <Step title="1. Set Up Testing Environment">
+    Install testing dependencies and configure Jest
+  </Step>
+  <Step title="2. Write Unit Tests">
+    Test embedding generation and search functionality
+  </Step>
+  <Step title="3. Write Integration Tests">
+    Test database operations and API routes
+  </Step>
+  <Step title="4. Write E2E Tests">Test complete user workflows</Step>
+</Steps>
+
+### Reflection Questions
+
+<Callout type="warning">Take a moment to reflect on these questions:</Callout>
+
+1. **What are the most critical areas to test in a RAG application?**
+
+   - Consider embedding quality, search accuracy, and user experience
+
+2. **How would you measure the quality of search results?**
+
+   - Think about relevance metrics and user feedback
+
+3. **What automated testing strategies would you implement?**
+   - Consider CI/CD integration and automated quality gates
+
+### Next Steps
+
+<Callout type="info">
+  **Ready to continue?** In the final module, you'll explore real-world
+  applications and best practices for RAG systems.
+</Callout>
+
+---
+
+## Module Summary
+
+In this module, you successfully:
+
+- **Testing Strategy**: Developed comprehensive testing strategies for RAG applications
+- **Embedding Testing**: Created tests for embedding generation and validation
+- **Search Testing**: Implemented tests for semantic search functionality
+- **User Experience Testing**: Added tests for chat interface and API routes
+
+### Key Takeaways
+
+- Comprehensive testing is crucial for RAG application reliability
+- Test embedding quality and search accuracy thoroughly
+- Performance testing helps identify bottlenecks
+- End-to-end testing ensures complete user workflows
+
+### Resources
+
+- [Jest Documentation](https://jestjs.io/docs/getting-started) - JavaScript testing framework
+- [Playwright Documentation](https://playwright.dev/) - End-to-end testing
+- [Testing Library](https://testing-library.com/) - React component testing
+- [RAG Testing Best Practices](https://arxiv.org/abs/2303.08774) - Academic paper on RAG evaluation
+
+### Troubleshooting
+
+If you encounter issues:
+
+1. **Test Setup Problems**: Check Jest configuration and dependencies
+2. **Mock Issues**: Ensure proper mocking of external services
+3. **Performance Test Failures**: Adjust timing thresholds for your environment
+4. **E2E Test Failures**: Check for UI changes and update selectors
+
+<Callout type="success">
+  **Module Complete!** Your RAG application now has comprehensive testing.
+  Continue to [Module 12: Real-World Applications and Best
+  Practices](/learning-paths/rag-chatbot/module-12) to explore practical
+  applications and best practices.
+</Callout>

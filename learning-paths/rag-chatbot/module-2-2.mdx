@@ -1,0 +1,414 @@
+---
+title: "2.2 Database Setup"
+description: "Configure PostgreSQL database with pgvector extension, set up database migrations, and test connectivity."
+---
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Set up PostgreSQL database with pgvector extension
+- Configure database connection and environment variables
+- Run database migrations to create the initial schema
+- Test database connectivity and verify setup
+
+<Callout>**Duration**: 40 minutes</Callout>
+
+---
+
+## PostgreSQL with pgvector Overview
+
+PostgreSQL with the pgvector extension provides the vector storage capabilities needed for RAG applications:
+
+<Columns cols={2}>
+  <Card title="PostgreSQL" icon="database">
+    Robust, open-source relational database
+  </Card>
+  <Card title="pgvector Extension" icon="layers">
+    Vector operations and similarity search
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="HNSW Index" icon="zap">
+    Fast approximate nearest neighbor search
+  </Card>
+  <Card title="Drizzle ORM" icon="code">
+    Type-safe database operations
+  </Card>
+</Columns>
+
+### Why pgvector?
+
+<Callout type="info">
+  **Vector Storage**: pgvector allows PostgreSQL to store and query
+  high-dimensional vectors (embeddings)
+</Callout>
+
+<Callout type="info">
+  **Similarity Search**: Efficient algorithms for finding similar vectors using
+  cosine similarity
+</Callout>
+
+<Callout type="info">
+  **Production Ready**: Battle-tested extension used by many production RAG
+  applications
+</Callout>
+
+---
+
+## Step 1: Install PostgreSQL
+
+<Steps>
+  <Step title="1. Install PostgreSQL">
+    Install PostgreSQL on your local machine
+  </Step>
+  <Step title="2. Install pgvector extension">
+    Add the pgvector extension to PostgreSQL
+  </Step>
+  <Step title="3. Create database">
+    Create a new database for your RAG application
+  </Step>
+</Steps>
+
+### Installation Options
+
+<CodeGroup>
+  <CodeGroupItem title="macOS (Homebrew)">
+```bash
+# Install PostgreSQL
+brew install postgresql
+
+# Start PostgreSQL service
+
+brew services start postgresql
+
+# Install pgvector
+
+brew install pgvector
+
+````
+  </CodeGroupItem>
+  <CodeGroupItem title="Ubuntu/Debian">
+```bash
+# Install PostgreSQL
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+
+# Install pgvector
+sudo apt install postgresql-14-pgvector
+````
+
+  </CodeGroupItem>
+  <CodeGroupItem title="Windows">
+```bash
+# Download from postgresql.org
+# Install pgvector from https://github.com/pgvector/pgvector
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+<Callout type="warning">
+  **Note**: The exact installation commands may vary based on your PostgreSQL
+  version and operating system
+</Callout>
+
+---
+
+## Step 2: Configure Database
+
+<Steps>
+  <Step title="1. Access PostgreSQL">
+    Connect to PostgreSQL as the postgres user
+  </Step>
+  <Step title="2. Create database">
+    Create a new database for your application
+  </Step>
+  <Step title="3. Enable pgvector">
+    Enable the pgvector extension in your database
+  </Step>
+</Steps>
+
+<Snippet>
+```bash
+# Connect to PostgreSQL as postgres user
+sudo -u postgres psql
+
+# Create a new database
+
+CREATE DATABASE rag_chatbot;
+
+# Connect to the new database
+
+\c rag_chatbot
+
+# Enable pgvector extension
+
+CREATE EXTENSION IF NOT EXISTS vector;
+
+# Verify extension is installed
+
+\dx
+
+# Exit PostgreSQL
+
+\q
+
+````
+</Snippet>
+
+<Callout type="info">
+  **Database Name**: You can use any name for your database. `rag_chatbot` is just an example.
+</Callout>
+
+---
+
+## Step 3: Configure Environment Variables
+
+Update your `.env.local` file with the correct database connection string:
+
+<CodeGroup>
+  <CodeGroupItem title="Local Development">
+```bash
+# PostgreSQL connection string
+DATABASE_URL=postgresql://postgres:password@localhost:5432/rag_chatbot
+
+# For Vercel deployment
+POSTGRES_URL=postgresql://postgres:password@localhost:5432/rag_chatbot
+````
+
+  </CodeGroupItem>
+  <CodeGroupItem title="Connection String Format">
+```bash
+# Format: postgresql://username:password@host:port/database
+DATABASE_URL=postgresql://[username]:[password]@[host]:[port]/[database]
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Connection String Components
+
+<Columns cols={2}>
+  <Card title="username" icon="user">
+    PostgreSQL user (default: postgres)
+  </Card>
+  <Card title="password" icon="lock">
+    User password (set during installation)
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="host" icon="server">
+    Database host (localhost for local development)
+  </Card>
+  <Card title="port" icon="hash">
+    PostgreSQL port (default: 5432)
+  </Card>
+</Columns>
+
+<Callout type="warning">
+  **Security**: Use strong passwords and never commit database credentials to
+  version control
+</Callout>
+
+---
+
+## Step 4: Run Database Migrations
+
+<Steps>
+  <Step title="1. Generate migrations">
+    Create migration files based on your schema
+  </Step>
+  <Step title="2. Run migrations">Apply the migrations to create tables</Step>
+  <Step title="3. Verify schema">Check that tables are created correctly</Step>
+</Steps>
+
+<Snippet>
+```bash
+# Generate migration files
+npm run db:generate
+
+# Run migrations
+
+npm run db:migrate
+
+# Open Drizzle Studio to verify
+
+npm run db:studio
+
+````
+</Snippet>
+
+### Understanding Migrations
+
+<CodeGroup>
+  <CodeGroupItem title="Migration Generation">
+```bash
+# This command analyzes your schema and creates migration files
+npm run db:generate
+
+# Creates files in drizzle/migrations/
+# Example: 0000_initial.sql
+````
+
+  </CodeGroupItem>
+  <CodeGroupItem title="Migration Execution">
+```bash
+# This command applies migrations to your database
+npm run db:migrate
+
+# Creates tables, indexes, and extensions
+
+# Safe to run multiple times
+
+````
+  </CodeGroupItem>
+</CodeGroup>
+
+<Callout type="info">
+  **Drizzle Studio**: A web interface for viewing and managing your database
+</Callout>
+
+---
+
+## Step 5: Verify Database Setup
+
+<Steps>
+  <Step title="1. Test connection">
+    Verify your application can connect to the database
+  </Step>
+  <Step title="2. Check tables">
+    Ensure all tables are created correctly
+  </Step>
+  <Step title="3. Test pgvector">
+    Verify vector operations work properly
+  </Step>
+</Steps>
+
+<Snippet>
+```bash
+# Test database connection
+npm run dev
+
+# Check for connection errors in the console
+# Should see "Database connected successfully"
+````
+
+</Snippet>
+
+### Database Schema Verification
+
+<MDXImage
+  srcLight="/images/database-schema-light.png"
+  srcDark="/images/database-schema-dark.png"
+  width={700}
+  height={500}
+  alt="Database Schema Diagram"
+/>
+
+<Callout type="info">
+  **Expected Tables**: - `resources` - Stores your knowledge base content -
+  `embeddings` - Stores vector embeddings (will be created later) -
+  `__drizzle_migrations` - Tracks applied migrations
+</Callout>
+
+---
+
+## Step 6: Test pgvector Functionality
+
+Let's verify that pgvector is working correctly:
+
+<Snippet>
+```sql
+-- Connect to your database
+psql postgresql://postgres:password@localhost:5432/rag_chatbot
+
+-- Test vector operations
+SELECT '[1,2,3]'::vector;
+
+-- Test similarity calculation
+SELECT '[1,2,3]'::vector <=> '[4,5,6]'::vector as distance;
+
+-- Test HNSW index creation (will be used later)
+CREATE INDEX test_idx ON test_table USING hnsw (embedding vector_cosine_ops);
+
+```
+</Snippet>
+
+<Callout type="info">
+  **Vector Operations**: These commands verify that pgvector can handle vector data types and similarity calculations
+</Callout>
+
+---
+
+## Interactive Elements
+
+### Database Setup Checklist
+
+<Callout type="info">
+  **Complete this checklist to verify your database setup**:
+
+  ✅ PostgreSQL installed and running
+  ✅ pgvector extension enabled
+  ✅ Database created successfully
+  ✅ Environment variables configured
+  ✅ Migrations run without errors
+  ✅ Drizzle Studio accessible
+  ✅ Application connects to database
+  ✅ Vector operations working
+</Callout>
+
+### Troubleshooting Common Issues
+
+<Callout type="warning">
+  **Issue**: `CREATE EXTENSION vector` fails
+  **Solution**: Ensure pgvector is installed and PostgreSQL is restarted
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Connection refused error
+  **Solution**: Check if PostgreSQL is running and port 5432 is accessible
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Migration fails with permission errors
+  **Solution**: Ensure your database user has CREATE privileges
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Drizzle Studio won't start
+  **Solution**: Check your DATABASE_URL format and database connectivity
+</Callout>
+
+---
+
+## Reflection Questions
+
+Take a moment to reflect on what you've learned:
+
+1. **Why is pgvector essential for RAG applications?**
+   - Consider the role of vector storage in semantic search
+   - Think about performance implications
+
+2. **How do migrations help with database management?**
+   - Consider version control for database schema
+   - Think about team collaboration and deployment
+
+3. **What security considerations are important for database setup?**
+   - Consider credential management
+   - Think about production deployment
+
+---
+
+## Next Steps
+
+You've successfully set up your database! In the next section, you'll:
+
+- **Start the development server** and explore the application
+- **Understand the project structure** and existing functionality
+- **Test the basic application** to ensure everything works
+
+Ready to continue? Proceed to [Section 2.3: Development Environment](/learning-paths/rag-chatbot/module-2-3).
+
+<Callout>
+  **Key Takeaway**: A properly configured PostgreSQL database with pgvector provides the foundation for storing and querying embeddings efficiently in your RAG application.
+</Callout>
+```

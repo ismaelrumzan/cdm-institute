@@ -1,0 +1,279 @@
+---
+title: "1.2 Vector Space Concepts & Similarity Metrics"
+description: "Explore how text is converted to numerical vectors and how similarity metrics enable semantic search in RAG systems."
+---
+
+import VectorEmbeddings from "/snippets/conceptual/vector-embeddings.mdx";
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Understand how vector embeddings represent text in numerical space
+- Explain similarity metrics like cosine similarity
+- Visualize how embeddings enable semantic search
+- Compare different types of similarity calculations
+
+<Callout>**Duration**: 25 minutes</Callout>
+
+---
+
+## Vector Space Concepts
+
+<VectorEmbeddings />
+
+### What Are Embeddings?
+
+Embeddings are numerical representations of text that capture semantic meaning. Think of them as coordinates in a high-dimensional space where similar concepts are positioned close together.
+
+<MDXImage
+  srcLight="/images/vector-space-light.png"
+  srcDark="/images/vector-space-dark.png"
+  width={600}
+  height={400}
+  alt="Vector Space Visualization"
+/>
+
+### How Embeddings Work
+
+<Steps>
+  <Step title="Text Input">
+    Raw text is processed and tokenized into smaller units
+  </Step>
+  <Step title="Neural Processing">
+    A neural network processes the tokens through multiple layers
+  </Step>
+  <Step title="Vector Output">
+    The final layer produces a fixed-length vector (e.g., 1536 dimensions)
+  </Step>
+  <Step title="Semantic Representation">
+    The vector captures the semantic meaning of the original text
+  </Step>
+</Steps>
+
+### Embedding Properties
+
+<Columns cols={2}>
+  <Card title="Fixed Dimensions" icon="ruler">
+    All embeddings have the same length (e.g., 1536 for OpenAI's
+    text-embedding-ada-002)
+  </Card>
+  <Card title="Semantic Similarity" icon="target">
+    Similar concepts have similar vector representations
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Mathematical Operations" icon="calculator">
+    Vectors can be compared, added, subtracted, and averaged
+  </Card>
+  <Card title="Language Agnostic" icon="globe">
+    Works across different languages and domains
+  </Card>
+</Columns>
+
+## Similarity Metrics
+
+### Cosine Similarity
+
+The most common metric for comparing embeddings is cosine similarity, which measures the angle between two vectors:
+
+<Tabs>
+  <Tab title="Mathematical Formula">
+```typescript
+  cosine_similarity = (A · B) / (||A|| × ||B||)
+```
+  </Tab>
+  <Tab title="Implementation">
+```typescript
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
+  const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+  const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
+  return dotProduct / (magnitudeA * magnitudeB);
+}
+```
+  </Tab>
+</Tabs>
+
+### Similarity Examples
+
+<Info>
+  **High Similarity (0.9+)**: "machine learning" and "artificial intelligence"
+</Info>
+
+<Info>
+  **Medium Similarity (0.5-0.8)**: "python programming" and "software
+  development"
+</Info>
+
+<Info>
+  **Low Similarity (0.0-0.3)**: "machine learning" and "cooking recipes"
+</Info>
+
+### Other Similarity Metrics
+
+<Columns cols={2}>
+  <Card title="Euclidean Distance" icon="ruler">
+    Measures straight-line distance between vectors. Lower values = more
+    similar.
+  </Card>
+  <Card title="Dot Product" icon="calculator">
+    Simple multiplication of corresponding vector elements. Higher values = more
+    similar.
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Manhattan Distance" icon="map">
+    Sum of absolute differences. Less sensitive to outliers than Euclidean.
+  </Card>
+  <Card title="Jaccard Similarity" icon="intersection">
+    Measures overlap between sets. Useful for comparing document features.
+  </Card>
+</Columns>
+
+<Accordion title="🔬 Extension: Interactive Similarity Calculator">
+<Note>
+  **Try This**: Imagine you have these embeddings:
+  <ul>
+    <li>"machine learning" → [0.1, 0.8, 0.3, ...]</li>
+    <li>"artificial intelligence" → [0.2, 0.7, 0.4, ...]</li>
+    <li>"cooking recipes" → [0.9, 0.1, 0.8, ...]</li>
+  </ul>
+  Which pair would have the highest cosine similarity?
+</Note>
+
+<Info>
+  **Advanced Exercise**: Build a simple similarity calculator:
+
+1. Create a function that takes two text inputs
+2. Generate embeddings for both texts
+3. Calculate and display the cosine similarity
+4. Provide interpretation of the similarity score
+5. Test with various text pairs to understand patterns
+   </Info>
+</Accordion>
+
+## Interactive Learning
+
+### Hands-On Embedding Analysis
+
+<Tabs>
+  <Tab title="Exercise 1: Embedding Comparison">
+```typescript
+// Compare embeddings for different text types
+const texts = [
+  "Machine learning algorithms",
+  "AI and deep learning",
+  "Cooking recipes and ingredients",
+  "Programming and software development",
+  "Machine learning algorithms for data analysis"
+];
+
+// Generate embeddings and compare similarities
+for (let i = 0; i < texts.length; i++) {
+for (let j = i + 1; j < texts.length; j++) {
+const similarity = cosineSimilarity(
+getEmbedding(texts[i]),
+getEmbedding(texts[j])
+);
+console.log(`${texts[i]} vs ${texts[j]}: ${similarity.toFixed(3)}`);
+}
+}
+
+````
+  </Tab>
+  <Tab title="Exercise 2: Similarity Patterns">
+```typescript
+// Analyze similarity patterns across different domains
+const domains = {
+  technology: ["artificial intelligence", "machine learning", "deep learning"],
+  cooking: ["baking", "cooking", "recipes"],
+  sports: ["football", "basketball", "tennis"]
+};
+
+// Compare within-domain vs cross-domain similarities
+for (const [domain1, terms1] of Object.entries(domains)) {
+  for (const [domain2, terms2] of Object.entries(domains)) {
+    if (domain1 !== domain2) {
+      const avgSimilarity = calculateAverageSimilarity(terms1, terms2);
+      console.log(`${domain1} vs ${domain2}: ${avgSimilarity.toFixed(3)}`);
+    }
+  }
+}
+````
+
+  </Tab>
+</Tabs>
+
+## Self-Assessment Quiz
+
+<AccordionGroup>
+<Accordion title="Question 1: Embeddings Purpose">
+What is the primary purpose of embeddings in RAG systems?
+<ul>
+  <li>A) To compress text data</li>
+  <li>B) To represent text as numerical vectors for similarity comparison</li>
+  <li>C) To encrypt sensitive information</li>
+  <li>D) To translate text between languages</li>
+</ul>
+</Accordion>
+
+<Accordion title="Question 2: Similarity Metrics">
+  Which similarity metric is most commonly used for comparing embeddings?
+  <ul>
+    <li>A) Euclidean distance</li>
+    <li>B) Cosine similarity</li>
+    <li>C) Manhattan distance</li>
+    <li>D) Hamming distance</li>
+  </ul>
+</Accordion>
+
+<Accordion title="Question 3: Vector Properties">
+Which property allows embeddings to capture semantic meaning?
+<ul>
+  <li>A) Fixed dimensions</li>
+  <li>B) Semantic similarity</li>
+  <li>C) Mathematical operations</li>
+  <li>D) Language agnostic</li>
+</ul>
+</Accordion>
+</AccordionGroup>
+
+## Reflection Questions
+
+<AccordionGroup>
+<Accordion title="Reflection 1: Semantic Search">
+**How do embeddings enable semantic search?**
+
+- Think about how numerical representations can capture meaning
+- Consider how similarity calculations work
+  </Accordion>
+
+<Accordion title="Reflection 2: Similarity Metrics">
+**Why is cosine similarity preferred over Euclidean distance for embeddings?**
+
+- Think about the properties of high-dimensional vectors
+- Consider what cosine similarity actually measures
+  </Accordion>
+
+<Accordion title="Reflection 3: Vector Space">
+**How does the concept of vector space help us understand semantic relationships?**
+
+- Think about how similar concepts are positioned in space
+- Consider how this enables mathematical operations on meaning
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+You've now explored the fundamental concepts of vector embeddings and similarity metrics! In the next section, we'll learn about chunking strategies and performance considerations:
+
+- **Document chunking techniques** for effective embedding
+- **Performance optimization** strategies
+- **Storage and retrieval** considerations
+
+<Info>
+  **Key Takeaway**: Embeddings convert text into numerical vectors that capture
+  semantic meaning, enabling powerful similarity-based search and retrieval in
+  RAG systems.
+</Info>

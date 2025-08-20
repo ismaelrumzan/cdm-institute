@@ -1,0 +1,591 @@
+---
+title: "5.1 Server Actions Fundamentals"
+description: "Understand Server Actions, review existing implementation, and learn about type safety and error handling patterns."
+---
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Understand the "use server" directive and Server Actions
+- Review the existing createResource implementation
+- Implement proper TypeScript types and Zod schemas
+- Create robust error handling patterns
+
+<Callout>**Duration**: 30 minutes</Callout>
+
+---
+
+## Server Actions Overview
+
+### What are Server Actions?
+
+<Callout type="info">
+  **Server Actions**: Next.js 14 feature that allows you to run asynchronous
+  code directly on the server from your components
+</Callout>
+
+<Callout type="info">
+  **"use server" Directive**: Marks functions that run on the server, not in the
+  browser
+</Callout>
+
+<Callout type="info">
+  **Form Integration**: Can be used with HTML forms or called programmatically
+  from client components
+</Callout>
+
+### Key Benefits for RAG Applications
+
+<Columns cols={2}>
+  <Card title="Database Operations" icon="database">
+    Direct access to database without API routes Secure data operations
+  </Card>
+  <Card title="AI Integration" icon="bot">
+    Server-side AI processing API key security
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Type Safety" icon="shield">
+    Full TypeScript support Compile-time error checking
+  </Card>
+  <Card title="Performance" icon="zap">
+    Reduced client-server round trips Optimized data flow
+  </Card>
+</Columns>
+
+---
+
+## Existing Implementation Review
+
+### Current createResource Function
+
+<CodeGroup>
+  <CodeGroupItem title="Basic Implementation">
+```typescript
+// app/actions.ts
+'use server'
+
+import { db } from '@/lib/db'
+import { resources } from '@/drizzle/schema'
+import { nanoid } from 'nanoid'
+import { revalidatePath } from 'next/cache'
+
+export async function createResource(formData: FormData) {
+  const content = formData.get('content') as string
+  
+  await db.insert(resources).values({
+    id: nanoid(),
+    content: content.trim(),
+  })
+  
+  revalidatePath('/')
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Enhanced with Error Handling">
+```typescript
+// app/actions.ts
+export async function createResource(formData: FormData) {
+  try {
+    const content = formData.get('content') as string
+    
+    if (!content || content.trim().length === 0) {
+      throw new Error('Content is required')
+    }
+    
+    await db.insert(resources).values({
+      id: nanoid(),
+      content: content.trim(),
+    })
+    
+    revalidatePath('/')
+    return { success: true }
+  } catch (error) {
+    console.error('Error creating resource:', error)
+    return { success: false, error: error.message }
+  }
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Understanding the Components
+
+<Columns cols={2}>
+  <Card title="'use server'" icon="server">
+    **Directive**: Marks function as server-only **Location**: Must be at top of
+    file or function
+  </Card>
+  <Card title="FormData" icon="form">
+    **Input**: Form data from client **Access**: Use .get() method
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="revalidatePath" icon="refresh">
+    **Cache**: Invalidates Next.js cache **UI**: Triggers component re-render
+  </Card>
+  <Card title="Error Handling" icon="alert-triangle">
+    **Try/Catch**: Graceful error management **Return**: Structured response
+    objects
+  </Card>
+</Columns>
+
+---
+
+## Type Safety Implementation
+
+### Zod Schema Validation
+
+<CodeGroup>
+  <CodeGroupItem title="Schema Definition">
+```typescript
+// lib/schemas.ts
+import { z } from 'zod'
+
+export const createResourceSchema = z.object({
+  content: z.string()
+    .min(1, 'Content is required')
+    .max(100000, 'Content too long (max 100,000 characters)')
+    .trim(),
+})
+
+export const updateResourceSchema = z.object({
+  id: z.string().min(1, 'Resource ID is required'),
+  content: z.string()
+    .min(1, 'Content is required')
+    .max(100000, 'Content too long')
+    .trim(),
+})
+
+export const deleteResourceSchema = z.object({
+  id: z.string().min(1, 'Resource ID is required'),
+})
+
+export type CreateResourceInput = z.infer<typeof createResourceSchema>
+export type UpdateResourceInput = z.infer<typeof updateResourceSchema>
+export type DeleteResourceInput = z.infer<typeof deleteResourceSchema>
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Validation Function">
+```typescript
+// lib/validation.ts
+import { createResourceSchema } from './schemas'
+import type { CreateResourceInput } from './schemas'
+
+export function validateCreateResource(formData: FormData): {
+  success: boolean
+  data?: CreateResourceInput
+  errors?: string[]
+} {
+  try {
+    const content = formData.get('content') as string
+    const validatedData = createResourceSchema.parse({ content })
+    
+    return {
+      success: true,
+      data: validatedData
+    }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        errors: error.errors.map(e => e.message)
+      }
+    }
+    
+    return {
+      success: false,
+      errors: ['Validation failed']
+    }
+  }
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Enhanced Server Actions
+
+### Type-Safe Implementation
+
+<CodeGroup>
+  <CodeGroupItem title="Validated Server Action">
+```typescript
+// app/actions.ts
+'use server'
+
+import { db } from '@/lib/db'
+import { resources } from '@/drizzle/schema'
+import { validateCreateResource } from '@/lib/validation'
+import { nanoid } from 'nanoid'
+import { revalidatePath } from 'next/cache'
+
+export async function createResource(formData: FormData) {
+  // Step 1: Validate input
+  const validation = validateCreateResource(formData)
+  
+  if (!validation.success) {
+    return {
+      success: false,
+      errors: validation.errors
+    }
+  }
+  
+  try {
+    // Step 2: Create resource
+    const resourceId = nanoid()
+    
+    await db.insert(resources).values({
+      id: resourceId,
+      content: validation.data!.content,
+    })
+    
+    // Step 3: Revalidate cache
+    revalidatePath('/')
+    
+    return {
+      success: true,
+      resourceId
+    }
+  } catch (error) {
+    console.error('Error creating resource:', error)
+    return {
+      success: false,
+      errors: ['Failed to create resource']
+    }
+  }
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Response Types">
+```typescript
+// lib/types.ts
+export interface ServerActionResponse<T = any> {
+  success: boolean
+  data?: T
+  errors?: string[]
+  message?: string
+}
+
+export interface CreateResourceResponse extends ServerActionResponse {
+  resourceId?: string
+}
+
+export interface UpdateResourceResponse extends ServerActionResponse {
+  resourceId?: string
+}
+
+export interface DeleteResourceResponse extends ServerActionResponse {
+  deletedId?: string
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Error Handling Patterns
+
+### Comprehensive Error Management
+
+<CodeGroup>
+  <CodeGroupItem title="Error Types">
+```typescript
+// lib/errors.ts
+export class ValidationError extends Error {
+  constructor(message: string, public field?: string) {
+    super(message)
+    this.name = 'ValidationError'
+  }
+}
+
+export class DatabaseError extends Error {
+  constructor(message: string, public originalError?: Error) {
+    super(message)
+    this.name = 'DatabaseError'
+  }
+}
+
+export class AIError extends Error {
+  constructor(message: string, public originalError?: Error) {
+    super(message)
+    this.name = 'AIError'
+  }
+}
+```
+  </CodeGroupItem>
+  <CodeGroupItem title="Error Handler">
+```typescript
+// lib/error-handler.ts
+import { ValidationError, DatabaseError, AIError } from './errors'
+
+export function handleServerActionError(error: unknown): {
+  success: false
+  errors: string[]
+  message: string
+} {
+  if (error instanceof ValidationError) {
+    return {
+      success: false,
+      errors: [error.message],
+      message: 'Validation failed'
+    }
+  }
+  
+  if (error instanceof DatabaseError) {
+    console.error('Database error:', error.originalError)
+    return {
+      success: false,
+      errors: ['Database operation failed'],
+      message: 'Unable to save data'
+    }
+  }
+  
+  if (error instanceof AIError) {
+    console.error('AI service error:', error.originalError)
+    return {
+      success: false,
+      errors: ['AI service unavailable'],
+      message: 'Unable to process content'
+    }
+  }
+  
+  // Generic error
+  console.error('Unexpected error:', error)
+  return {
+    success: false,
+    errors: ['An unexpected error occurred'],
+    message: 'Something went wrong'
+  }
+}
+```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Form Integration
+
+### Client-Side Usage
+
+<CodeGroup>
+  <CodeGroupItem title="Form Component">
+```typescript
+// components/resource-form.tsx
+'use client'
+
+import { createResource } from '@/app/actions'
+import { useState } from 'react'
+
+export function ResourceForm() {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [message, setMessage] = useState('')
+
+async function handleSubmit(formData: FormData) {
+setIsSubmitting(true)
+setMessage('')
+
+    try {
+      const result = await createResource(formData)
+
+      if (result.success) {
+        setMessage('Resource created successfully!')
+        // Reset form
+        const form = document.querySelector('form') as HTMLFormElement
+        form?.reset()
+      } else {
+        setMessage(`Error: ${result.errors?.join(', ')}`)
+      }
+    } catch (error) {
+      setMessage('An unexpected error occurred')
+    } finally {
+      setIsSubmitting(false)
+    }
+
+}
+
+return (
+<form action={handleSubmit}>
+<textarea
+        name="content"
+        placeholder="Enter your content..."
+        required
+        disabled={isSubmitting}
+      />
+<button type="submit" disabled={isSubmitting}>
+{isSubmitting ? 'Creating...' : 'Create Resource'}
+</button>
+{message && <p>{message}</p>}
+</form>
+)
+}
+
+````
+  </CodeGroupItem>
+  <CodeGroupItem title="Programmatic Usage">
+```typescript
+// components/resource-creator.tsx
+'use client'
+
+import { createResource } from '@/app/actions'
+import { useState } from 'react'
+
+export function ResourceCreator() {
+  const [content, setContent] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+
+  async function handleCreate() {
+    if (!content.trim()) return
+
+    setIsCreating(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('content', content)
+
+      const result = await createResource(formData)
+
+      if (result.success) {
+        setContent('')
+        alert('Resource created!')
+      } else {
+        alert(`Error: ${result.errors?.join(', ')}`)
+      }
+    } catch (error) {
+      alert('Failed to create resource')
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  return (
+    <div>
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Enter content..."
+        disabled={isCreating}
+      />
+      <button onClick={handleCreate} disabled={isCreating || !content.trim()}>
+        {isCreating ? 'Creating...' : 'Create Resource'}
+      </button>
+    </div>
+  )
+}
+````
+
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## Performance Considerations
+
+### Optimizing Server Actions
+
+<Columns cols={2}>
+  <Card title="Input Validation" icon="shield">
+    **Early Validation**: Validate before expensive operations **Zod Caching**:
+    Cache compiled schemas
+  </Card>
+  <Card title="Database Operations" icon="database">
+    **Batch Operations**: Group related database calls **Connection Pooling**:
+    Use efficient database connections
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Error Handling" icon="alert-triangle">
+    **Graceful Degradation**: Handle errors without crashing **User Feedback**:
+    Provide clear error messages
+  </Card>
+  <Card title="Caching" icon="refresh">
+    **Selective Revalidation**: Only revalidate affected paths **Optimistic
+    Updates**: Update UI before server response
+  </Card>
+</Columns>
+
+---
+
+## Interactive Elements
+
+### Server Actions Testing Checklist
+
+<Callout type="info">
+  **Complete this checklist to verify your server actions**: ✅ Server actions
+  are properly marked with 'use server' ✅ Input validation works correctly ✅
+  Error handling covers all scenarios ✅ Database operations are successful ✅
+  Cache revalidation works ✅ Type safety is maintained ✅ Form integration
+  functions properly ✅ Performance is acceptable
+</Callout>
+
+### Error Handling Test Cases
+
+<Callout type="info">
+  **Test these error scenarios**: 1. Empty content submission 2. Content
+  exceeding length limits 3. Database connection failures 4. Network timeouts 5.
+  Invalid data types 6. Concurrent form submissions
+</Callout>
+
+---
+
+## Troubleshooting Common Issues
+
+<Callout type="warning">
+  **Issue**: "use server" directive not working **Solution**: Ensure it's at the
+  top of the file or function, and you're using Next.js 14+
+</Callout>
+
+<Callout type="warning">
+  **Issue**: FormData validation failing **Solution**: Check field names match
+  exactly and handle type conversion properly
+</Callout>
+
+<Callout type="warning">
+  **Issue**: Cache not updating after action **Solution**: Verify revalidatePath
+  is called with correct path and after successful operation
+</Callout>
+
+<Callout type="warning">
+  **Issue**: TypeScript errors in server actions **Solution**: Ensure proper
+  type definitions and Zod schema integration
+</Callout>
+
+---
+
+## Reflection Questions
+
+Take a moment to reflect on what you've learned:
+
+1. **How do Server Actions improve the developer experience compared to API routes?**
+
+   - Consider type safety and error handling
+   - Think about form integration and data flow
+
+2. **What are the most important aspects of error handling in server actions?**
+
+   - Consider user experience and debugging
+   - Think about security and data integrity
+
+3. **How would you optimize server actions for your specific use case?**
+   - Consider performance and scalability
+   - Think about user feedback and validation
+
+---
+
+## Next Steps
+
+You've learned the fundamentals of Server Actions! In the next section, you'll:
+
+- **Extend resource management** with enhanced functionality
+- **Integrate embedding generation** into server actions
+- **Implement advanced error handling** and recovery
+
+Ready to continue? Proceed to [Section 5.2: Resource Management Enhancement](/learning-paths/rag-chatbot/module-5-2).
+
+<Callout>
+  **Key Takeaway**: Proper Server Actions implementation with type safety and
+  robust error handling provides a solid foundation for building reliable RAG
+  applications.
+</Callout>

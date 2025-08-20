@@ -1,0 +1,298 @@
+---
+title: "1.1 Conceptual Foundation"
+description: "Learn what RAG is, why it matters, and understand the RAG architecture flow. Explore real-world examples and limitations of traditional LLMs."
+---
+
+import WhatIsRag from "/snippets/conceptual/what-is-rag.mdx";
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Define what RAG is and explain its core components
+- Understand why RAG is important for modern AI applications
+- Describe the RAG architecture flow step-by-step
+- Identify real-world use cases for RAG systems
+
+<Info>**Duration**: 25 minutes</Info>
+
+---
+
+## Understanding RAG
+
+<WhatIsRag />
+
+## Why RAG Matters
+
+Traditional large language models have a significant limitation: they can only work with the information they were trained on. This creates several problems:
+
+<Columns cols={2}>
+  <Card title="Knowledge Cutoff" icon="calendar">
+    Models can't access information after their training date
+  </Card>
+  <Card title="No Personal Data" icon="user">
+    Models can't access your private or proprietary information
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Hallucinations" icon="cloud">
+    Models may make up information when they don't know the answer
+  </Card>
+  <Card title="Limited Context" icon="database">
+    Models can't access real-time or domain-specific data
+  </Card>
+</Columns>
+
+### The RAG Solution
+
+RAG addresses these limitations by:
+
+<Steps>
+  <Step title="External Knowledge Access">
+    RAG systems can retrieve information from external sources like databases,
+    documents, and APIs
+  </Step>
+  <Step title="Real-time Information">
+    RAG can access current information that wasn't available during model
+    training
+  </Step>
+  <Step title="Domain-specific Knowledge">
+    RAG can incorporate specialized knowledge for specific industries or use
+    cases
+  </Step>
+  <Step title="Reduced Hallucinations">
+    By providing relevant context, RAG reduces the likelihood of the model
+    making up information
+  </Step>
+</Steps>
+
+## RAG Architecture Overview
+
+RAG solves these problems by following a specific process:
+
+<Steps>
+  <Step title="User Query">A user asks a question or makes a request</Step>
+  <Step title="Query Processing">
+    The system processes the query and identifies what information is needed
+  </Step>
+  <Step title="Information Retrieval">
+    Relevant information is retrieved from external sources (documents,
+    databases, etc.)
+  </Step>
+  <Step title="Context Augmentation">
+    The retrieved information is added to the user's query as context
+  </Step>
+  <Step title="Response Generation">
+    The language model generates a response using both the original query and
+    the retrieved context
+  </Step>
+</Steps>
+
+<MDXImage
+  srcLight="/images/rag-architecture-light.png"
+  srcDark="/images/rag-architecture-dark.png"
+  width={800}
+  height={400}
+  alt="RAG Architecture Flow Diagram"
+/>
+
+### Key components
+
+<Columns cols={3}>
+  <Card title="Retriever" icon="folder-search">
+    Finds relevant information from knowledge sources
+  </Card>
+  <Card title="Generator" icon="bot">
+    Creates responses using the retrieved context
+  </Card>
+  <Card title="Knowledge Base" icon="database">
+    Stores the information that can be retrieved
+  </Card>
+</Columns>
+
+## Real-World Examples
+
+RAG systems are transforming how organizations handle information and provide services. Here are detailed examples of RAG in action:
+
+<AccordionGroup>
+<Accordion title="Customer Support & Help Desks">
+<Columns cols={2}>
+  <Card title="Traditional Approach" icon="user">
+    Support agents manually search through documentation and knowledge bases,
+    leading to inconsistent responses and longer resolution times.
+  </Card>
+  <Card title="RAG-Enhanced Support" icon="books">
+    AI assistant instantly retrieves relevant information from company knowledge
+    base, providing accurate, up-to-date answers with source citations.
+  </Card>
+</Columns>
+
+**Real Example**: A customer asks "How do I reset my password?". The RAG system searches through the company's support documentation, finds the specific password reset procedure, and provides step-by-step instructions with links to relevant articles.
+
+</Accordion>
+
+<Accordion title="Research & Academic Applications">
+<Columns cols={2}>
+  <Card title="Manual Research" icon="search">
+    Researchers spend hours manually searching through papers, reading
+    abstracts, and cross-referencing citations to find relevant information.
+  </Card>
+  <Card title="RAG Research Assistant" icon="book">
+    AI assistant searches through thousands of papers, identifies relevant
+    studies, and provides summaries with direct citations and key findings.
+  </Card>
+</Columns>
+
+**Real Example**: A researcher asks "What are the latest developments in transformer architecture?" The RAG system searches through recent papers, identifies key innovations, and provides a synthesized summary with links to the original research.
+
+</Accordion>
+
+<Accordion title="Legal & Compliance">
+<Columns cols={2}>
+  <Card title="Manual Document Review" icon="file-text">
+    Lawyers manually search through case law, regulations, and legal documents,
+    which is time-consuming and prone to missing relevant precedents.
+  </Card>
+  <Card title="RAG Legal Assistant" icon="scale">
+    AI assistant searches through legal databases, finds relevant cases and
+    regulations, and provides context-aware legal guidance with citations.
+  </Card>
+</Columns>
+
+**Real Example**: A lawyer asks "What are the precedents for data privacy violations in healthcare?" The RAG system searches through case law, finds relevant precedents, and provides analysis with specific case citations and outcomes.
+
+</Accordion>
+
+<Accordion title="Healthcare & Medical">
+<Columns cols={2}>
+  <Card title="Traditional Diagnosis" icon="stethoscope">
+    Doctors rely on memory and manual searches through medical literature, which
+    can lead to missed information or outdated practices.
+  </Card>
+  <Card title="RAG Medical Assistant" icon="heart">
+    AI assistant searches through medical literature, clinical guidelines, and
+    patient records to provide evidence-based recommendations.
+  </Card>
+</Columns>
+
+**Real Example**: A doctor asks "What are the latest treatment protocols for diabetes management?" The RAG system searches through medical journals, clinical guidelines, and recent studies to provide current best practices with supporting evidence.
+
+</Accordion>
+
+<Accordion title="Enterprise Knowledge Management">
+<Columns cols={2}>
+  <Card title="Scattered Information" icon="folder">
+    Company knowledge is spread across multiple systems, making it difficult for
+    employees to find relevant information quickly.
+  </Card>
+  <Card title="RAG Knowledge Hub" icon="database">
+    Centralized AI assistant that searches across all company systems and
+    provides relevant information with source attribution.
+  </Card>
+</Columns>
+
+**Real Example**: An employee asks "What's our policy on remote work?" The RAG system searches through HR documents, company policies, and recent announcements to provide the most current and relevant information.
+
+</Accordion>
+</AccordionGroup>
+
+## Interactive Elements
+
+### Before vs After RAG
+
+Let's explore the dramatic difference between traditional LLMs and RAG-enhanced systems:
+
+<Columns cols={2}>
+  <Card title="Traditional LLM Response">
+    - **Question**: What's the latest news about AI?
+    - **Process with prompt**: `await model.generate({ prompt: "What's the latest news about AI?" });`
+    - **Response**: Based on my training data, AI has made significant progress in areas like machine learning and natural language processing. However, I don't have access to current events beyond my training cutoff date.
+  </Card>
+  <Card title="RAG-Enhanced Response">
+    - **Question**: What's the latest news about AI?
+    - **Process with retrieval**: `await retrieveRelevantDocuments("latest AI news");`
+    - **Process with prompt using retrieved context**:  `await model.generate({ prompt: ``Based on this context: ${relevantDocs}\n\nWhat's the latest news about AI?`` });`
+    - **Response**: According to recent reports, OpenAI has released GPT-4 Turbo with improved performance and reduced costs. Google has also announced new developments in their Gemini model. These updates represent significant advances in AI capabilities and accessibility.
+  </Card>
+</Columns>
+
+### Real-Time Comparison Tool
+
+<Check>
+  **Try This Exercise**: Compare responses from a traditional chatbot vs. a RAG-enhanced system:
+
+1. Ask both systems: "What are the current best practices for React 18?"
+2. Traditional chatbot: May give outdated information or generic advice
+3. RAG system: Will search through current documentation and provide specific, up-to-date guidance with source links
+
+</Check>
+
+## Self-Assessment Quiz
+
+Test your understanding of RAG concepts with these interactive questions:
+
+1. What is the main limitation of traditional large language models?
+
+   - They can't understand complex queries
+   - They can only work with information from their training data
+   - They are too slow to respond
+   - They require too much computational power
+
+2. Which component of RAG is responsible for finding relevant information?
+
+   - Generator
+   - Retriever
+   - Knowledge Base
+   - Query Processor
+
+3. What is one way RAG reduces hallucinations?
+
+   - By using smaller models
+   - By providing relevant context from external sources
+   - By limiting response length
+   - By using multiple models
+
+4. In a RAG system, what happens after relevant documents are retrieved?
+
+   - The documents are stored in a database
+   - The documents are used as context for the language model
+   - The documents are summarized automatically
+   - The documents are sent to the user directly
+
+5. Which of the following is NOT a typical use case for RAG systems?
+   - Customer support chatbots
+   - Research paper analysis
+   - Real-time weather forecasting
+   - Legal document review
+
+## Reflection Questions
+
+Take a moment to reflect on what you've learned:
+
+1. **How does RAG differ from traditional chatbots?**
+
+   - Think about the information sources each can access
+   - Consider the accuracy and relevance of responses
+
+2. **What types of applications would benefit most from RAG?**
+
+   - Consider domains that require current information
+   - Think about applications that need domain-specific knowledge
+
+3. **What challenges might you face when implementing RAG?**
+   - Consider technical challenges like data quality
+   - Think about user experience challenges
+
+## Next Steps
+
+You've now understood the foundational concepts of RAG! In the next section, we'll dive deeper into:
+
+- **Vector embeddings** and how they represent text
+- **Similarity metrics** for finding relevant information
+- **Chunking strategies** for processing large documents
+
+<Info>
+  **Key Takeaway**: RAG combines the power of large language models with
+  external knowledge retrieval to create more accurate, current, and
+  contextually relevant AI responses.
+</Info>

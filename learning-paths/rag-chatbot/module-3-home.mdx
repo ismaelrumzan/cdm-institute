@@ -1,0 +1,108 @@
+---
+title: "Module 3: Database Schema and Data Modeling"
+description: "Understand the existing database schemas in the starter project. Implement vector storage with proper indexing and set up database migrations."
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Understand the existing database schemas in the starter project
+- Implement vector storage with proper indexing
+- Understand foreign key relationships and data integrity
+- Set up database migrations and version control
+
+## Module Overview
+
+This module focuses on the database layer of your RAG application. You'll explore the existing schema, add vector storage capabilities, and understand how to properly structure your data for efficient retrieval and storage.
+
+<Callout>**Time Estimate**: 80 minutes total</Callout>
+
+## Module Structure
+
+<Columns cols={3}>
+  <Card
+    title="3.1 Schema Analysis"
+    icon="database"
+    href="/learning-paths/rag-chatbot/module-3-1">
+    **Duration**: 30 minutes
+    <br />
+    Review existing schemas and understand the resources table structure.
+  </Card>
+  <Card
+    title="3.2 Vector Database Implementation"
+    icon="layers"
+    href="/learning-paths/rag-chatbot/module-3-2">
+    **Duration**: 30 minutes
+    <br />
+    Set up vector columns and implement proper indexing strategies.
+  </Card>
+  <Card
+    title="3.3 Migration and Validation"
+    icon="check-circle"
+    href="/learning-paths/rag-chatbot/module-3-3">
+    **Duration**: 20 minutes
+    <br />
+    Run migrations safely and validate the database setup.
+  </Card>
+</Columns>
+
+## Prerequisites
+
+Before starting this module, ensure you have:
+
+- Completed Module 2 (Project Setup)
+- PostgreSQL database running with pgvector extension
+- Basic understanding of SQL and database concepts
+- Familiarity with TypeScript (helpful but not required)
+
+## Key Concepts You'll Learn
+
+<Columns cols={2}>
+  <Card title="Database Schema Design" icon="database">
+    Understanding table relationships and data modeling
+  </Card>
+  <Card title="Vector Storage" icon="layers">
+    Storing and indexing embeddings efficiently
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Database Migrations" icon="git-merge">
+    Managing schema changes safely
+  </Card>
+  <Card title="Performance Optimization" icon="zap">
+    Indexing strategies for fast queries
+  </Card>
+</Columns>
+
+## What You'll Build
+
+<Callout type="info">
+  **Enhanced Schema**: You'll extend the existing database schema to support
+  vector storage and efficient retrieval.
+</Callout>
+
+<Callout type="warning">
+  **No Data Loss**: All changes will be made through proper migrations to
+  preserve existing data.
+</Callout>
+
+## Module Resources
+
+<Callout type="info">
+  **Drizzle Studio**: You'll use Drizzle Studio to inspect and manage your
+  database.
+</Callout>
+
+<Callout type="info">
+  **pgvector Documentation**: Reference for vector operations and indexing.
+</Callout>
+
+## Get Started
+
+Ready to dive into database design? Start with [Section 3.1: Schema Analysis](/learning-paths/rag-chatbot/module-3-1) to understand the existing database structure.
+
+<Callout>
+  **Pro Tip**: Take notes on the schema design decisions. Understanding the data
+  model is crucial for building efficient RAG systems.
+</Callout>

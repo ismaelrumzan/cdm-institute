@@ -1,0 +1,497 @@
+---
+title: "AI SDK Integration and Embedding Generation"
+description: "Integrate AI SDK with OpenAI for embedding generation. Implement efficient chunking strategies and create reusable embedding utilities with proper error handling."
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Integrate AI SDK with OpenAI for embedding generation
+- Implement efficient chunking strategies
+- Create reusable embedding utilities
+- Handle API rate limits and error management
+
+## Module Overview
+
+This module integrates the AI SDK with OpenAI to generate embeddings for your content. You'll implement chunking strategies, create embedding utilities, and handle the storage of vector representations.
+
+<Callout>
+  **Time Estimate**: 90 minutes (25 + 40 + 25 minutes for each section)
+</Callout>
+
+---
+
+## 4.1 AI SDK Setup and Configuration
+
+**Duration**: 25 minutes
+
+### Installing AI SDK Dependencies
+
+Add the required AI SDK packages to your project:
+
+<Snippet text="npm install ai @ai-sdk/react @ai-sdk/openai" />
+
+<Note>
+  The AI SDK provides a unified interface for working with different AI providers, making it easy to switch between models and services.
+</Note>
+
+### Understanding the AI SDK Architecture
+
+<Columns cols={2}>
+  <Card title="Core SDK" icon="code">
+    Main AI SDK for server-side operations
+  </Card>
+  <Card title="React SDK" icon="react">
+    React hooks for client-side AI interactions
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="OpenAI Provider" icon="openai">
+    OpenAI-specific integration and models
+  </Card>
+  <Card title="Unified Interface" icon="api">
+    Consistent API across different providers
+  </Card>
+</Columns>
+
+### OpenAI API Key Setup
+
+Get your OpenAI API key:
+
+<Steps>
+  <Step title="1. Create OpenAI Account">
+    Go to [platform.openai.com](https://platform.openai.com) and sign up
+  </Step>
+  <Step title="2. Generate API Key">
+    Navigate to API Keys section and create a new key
+  </Step>
+  <Step title="3. Add to Environment">
+    Add the key to your `.env` file
+  </Step>
+</Steps>
+
+<CodeGroup>
+  <CodeGroupItem title=".env">
+    ```bash
+    OPENAI_API_KEY=sk-your-api-key-here
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Provider Configuration
+
+The AI SDK uses a provider pattern for different AI services:
+
+<CodeGroup>
+  <CodeGroupItem title="OpenAI Provider Setup">
+    ```tsx
+    import { openai } from "@ai-sdk/openai";
+
+    // Configure the embedding model
+    const embeddingModel = openai.embedding("text-embedding-ada-002");
+    
+    // Configure the chat model (for later use)
+    const chatModel = openai("gpt-4o");
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Environment Variables Validation
+
+Create a utility to validate your environment setup:
+
+<CodeGroup>
+  <CodeGroupItem title="lib/utils/env.ts">
+    ```tsx
+    export function validateEnv() {
+      const required = ['OPENAI_API_KEY', 'DATABASE_URL'];
+      
+      for (const var_name of required) {
+        if (!process.env[var_name]) {
+          throw new Error(`Missing required environment variable: ${var_name}`);
+        }
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+---
+
+## 4.2 Embedding Generation and Chunking
+
+**Duration**: 40 minutes
+
+### Understanding Chunking
+
+Before generating embeddings, we need to break down documents into manageable chunks:
+
+<Callout type="info">
+  **Why Chunking?** Large documents can't be embedded effectively, and we need smaller pieces for precise retrieval.
+</Callout>
+
+### Implementing Chunking Strategies
+
+Create a chunking utility:
+
+<CodeGroup>
+  <CodeGroupItem title="lib/ai/chunking.ts">
+    ```tsx
+    export function generateChunks(input: string): string[] {
+      return input
+        .trim()
+        .split(".")
+        .filter((chunk) => chunk.trim().length > 0)
+        .map((chunk) => chunk.trim() + ".");
+    }
+
+    export function generateChunksByTokens(
+      input: string, 
+      maxTokens: number = 500
+    ): string[] {
+      // Simple token-based chunking (words as tokens)
+      const words = input.split(/\s+/);
+      const chunks: string[] = [];
+      
+      for (let i = 0; i < words.length; i += maxTokens) {
+        chunks.push(words.slice(i, i + maxTokens).join(" "));
+      }
+      
+      return chunks.filter(chunk => chunk.trim().length > 0);
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Advanced Chunking Strategies
+
+<Columns cols={2}>
+  <Card title="Semantic Chunking" icon="brain">
+    Split by meaning boundaries using NLP techniques
+  </Card>
+  <Card title="Overlapping Chunks" icon="layers">
+    Create overlapping chunks to maintain context
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Hierarchical Chunking" icon="tree">
+    Create chunks at different levels (paragraph, section, document)
+  </Card>
+  <Card title="Metadata-Aware" icon="tag">
+    Preserve metadata and structure information
+  </Card>
+</Columns>
+
+### Creating the Embedding Generator
+
+Create the main embedding generation utility:
+
+<CodeGroup>
+  <CodeGroupItem title="lib/ai/embedding.ts">
+    ```tsx
+    import { embedMany } from "ai";
+    import { openai } from "@ai-sdk/openai";
+    import { generateChunks } from "./chunking";
+
+    const embeddingModel = openai.embedding("text-embedding-ada-002");
+
+    export async function generateEmbeddings(
+      value: string
+    ): Promise<Array<{ embedding: number[]; content: string }>> {
+      try {
+        // Generate chunks from the input text
+        const chunks = generateChunks(value);
+        
+        // Generate embeddings for all chunks
+        const { embeddings } = await embedMany({
+          model: embeddingModel,
+          values: chunks,
+        });
+        
+        // Return chunks with their embeddings
+        return embeddings.map((embedding, index) => ({
+          content: chunks[index],
+          embedding: embedding,
+        }));
+      } catch (error) {
+        console.error("Error generating embeddings:", error);
+        throw new Error("Failed to generate embeddings");
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Error Handling and Rate Limiting
+
+Implement robust error handling:
+
+<CodeGroup>
+  <CodeGroupItem title="Enhanced Error Handling">
+    ```tsx
+    export async function generateEmbeddingsWithRetry(
+      value: string,
+      maxRetries: number = 3
+    ): Promise<Array<{ embedding: number[]; content: string }>> {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          return await generateEmbeddings(value);
+        } catch (error) {
+          if (attempt === maxRetries) {
+            throw error;
+          }
+          
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => 
+            setTimeout(resolve, Math.pow(2, attempt) * 1000)
+          );
+        }
+      }
+      
+      throw new Error("Failed to generate embeddings after retries");
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Performance Optimization
+
+<Callout type="info">
+  **Batch Processing**: The `embedMany` function processes multiple chunks efficiently
+</Callout>
+
+<Callout type="info">
+  **Caching**: Consider implementing embedding caching for repeated content
+</Callout>
+
+<Callout type="info">
+  **Parallel Processing**: For large documents, consider processing chunks in parallel
+</Callout>
+
+---
+
+## 4.3 Embedding Storage and Database Integration
+
+**Duration**: 25 minutes
+
+### Integrating with Database
+
+Now we need to store the generated embeddings in our database:
+
+<CodeGroup>
+  <CodeGroupItem title="lib/ai/embedding-storage.ts">
+    ```tsx
+    import { db } from "@/lib/db";
+    import { embeddings } from "@/lib/db/schema/embeddings";
+    import { generateEmbeddings } from "./embedding";
+
+    export async function storeEmbeddings(
+      resourceId: string,
+      content: string
+    ): Promise<void> {
+      try {
+        // Generate embeddings for the content
+        const embeddingData = await generateEmbeddings(content);
+        
+        // Prepare data for database insertion
+        const embeddingRecords = embeddingData.map(({ content, embedding }) => ({
+          resourceId,
+          content,
+          embedding,
+        }));
+        
+        // Insert embeddings into database
+        await db.insert(embeddings).values(embeddingRecords);
+        
+        console.log(`Stored ${embeddingRecords.length} embeddings for resource ${resourceId}`);
+      } catch (error) {
+        console.error("Error storing embeddings:", error);
+        throw new Error("Failed to store embeddings");
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Updating Server Actions
+
+Modify the existing `createResource` function to include embedding generation:
+
+<CodeGroup>
+  <CodeGroupItem title="lib/actions/resources.ts">
+    ```tsx
+    "use server";
+
+    import {
+      NewResourceParams,
+      insertResourceSchema,
+      resources,
+    } from "@/lib/db/schema/resources";
+    import { db } from "../db";
+    import { storeEmbeddings } from "../ai/embedding-storage";
+
+    export const createResource = async (input: NewResourceParams) => {
+      try {
+        const { content } = insertResourceSchema.parse(input);
+
+        // Create the resource
+        const [resource] = await db
+          .insert(resources)
+          .values({ content })
+          .returning();
+
+        // Generate and store embeddings
+        await storeEmbeddings(resource.id, content);
+
+        return "Resource successfully created and embedded.";
+      } catch (error) {
+        console.error("Error creating resource:", error);
+        return error instanceof Error && error.message.length > 0
+          ? error.message
+          : "Error, please try again.";
+      }
+    };
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Data Validation and Quality
+
+Implement validation for embedding quality:
+
+<CodeGroup>
+  <CodeGroupItem title="Embedding Validation">
+    ```tsx
+    export function validateEmbedding(embedding: number[]): boolean {
+      // Check if embedding has the correct dimensions
+      if (embedding.length !== 1536) {
+        return false;
+      }
+      
+      // Check if embedding contains valid numbers
+      if (!embedding.every(val => typeof val === 'number' && !isNaN(val))) {
+        return false;
+      }
+      
+      // Check if embedding is not all zeros
+      if (embedding.every(val => val === 0)) {
+        return false;
+      }
+      
+      return true;
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Testing the Embedding Pipeline
+
+Create a test function to verify everything works:
+
+<CodeGroup>
+  <CodeGroupItem title="Test Function">
+    ```tsx
+    export async function testEmbeddingPipeline() {
+      const testContent = "This is a test document for RAG. It contains multiple sentences. We will test embedding generation and storage.";
+      
+      try {
+        // Test embedding generation
+        const embeddings = await generateEmbeddings(testContent);
+        console.log(`Generated ${embeddings.length} embeddings`);
+        
+        // Test validation
+        const isValid = embeddings.every(({ embedding }) => 
+          validateEmbedding(embedding)
+        );
+        console.log(`All embeddings are valid: ${isValid}`);
+        
+        return { success: true, embeddings };
+      } catch (error) {
+        console.error("Test failed:", error);
+        return { success: false, error };
+      }
+    }
+    ```
+  </CodeGroupItem>
+</CodeGroup>
+
+### Practical Exercise
+
+<Callout type="info">
+  **Exercise**: Test the complete embedding pipeline
+</Callout>
+
+<Steps>
+  <Step title="1. Test Embedding Generation">
+    Run the test function to verify embedding generation works
+  </Step>
+  <Step title="2. Create a Test Resource">
+    Use the createResource function to add content to your database
+  </Step>
+  <Step title="3. Verify Storage">
+    Check Drizzle Studio to confirm embeddings were stored
+  </Step>
+  <Step title="4. Test Different Content">
+    Try different types of content to see how chunking works
+  </Step>
+</Steps>
+
+### Reflection Questions
+
+<Callout type="warning">
+  Take a moment to reflect on these questions:
+</Callout>
+
+1. **How would you handle embedding model updates?**
+   - Consider versioning and migration strategies
+
+2. **What strategies would you use for embedding versioning?**
+   - Think about model updates and backward compatibility
+
+3. **How would you optimize embedding generation for large datasets?**
+   - Consider batching, caching, and parallel processing
+
+### Next Steps
+
+<Callout type="info">
+  **Ready to continue?** In the next module, you'll extend server actions and implement data management features.
+</Callout>
+
+---
+
+## Module Summary
+
+In this module, you successfully:
+
+- **AI SDK Integration**: Set up AI SDK with OpenAI provider
+- **Embedding Generation**: Implemented chunking and embedding generation
+- **Database Integration**: Connected embedding generation to database storage
+- **Error Handling**: Added robust error handling and validation
+
+### Key Takeaways
+
+- AI SDK provides a unified interface for different AI providers
+- Effective chunking is crucial for embedding quality
+- Batch processing improves performance for large documents
+- Proper error handling ensures reliability in production
+
+### Resources
+
+- [AI SDK Documentation](https://sdk.vercel.ai/docs) - Official AI SDK docs
+- [OpenAI Embeddings Guide](https://platform.openai.com/docs/guides/embeddings) - Embedding best practices
+- [Text Chunking Strategies](https://python.langchain.com/docs/modules/data_connection/document_transformers/) - Advanced chunking techniques
+- [Rate Limiting Best Practices](https://platform.openai.com/docs/guides/rate-limits) - API usage optimization
+
+### Troubleshooting
+
+If you encounter issues:
+
+1. **API Key Issues**: Verify your OpenAI API key is valid and has sufficient credits
+2. **Rate Limiting**: Implement proper retry logic and rate limiting
+3. **Chunking Problems**: Adjust chunk size and strategy for your content
+4. **Database Errors**: Check database connectivity and schema compatibility
+
+<Callout type="success">
+  **Module Complete!** Your embedding generation pipeline is working. Continue to [Module 5: Server Actions and Data Management](/learning-paths/rag-chatbot/module-5) to enhance your data management capabilities.
+</Callout>
