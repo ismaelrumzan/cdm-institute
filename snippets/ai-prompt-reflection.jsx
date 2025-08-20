@@ -20,7 +20,7 @@ export const AIPromptReflection = ({
     const contentText = mainContent.innerText || mainContent.textContent || "";
 
     setPageContext(`Page: ${pageTitle}`);
-    setPageURL(`${window.location.href}.md`);
+    setPageURL(`${window.location.href.split("#")[0]}.md`);
 
     // Try to get the current file path from the URL or window location
     const currentPath = window.location.pathname;
@@ -40,13 +40,13 @@ Context: ${pageContext}`;
         // Try to open ChatGPT with the prompt
         const encodedPrompt = encodeURIComponent(fullPrompt);
         window.open(
-          `https://chat.openai.com/?prompt=${encodedPrompt}`,
+          `https://chatgpt.com/?hints=search&prompt=${encodedPrompt}`,
           "_blank"
         );
       } else if (tool === "claude") {
         // Try to open Claude with the prompt
         const encodedPrompt = encodeURIComponent(fullPrompt);
-        window.open(`https://claude.ai?q=${encodedPrompt}`, "_blank");
+        window.open(`https://claude.ai/new?q=${encodedPrompt}`, "_blank");
       }
     } catch (error) {
       console.error("Error opening AI tool:", error);
