@@ -1,63 +1,130 @@
 ---
-title: "Module 2: Project Setup and Environment Configuration"
-description: "Clone and set up the Vercel AI SDK RAG Starter repository. Configure PostgreSQL database with pgvector extension and set up your development environment."
+title: "Module 2: Project Setup"
+description: "Set up the RAG chatbot development environment with database configuration."
 ---
 
-## Learning Objectives
+## Takeaways
 
-By the end of this module, you will be able to:
+By the end of this module, you will be able to **apply** the necessary configuration steps to establish a functional RAG chatbot development environment by:
 
-- Clone and set up the Vercel AI SDK RAG Starter repository
-- Configure PostgreSQL database with pgvector extension
-- Set up development environment with proper tooling
-- Understand the project structure and architecture
+- Cloning and setting up the Vercel AI SDK RAG Starter repository
+- Configuring PostgreSQL database in the cloud with Vercel
+- Setting up thedevelopment environment with proper tooling
+- Understanding the project structure
 
-## Module Overview
-
-This module guides you through setting up your development environment and getting the Vercel AI SDK RAG Starter project running locally. You'll configure the database, install dependencies, and understand the project structure.
-
-<Callout>**Time Estimate**: 95 minutes total</Callout>
-
-## Module Structure
+## Lessons
 
 <Columns cols={3}>
   <Card
     title="2.1 Repository Setup"
     icon="git-branch"
     href="/learning-paths/rag-chatbot/module-2-1">
-    **Duration**: 30 minutes
-    <br />
     Clone the starter repository and understand its structure and dependencies.
   </Card>
   <Card
     title="2.2 Database Setup"
     icon="database"
     href="/learning-paths/rag-chatbot/module-2-2">
-    **Duration**: 40 minutes
-    <br />
     Configure PostgreSQL with pgvector extension and run database migrations.
   </Card>
   <Card
     title="2.3 Development Environment"
     icon="code"
     href="/learning-paths/rag-chatbot/module-2-3">
-    **Duration**: 25 minutes
-    <br />
     Start the development server and explore the project structure.
   </Card>
 </Columns>
 
 ## Prerequisites
 
-Before starting this module, ensure you have:
+Before starting this module, ensure you have the following tools installed:
 
-- Git installed on your system
-- Node.js 18+ installed
-- A code editor (VS Code recommended)
-- Basic familiarity with command line tools
-- No prior experience with Next.js or Vercel required
+<Accordion title="Git">
+  <p>Version control system for managing your code repository.</p>
+  <ul>
+    <li>
+      <a href="https://git-scm.com/download/mac" target="_blank">
+        macOS: Download Git for macOS
+      </a>
+    </li>
+    <li>
+      <a href="https://git-scm.com/download/win" target="_blank">
+        Windows: Download Git for Windows
+      </a>
+    </li>
+    <li>
+      <a href="https://desktop.github.com/" target="_blank">
+        Alternative: GitHub Desktop (GUI for Git)
+      </a>
+    </li>
+  </ul>
+</Accordion>
 
-## Key Technologies You'll Work With
+<Accordion title="Node.js 18+">
+  <p>JavaScript runtime environment for running the application.</p>
+  <ul>
+    <li>
+      <a href="https://nodejs.org/en/download/" target="_blank">
+        macOS: Download Node.js for macOS
+      </a>
+    </li>
+    <li>
+      <a href="https://nodejs.org/en/download/" target="_blank">
+        Windows: Download Node.js for Windows
+      </a>
+    </li>
+  </ul>
+</Accordion>
+
+<Accordion title="Code Editor (Cursor Recommended)">
+  <p>
+    AI-powered code editor built on VS Code for enhanced development experience.
+  </p>
+  <ul>
+    <li>
+      <a href="https://cursor.com/downloads" target="_blank">
+        macOS: Download Cursor for macOS
+      </a>
+    </li>
+    <li>
+      <a href="https://cursor.com/downloads" target="_blank">
+        Windows: Download Cursor for Windows
+      </a>
+    </li>
+    <li>
+      <a href="https://code.visualstudio.com/download" target="_blank">
+        Alternative: VS Code
+      </a>
+    </li>
+  </ul>
+</Accordion>
+
+<Accordion title="Command Line Tools">
+  <p>Basic familiarity with terminal/command prompt operations.</p>
+  <ul>
+    <li>
+      <a
+        href="https://support.apple.com/guide/terminal/welcome/mac"
+        target="_blank">
+        macOS: Terminal Guide
+      </a>
+    </li>
+    <li>
+      <a
+        href="https://docs.microsoft.com/en-us/windows/terminal/"
+        target="_blank">
+        Windows: Windows Terminal Guide
+      </a>
+    </li>
+  </ul>
+</Accordion>
+
+<Callout type="info">
+  **No Prior Experience Required**: No prior experience with Next.js or Vercel
+  is required for this module.
+</Callout>
+
+## Key technologies used
 
 <Columns cols={2}>
   <Card title="Next.js 14" icon="react">
@@ -76,36 +143,9 @@ Before starting this module, ensure you have:
   </Card>
 </Columns>
 
-## What You'll Build
+## Resources
 
-<Callout type="info">
-  **Starter Repository**: You'll be working with the [Vercel AI SDK RAG
-  Starter](https://github.com/vercel/ai-sdk-rag-starter), which provides a
-  foundation for building RAG applications.
-</Callout>
-
-<Callout type="warning">
-  **No Custom Code Yet**: In this module, you'll set up the existing starter
-  project. We'll start building custom features in the next modules.
-</Callout>
-
-## Module Resources
-
-<Callout type="info">
+<Info>
   **Repository**:
   [https://github.com/vercel/ai-sdk-rag-starter](https://github.com/vercel/ai-sdk-rag-starter)
-</Callout>
-
-<Callout type="info">
-  **Documentation**: Each section includes step-by-step instructions with
-  screenshots and troubleshooting tips.
-</Callout>
-
-## Get Started
-
-Ready to set up your development environment? Start with [Section 2.1: Repository Setup](/learning-paths/rag-chatbot/module-2-1) to clone the starter project and understand its structure.
-
-<Callout>
-  **Pro Tip**: Take your time with the setup process. A properly configured
-  development environment will make the rest of the course much smoother.
-</Callout>
+</Info>

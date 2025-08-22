@@ -35,6 +35,15 @@
                       "learning-paths/rag-chatbot/module-1-2",
                       "learning-paths/rag-chatbot/module-1-3"
                     ]
+                  },
+                  {
+                    "group": "Module 2: Project Setup and Environment Configuration",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-2-home",
+                      "learning-paths/rag-chatbot/module-2-1",
+                      "learning-paths/rag-chatbot/module-2-2",
+                      "learning-paths/rag-chatbot/module-2-3"
+                    ]
                   }
                 ]
               }
