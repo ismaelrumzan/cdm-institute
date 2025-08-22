@@ -59,23 +59,20 @@ cd ai-sdk-rag-starter
 
 <Step title="Install dependencies">
 
-Install Node.js dependencies and check that all dependencies are installed correctly by building the project:
+Install Node.js dependencies and check for any errors in the console:
 
 <CodeGroup>
 
 ```bash npm
 npm install
-npm run build
 ```
 
 ```bash pnpm
 pnpm install
-pnpm run build
 ```
 
 ```bash yarn
 yarn install
-yarn build
 ```
 
 </CodeGroup>
@@ -111,33 +108,64 @@ yarn build
 
 </CodeGroup>
 </Step>
+<Step title="Verify your setup">
 
-<Step title="Environment Configuration">
-
-You can perform the following steps in your terminal or using your code editor.
-
-1. Create your local environment file from the template
+1. Ensure you're using Node.js 18 or higher
 
 ```bash Terminal
-cp .env.example .env.local
+node --version  # Should be 18.0.0 or higher
 ```
 
-2. Update `.env.local` with your OpenAI API key and database connection string
+2. Verify dependencies
 
-```bash env.local
-# OpenAI API Key (required for embeddings and chat)
-OPENAI_API_KEY=sk-your-openai-api-key-here
-# OpenAI Model (optional, defaults to gpt-4o)
-OPENAI_MODEL=gpt-4o
-# Database URL for the cloud with Vercel
-POSTGRES_URL=postgresql://username:password@localhost:5432/rag_chatbot
+```bash Terminal
+npm list --depth=0
 ```
 
-<Warning>
-  Never commit your `.env.local` file to version control. It's already in
-  `.gitignore`
-</Warning>
+3. Test build process
 
+<CodeGroup>
+
+```bash npm
+npm run build
+```
+
+```bash pnpm
+pnpm run build
+```
+
+```bash yarn
+yarn build
+```
+
+</CodeGroup>
+
+<Accordion title="Console output of successful build">
+
+```bash Terminal
+  ▲ Next.js 14.2.4
+
+   Creating an optimized production build ...
+Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ Compiled successfully
+ ✓ Linting and checking validity of types
+ ✓ Collecting page data
+ ✓ Generating static pages (5/5)
+ ✓ Collecting build traces
+ ✓ Finalizing page optimization
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    138 B          87.1 kB
+└ ○ /_not-found                          870 B          87.9 kB
++ First Load JS shared by all            87 kB
+  ├ chunks/221-412c466386c2d029.js       31.5 kB
+  ├ chunks/67cfe1a8-964e1781a2edea35.js  53.6 kB
+  └ other shared chunks (total)          1.86 kB
+```
+
+</Accordion>
 </Step>
 
 </Steps>
@@ -153,18 +181,15 @@ Let's explore the key directories and files in the [starter project](https://git
     [Next.js App
     Router](https://nextjs.org/docs/app/getting-started/project-structure):
     <ul>
-      <li>`page.tsx`: Main application page</li>
-      <li>`layout.tsx`: Root layout component</li>
-      <li>`api/`: API routes</li>
-      <li>`globals.css`: Global styles</li>
+      <li>`app/page.tsx`: Main application page</li>
+      <li>`app/layout.tsx`: Root layout component</li>
+      <li>`app/globals.css`: Global styles</li>
     </ul>
   </Card>
   <Card title="components/" icon="puzzle">
     React Components
     <ul>
-      <li>`chat.tsx`: Chat interface component</li>
-      <li>`ui/`: Reusable UI components</li>
-      <li>`icons/`: Icon components</li>
+      <li>`components/ui/`: Reusable UI components</li>
     </ul>
   </Card>
 </Columns>
@@ -172,16 +197,18 @@ Let's explore the key directories and files in the [starter project](https://git
   <Card title="lib/" icon="code">
     Utility functions:
     <ul>
-      <li>`db.ts`: Database configuration</li>
-      <li>`ai.ts`: AI SDK configuration</li>
+      <li>`lib/db/index.ts`: Database configuration</li>
+      <li>
+        `actions/resources.ts`: Server action to add resources to the database
+      </li>
       <li>`utils.ts`: Helper functions</li>
     </ul>
   </Card>
-  <Card title="drizzle/" icon="database">
+  <Card title="lib/db/" icon="database">
     Database Schema
     <ul>
-      <li>`schema.ts`: Table definitions</li>
-      <li>`migrations/`: Database migrations</li>
+      <li>`lib/db/schema/`: Table definitions</li>
+      <li>`lib/db/migrations/`: Database migrations</li>
     </ul>
   </Card>
 </Columns>
@@ -223,35 +250,6 @@ module.exports = nextConfig;
 ```
 
 </CodeGroup>
-
-## Verify your setup
-
-1. Ensure you're using Node.js 18 or higher
-
-```bash Terminal
-node --version  # Should be 18.0.0 or higher
-```
-
-2. Verify dependencies
-
-```bash Terminal
-npm list --depth=0
-```
-
-3. Test build process
-
-```bash Terminal
-npm run build
-```
-
-<Info>
-  **Success Indicators**
-  <ul>
-    <li>No dependency warnings</li>
-    <li>Build completes without errors</li>
-    <li>All TypeScript types are valid</li>
-  </ul>
-</Info>
 
 ---
 
