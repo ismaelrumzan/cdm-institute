@@ -7,13 +7,13 @@
     "light": "#07C983",
     "dark": "#15803D"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/favicon.ico",
   "icons": { "library": "lucide" },
   "navigation": {
     "tabs": [
       {
         "tab": "Home",
-        "pages": ["index"]
+        "pages": ["index", "about"]
       },
       {
         "tab": "Learning Paths",
@@ -57,32 +57,17 @@
       },
       {
         "tab": "Reference",
-        "pages": [
-          "reference/cursor",
-          "reference/claude-code",
-          "reference/windsurf"
-        ]
+        "pages": ["reference/nextjs"]
       },
       {
         "tab": "Tutorials",
-        "pages": [
-          "tutorials/cursor",
-          "tutorials/claude-code",
-          "tutorials/windsurf"
-        ]
+        "pages": ["tutorials/cursor"]
       }
     ]
   },
   "logo": {
     "light": "/logo/lawh-logo.png",
     "dark": "/logo/lawh-logo.png"
-  },
-  "navbar": {
-    "primary": {
-      "type": "button",
-      "label": "About Cordoba",
-      "href": "https://cordoba.institute/about"
-    }
   },
   "contextual": {
     "options": [

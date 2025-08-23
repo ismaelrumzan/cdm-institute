@@ -1,6 +1,6 @@
 ---
-title: "Project Setup and Environment Configuration"
-description: "Set up your development environment and get the Vercel AI SDK RAG starter repository running. Configure PostgreSQL database with pgvector and understand the project structure."
+title: "Quick Setup: Modern AI Development Environment for Beginners"
+description: "Set up your AI development environment fast with modern tools (Next.js, PostgreSQL, Vercel). Perfect for beginners - get your AI application running in minutes, not hours."
 ---
 
 ## Learning Objectives
@@ -71,7 +71,8 @@ ai-sdk-rag-starter/
 <Snippet text="npm install" />
 
 <Note>
-  The starter uses npm by default, but you can also use pnpm or yarn if you prefer.
+  The starter uses npm by default, but you can also use pnpm or yarn if you
+  prefer.
 </Note>
 
 ### Step 3: Environment Configuration
@@ -84,24 +85,22 @@ You'll need to configure these environment variables:
 
 <CodeGroup>
   <CodeGroupItem title=".env">
-    ```bash
-    # Database connection (we'll set this up next)
-    DATABASE_URL="postgresql://..."
-    
-    # OpenAI API key (we'll get this later)
-    OPENAI_API_KEY="sk-..."
-    ```
+    ```bash # Database connection (we'll set this up next)
+    DATABASE_URL="postgresql://..." # OpenAI API key (we'll get this later)
+    OPENAI_API_KEY="sk-..." ```
   </CodeGroupItem>
 </CodeGroup>
 
 ### Understanding the Tech Stack
 
 <Callout type="info">
-  **Next.js 14**: Modern React framework with App Router, Server Components, and built-in optimizations
+  **Next.js 14**: Modern React framework with App Router, Server Components, and
+  built-in optimizations
 </Callout>
 
 <Callout type="info">
-  **Drizzle ORM**: Type-safe database toolkit with excellent TypeScript support and migration capabilities
+  **Drizzle ORM**: Type-safe database toolkit with excellent TypeScript support
+  and migration capabilities
 </Callout>
 
 <Callout type="info">
@@ -178,6 +177,7 @@ Once your database is set up, run the initial migration:
 <Snippet text="npm run db:migrate" />
 
 This will:
+
 - Add the pgvector extension to your database
 - Create the initial `resources` table
 - Set up the basic schema structure
@@ -189,6 +189,7 @@ Test your database connection:
 <Snippet text="npm run db:studio" />
 
 This opens Drizzle Studio, a web interface for managing your database. You should see:
+
 - The `resources` table
 - The pgvector extension enabled
 - Ability to view and edit data
@@ -196,7 +197,8 @@ This opens Drizzle Studio, a web interface for managing your database. You shoul
 ### Troubleshooting Common Issues
 
 <Callout type="warning">
-  **Connection Issues**: Make sure your `DATABASE_URL` is correct and the database is accessible
+  **Connection Issues**: Make sure your `DATABASE_URL` is correct and the
+  database is accessible
 </Callout>
 
 <Callout type="warning">
@@ -204,7 +206,8 @@ This opens Drizzle Studio, a web interface for managing your database. You shoul
 </Callout>
 
 <Callout type="warning">
-  **Migration Errors**: If migrations fail, check that your database user has the necessary permissions
+  **Migration Errors**: If migrations fail, check that your database user has
+  the necessary permissions
 </Callout>
 
 ---
@@ -225,22 +228,16 @@ Let's explore the key files and directories:
 
 <CodeGroup>
   <CodeGroupItem title="app/page.tsx">
-    ```tsx
-    // Main page component
-    // This is where we'll build our chat interface
-    ```
+    ```tsx // Main page component // This is where we'll build our chat
+    interface ```
   </CodeGroupItem>
   <CodeGroupItem title="lib/db/schema/resources.ts">
-    ```tsx
-    // Database schema for resources
-    // Defines the structure of our knowledge base
-    ```
+    ```tsx // Database schema for resources // Defines the structure of our
+    knowledge base ```
   </CodeGroupItem>
   <CodeGroupItem title="lib/actions/resources.ts">
-    ```tsx
-    // Server actions for resource management
-    // Handles CRUD operations for our knowledge base
-    ```
+    ```tsx // Server actions for resource management // Handles CRUD operations
+    for our knowledge base ```
   </CodeGroupItem>
 </CodeGroup>
 
@@ -266,11 +263,13 @@ Let's explore the key files and directories:
 ### Development Tools
 
 <Callout type="info">
-  **Drizzle Studio**: Web-based database management tool for viewing and editing data
+  **Drizzle Studio**: Web-based database management tool for viewing and editing
+  data
 </Callout>
 
 <Callout type="info">
-  **Next.js DevTools**: Built-in development tools for debugging and performance monitoring
+  **Next.js DevTools**: Built-in development tools for debugging and performance
+  monitoring
 </Callout>
 
 <Callout type="info">
@@ -294,6 +293,7 @@ Let's explore the key files and directories:
 ### Understanding the Current State
 
 At this point, you have:
+
 - ✅ A working Next.js application
 - ✅ PostgreSQL database with pgvector
 - ✅ Basic database schema (resources table)
@@ -301,19 +301,20 @@ At this point, you have:
 - ✅ UI components and styling
 
 <Callout type="info">
-  **What's Missing**: We still need to add embedding generation, vector storage, and the chat interface. These will be covered in the next modules.
+  **What's Missing**: We still need to add embedding generation, vector storage,
+  and the chat interface. These will be covered in the next modules.
 </Callout>
 
 ### Reflection Questions
 
-<Callout type="warning">
-  Take a moment to reflect on these questions:
-</Callout>
+<Callout type="warning">Take a moment to reflect on these questions:</Callout>
 
 1. **What are the benefits of using pgvector over other vector databases?**
+
    - Consider cost, complexity, and integration requirements
 
 2. **How does the project structure support scalability?**
+
    - Think about how the modular structure helps with maintenance
 
 3. **What debugging strategies would you use for database issues?**
@@ -322,7 +323,8 @@ At this point, you have:
 ### Next Steps
 
 <Callout type="info">
-  **Ready to continue?** In the next module, you'll understand the database schema and implement vector storage for embeddings.
+  **Ready to continue?** In the next module, you'll understand the database
+  schema and implement vector storage for embeddings.
 </Callout>
 
 ---
@@ -360,5 +362,8 @@ If you encounter issues:
 4. **Environment Variables**: Check that your `.env` file is properly configured
 
 <Callout type="success">
-  **Module Complete!** Your development environment is ready. Continue to [Module 3: Database Schema and Data Modeling](/learning-paths/rag-chatbot/module-3) to understand the database architecture.
+  **Module Complete!** Your development environment is ready. Continue to
+  [Module 3: Database Schema and Data
+  Modeling](/learning-paths/rag-chatbot/module-3) to understand the database
+  architecture.
 </Callout>
