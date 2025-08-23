@@ -1,6 +1,6 @@
 ---
-title: "1.2 Vector Space Concepts & Similarity Metrics"
-description: "Explore how text is converted to numerical vectors and how similarity metrics enable semantic search in RAG systems."
+title: "1.2 Vector AI Made Simple: Understanding Embeddings for Modern Apps"
+description: "Master vector embeddings quickly for AI application development. Learn how text becomes numbers and how similarity search powers modern AI systems. No math background required."
 ---
 
 import VectorEmbeddings from "/snippets/conceptual/vector-embeddings.mdx";
@@ -14,8 +14,6 @@ By the end of this section, you will be able to:
 - Visualize how embeddings enable semantic search
 - Compare different types of similarity calculations
 
-<Callout>**Duration**: 25 minutes</Callout>
-
 ---
 
 ## Vector Space Concepts
@@ -25,14 +23,6 @@ By the end of this section, you will be able to:
 ### What Are Embeddings?
 
 Embeddings are numerical representations of text that capture semantic meaning. Think of them as coordinates in a high-dimensional space where similar concepts are positioned close together.
-
-<MDXImage
-  srcLight="/images/vector-space-light.png"
-  srcDark="/images/vector-space-dark.png"
-  width={600}
-  height={400}
-  alt="Vector Space Visualization"
-/>
 
 ### How Embeddings Work
 
@@ -114,10 +104,12 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 
 <Columns cols={2}>
   <Card title="Euclidean Distance" icon="ruler">
-    Measures straight-line distance between vectors. Lower values = more similar.
+    Measures straight-line distance between vectors. Lower values = more
+    similar.
   </Card>
   <Card title="Dot Product" icon="calculator">
-    Simple multiplication of corresponding vector elements. Higher values = more similar.
+    Simple multiplication of corresponding vector elements. Higher values = more
+    similar.
   </Card>
 </Columns>
 <Columns cols={2}>
@@ -148,7 +140,8 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 3. Calculate and display the cosine similarity
 4. Provide interpretation of the similarity score
 5. Test with various text pairs to understand patterns
-</Info>
+
+  </Info>
 </Accordion>
 
 ## Interactive Learning
@@ -169,15 +162,16 @@ const texts = [
 
 // Generate embeddings and compare similarities
 for (let i = 0; i < texts.length; i++) {
-  for (let j = i + 1; j < texts.length; j++) {
-    const similarity = cosineSimilarity(
-      getEmbedding(texts[i]),
-      getEmbedding(texts[j])
-    );
-    console.log(`${texts[i]} vs ${texts[j]}: ${similarity.toFixed(3)}`);
-  }
+for (let j = i + 1; j < texts.length; j++) {
+const similarity = cosineSimilarity(
+getEmbedding(texts[i]),
+getEmbedding(texts[j])
+);
+console.log(`${texts[i]} vs ${texts[j]}: ${similarity.toFixed(3)}`);
 }
-```
+}
+
+````
   </Tab>
   <Tab title="Exercise 2: Similarity Patterns">
 ```typescript
@@ -197,7 +191,8 @@ for (const [domain1, terms1] of Object.entries(domains)) {
     }
   }
 }
-```
+````
+
   </Tab>
 </Tabs>
 
@@ -215,13 +210,13 @@ What is the primary purpose of embeddings in RAG systems?
 </Accordion>
 
 <Accordion title="Question 2: Similarity Metrics">
-Which similarity metric is most commonly used for comparing embeddings?
-<ul>
-  <li>A) Euclidean distance</li>
-  <li>B) Cosine similarity</li>
-  <li>C) Manhattan distance</li>
-  <li>D) Hamming distance</li>
-</ul>
+  Which similarity metric is most commonly used for comparing embeddings?
+  <ul>
+    <li>A) Euclidean distance</li>
+    <li>B) Cosine similarity</li>
+    <li>C) Manhattan distance</li>
+    <li>D) Hamming distance</li>
+  </ul>
 </Accordion>
 
 <Accordion title="Question 3: Vector Properties">
@@ -243,6 +238,7 @@ Which property allows embeddings to capture semantic meaning?
 
 - Think about how numerical representations can capture meaning
 - Consider how similarity calculations work
+
 </Accordion>
 
 <Accordion title="Reflection 2: Similarity Metrics">
@@ -250,6 +246,7 @@ Which property allows embeddings to capture semantic meaning?
 
 - Think about the properties of high-dimensional vectors
 - Consider what cosine similarity actually measures
+
 </Accordion>
 
 <Accordion title="Reflection 3: Vector Space">
@@ -257,6 +254,7 @@ Which property allows embeddings to capture semantic meaning?
 
 - Think about how similar concepts are positioned in space
 - Consider how this enables mathematical operations on meaning
+
 </Accordion>
 </AccordionGroup>
 
