@@ -281,6 +281,33 @@ npm run db:migrate
   <Step title="3. Test pgvector">
     Verify vector operations work properly
   </Step>
+  <Step title="Environment Configuration">
+
+You can perform the following steps in your terminal or using your code editor.
+
+1. Create your local environment file from the template
+
+```bash Terminal
+cp .env.example .env.local
+```
+
+2. Update `.env.local` with your OpenAI API key and database connection string
+
+```bash env.local
+# OpenAI API Key (required for embeddings and chat)
+OPENAI_API_KEY=sk-your-openai-api-key-here
+# OpenAI Model (optional, defaults to gpt-4o)
+OPENAI_MODEL=gpt-4o
+# Database URL for the cloud with Vercel
+POSTGRES_URL=postgresql://username:password@localhost:5432/rag_chatbot
+```
+
+<Warning>
+  Never commit your `.env.local` file to version control. It's already in
+  `.gitignore`
+</Warning>
+
+</Step>
 </Steps>
 
 <Snippet>

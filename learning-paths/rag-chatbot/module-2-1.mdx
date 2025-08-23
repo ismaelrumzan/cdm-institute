@@ -1,131 +1,91 @@
 ---
 title: "2.1 Repository Setup"
-description: "Clone the Vercel AI SDK RAG Starter repository and understand its structure, dependencies, and configuration."
+description: "Clone and review the Vercel AI SDK RAG Starter repository."
 ---
 
-## Learning Objectives
+## Takeaways
 
-By the end of this section, you will be able to:
+By the end of this section, you will be ready to start using the starter repository by:
 
-- Clone and set up the Vercel AI SDK RAG Starter repository
-- Understand the project structure and architecture
-- Install and configure dependencies
-- Set up environment variables and API keys
+- Cloning the repository and reviewing the project structure
+- Installing dependencies
+- Setting up environment variables and API keys
 
-<Callout>**Duration**: 30 minutes</Callout>
+## What's included
 
----
-
-## Starter Repository Overview
-
-The [Vercel AI SDK RAG Starter](https://github.com/vercel/ai-sdk-rag-starter) is a production-ready template for building RAG applications. It provides:
-
-<Columns cols={2}>
-  <Card title="Next.js 14 App Router" icon="react">
-    Modern React framework with server-side rendering
-  </Card>
-  <Card title="AI SDK Integration" icon="bot">
-    Vercel's toolkit for AI-powered applications
-  </Card>
-</Columns>
-<Columns cols={2}>
-  <Card title="PostgreSQL + pgvector" icon="database">
-    Vector database for storing embeddings
-  </Card>
-  <Card title="Drizzle ORM" icon="code">
-    Type-safe database operations
-  </Card>
-</Columns>
-
-### What's Included
-
-<Callout type="info">
+<Info>
   **Pre-built Components**: Chat interface, database schema, API routes, and
   basic RAG functionality
-</Callout>
+</Info>
 
-<Callout type="info">
+<Info>
   **Development Tools**: TypeScript, ESLint, Prettier, and development utilities
-</Callout>
+</Info>
 
-<Callout type="info">
+<Info>
   **Deployment Ready**: Configured for Vercel deployment with environment
   variables
-</Callout>
+</Info>
 
 ---
 
-## Step 1: Clone the Repository
+## Get started
+
+To set up the repository on your local machine, follow these steps:
 
 <Steps>
-  <Step title="1. Navigate to your development directory">
-    Open your terminal and navigate to where you want to create the project
-  </Step>
-  <Step title="2. Clone the repository">
-    Use git to clone the starter repository
-  </Step>
-  <Step title="3. Navigate into the project directory">
-    Change into the newly created project folder
-  </Step>
-</Steps>
 
-<Snippet>
-```bash
-# Navigate to your development directory
-cd ~/projects
+<Step title="Clone the Repository">
 
-# Clone the repository
+- Open your terminal and navigate to where you want to create the project
 
+```bash title="Terminal"
+cd ~/{your-development-directory}
+```
+
+- Clone the repository
+
+```bash title="Terminal"
 git clone https://github.com/vercel/ai-sdk-rag-starter.git
+```
 
-# Navigate into the project
+- Navigate into the project directory
 
+```bash title="Terminal"
 cd ai-sdk-rag-starter
+```
 
-````
-</Snippet>
+</Step>
 
-<Callout type="warning">
-  **Note**: Make sure you have Git installed on your system. If not, install it from [git-scm.com](https://git-scm.com/)
-</Callout>
+<Step title="Install dependencies">
 
----
-
-## Step 2: Install Dependencies
-
-<Steps>
-  <Step title="1. Install Node.js dependencies">
-    Install all required packages using npm or yarn
-  </Step>
-  <Step title="2. Verify installation">
-    Check that all dependencies are installed correctly
-  </Step>
-</Steps>
-
-<Snippet>
-```bash
-# Install dependencies
-npm install
-
-# Or if you prefer yarn
-yarn install
-
-# Verify installation
-npm run build
-````
-
-</Snippet>
-
-<Callout type="info">
-  **Package Manager**: The project uses npm by default, but you can use yarn or
-  pnpm if preferred
-</Callout>
-
-### Key Dependencies
+Install Node.js dependencies and check for any errors in the console:
 
 <CodeGroup>
-  <CodeGroupItem title="Core Dependencies">
-```json
+
+```bash npm
+npm install
+```
+
+```bash pnpm
+pnpm install
+```
+
+```bash yarn
+yarn install
+```
+
+</CodeGroup>
+
+<Info>
+  **Package Manager**: The project uses npm by default, but you can use yarn or
+  pnpm if preferred
+</Info>
+
+### Key dependencies
+
+<CodeGroup>
+```json Core Dependencies
 {
   "next": "^14.0.0",
   "react": "^18.0.0",
@@ -135,9 +95,8 @@ npm run build
   "postgres": "^3.0.0"
 }
 ```
-  </CodeGroupItem>
-  <CodeGroupItem title="Development Dependencies">
-```json
+
+```json Development Dependencies
 {
   "@types/node": "^20.0.0",
   "@types/react": "^18.0.0",
@@ -146,117 +105,125 @@ npm run build
   "prettier": "^3.0.0"
 }
 ```
-  </CodeGroupItem>
+
 </CodeGroup>
+</Step>
+<Step title="Verify your setup">
 
----
+1. Ensure you're using Node.js 18 or higher
 
-## Step 3: Environment Configuration
+```bash Terminal
+node --version  # Should be 18.0.0 or higher
+```
 
-<Steps>
-  <Step title="1. Copy environment template">
-    Create your local environment file from the template
-  </Step>
-  <Step title="2. Configure API keys">
-    Add your OpenAI API key and database connection string
-  </Step>
-  <Step title="3. Verify configuration">
-    Ensure all required environment variables are set
-  </Step>
-</Steps>
+2. Verify dependencies
 
-<Snippet>
-```bash
-# Copy the environment template
-cp .env.example .env.local
+```bash Terminal
+npm list --depth=0
+```
 
-# Edit the environment file
-
-nano .env.local
-
-````
-</Snippet>
-
-### Required Environment Variables
+3. Test build process
 
 <CodeGroup>
-  <CodeGroupItem title="OpenAI Configuration">
-```bash
-# OpenAI API Key (required for embeddings and chat)
-OPENAI_API_KEY=sk-your-openai-api-key-here
 
-# OpenAI Model (optional, defaults to gpt-4o)
-OPENAI_MODEL=gpt-4o
-````
+```bash npm
+npm run build
+```
 
-  </CodeGroupItem>
-  <CodeGroupItem title="Database Configuration">
-```bash
-# PostgreSQL connection string
-DATABASE_URL=postgresql://username:password@localhost:5432/rag_chatbot
+```bash pnpm
+pnpm run build
+```
 
-# Database URL for Vercel (production)
+```bash yarn
+yarn build
+```
 
-POSTGRES_URL=postgresql://username:password@localhost:5432/rag_chatbot
-
-````
-  </CodeGroupItem>
 </CodeGroup>
 
-<Callout type="warning">
-  **Security**: Never commit your `.env.local` file to version control. It's already in `.gitignore`
-</Callout>
+<Accordion title="Console output of successful build">
 
----
+```bash Terminal
+  ▲ Next.js 14.2.4
 
-## Step 4: Project Structure Analysis
+   Creating an optimized production build ...
+Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ Compiled successfully
+ ✓ Linting and checking validity of types
+ ✓ Collecting page data
+ ✓ Generating static pages (5/5)
+ ✓ Collecting build traces
+ ✓ Finalizing page optimization
 
-Let's explore the key directories and files in the starter project:
+Route (app)                              Size     First Load JS
+┌ ○ /                                    138 B          87.1 kB
+└ ○ /_not-found                          870 B          87.9 kB
++ First Load JS shared by all            87 kB
+  ├ chunks/221-412c466386c2d029.js       31.5 kB
+  ├ chunks/67cfe1a8-964e1781a2edea35.js  53.6 kB
+  └ other shared chunks (total)          1.86 kB
+```
 
-<MDXImage
-  srcLight="/images/project-structure-light.png"
-  srcDark="/images/project-structure-dark.png"
-  width={600}
-  height={400}
-  alt="Project Directory Structure"
-/>
+</Accordion>
+</Step>
+
+</Steps>
+
+## Understand the project structure
+
+Let's explore the key directories and files in the [starter project](https://github.com/vercel/ai-sdk-rag-starter):
 
 ### Key Directories
 
 <Columns cols={2}>
   <Card title="app/" icon="folder">
-    **Next.js App Router**
-    - `page.tsx` - Main application page
-    - `layout.tsx` - Root layout component
-    - `api/` - API routes
-    - `globals.css` - Global styles
+    [Next.js App
+    Router](https://nextjs.org/docs/app/getting-started/project-structure):
+    <ul>
+      <li>`app/page.tsx`: Main application page</li>
+      <li>`app/layout.tsx`: Root layout component</li>
+      <li>`app/globals.css`: Global styles</li>
+    </ul>
   </Card>
   <Card title="components/" icon="puzzle">
-    **React Components**
-    - `chat.tsx` - Chat interface component
-    - `ui/` - Reusable UI components
-    - `icons/` - Icon components
+    React Components
+    <ul>
+      <li>`components/ui/`: Reusable UI components</li>
+    </ul>
   </Card>
 </Columns>
 <Columns cols={2}>
   <Card title="lib/" icon="code">
-    **Utility Functions**
-    - `db.ts` - Database configuration
-    - `ai.ts` - AI SDK configuration
-    - `utils.ts` - Helper functions
+    Utility functions:
+    <ul>
+      <li>`lib/db/index.ts`: Database configuration</li>
+      <li>
+        `actions/resources.ts`: Server action to add resources to the database
+      </li>
+      <li>`utils.ts`: Helper functions</li>
+    </ul>
   </Card>
-  <Card title="drizzle/" icon="database">
-    **Database Schema**
-    - `schema.ts` - Table definitions
-    - `migrations/` - Database migrations
+  <Card title="lib/db/" icon="database">
+    Database Schema
+    <ul>
+      <li>`lib/db/schema/`: Table definitions</li>
+      <li>`lib/db/migrations/`: Database migrations</li>
+    </ul>
   </Card>
 </Columns>
+
+#### References
+
+- [Next.js App Router](https://nextjs.org/docs/app/getting-started/project-structure)
+- [React Components](https://react.dev/learn/your-first-component)
+- [Drizzle ORM](https://orm.drizzle.team/docs/intro)
+- [AI SDK](https://sdk.vercel.ai/)
 
 ### Key Files
 
 <CodeGroup>
-  <CodeGroupItem title="package.json">
-```json
+```json package.json
 {
   "name": "ai-sdk-rag-starter",
   "version": "0.1.0",
@@ -269,126 +236,120 @@ Let's explore the key directories and files in the starter project:
     "db:studio": "drizzle-kit studio"
   }
 }
-````
+```
 
-  </CodeGroupItem>
-  <CodeGroupItem title="next.config.js">
-```javascript
+```javascript next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
     serverActions: true,
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
+```
 
-````
-  </CodeGroupItem>
 </CodeGroup>
 
 ---
 
-## Step 5: Verify Setup
+## Troubleshooting common issues
+
+<AccordionGroup>
+<Accordion title="npm install fails with permission errors">
+    Use `npm
+    install --legacy-peer-deps` or check your Node.js version
+</Accordion>
+
+<Accordion title="TypeScript errors during build">
+  Ensure you have the correct TypeScript version and all type definitions
+</Accordion>
+
+  <Accordion title="Environment variables not recognized">
+    Restart your development server after adding environment variables
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Activity: Explore the Codebase with Cursor
+
+Now that you have the repository set up, let's explore the codebase using Cursor's AI-powered features to understand the project structure and purpose.
 
 <Steps>
-  <Step title="1. Check Node.js version">
-    Ensure you're using Node.js 18 or higher
-  </Step>
-  <Step title="2. Verify dependencies">
-    Confirm all packages are installed correctly
-  </Step>
-  <Step title="3. Test build process">
-    Ensure the project can be built without errors
-  </Step>
+
+<Step title="Open the repository in Cursor">
+
+You can open the repository in Cursor in two ways:
+
+**Option 1: Using the command line**
+
+```bash Terminal
+cd ai-sdk-rag-starter
+cursor .
+```
+
+**Option 2: Using the file menu**
+
+1. Open Cursor
+2. Go to `File` → `Open Folder`
+3. Navigate to and select the `ai-sdk-rag-starter` folder
+4. Click `Open`
+
+</Step>
+
+<Step title="Add the repository to Cursor Chat">
+
+1. In the file explorer (left sidebar), right-click on the root folder `ai-sdk-rag-starter`
+2. Select `Add to Cursor Chat` from the context menu
+3. This will add the entire repository to your chat context
+
+</Step>
+
+<Step title="Add the README to Cursor Chat">
+
+1. In the file explorer, find and right-click on the `README.md` file
+2. Select `Add to Cursor Chat` from the context menu
+3. This will add the README documentation to your chat context
+
+</Step>
+
+<Step title="Ask Cursor to analyze the codebase">
+
+In the Cursor Chat panel, ask the following prompt:
+
+```
+Review the code in this repository and explain its purpose and how the code is structured
+```
+
+<Info>
+  **What to expect**: Cursor will analyze the entire codebase and provide you:
+  <ul>
+    <li>An overview of the project's purpose</li>
+    <li>Explanation of the main components and their relationships</li>
+    <li>Code structure and architecture patterns</li>
+    <li>Key files and their roles in the application</li>
+  </ul>
+</Info>
+
+</Step>
+
+<Step title="Explore further (optional)">
+
+Once you have the initial analysis, you can ask follow-up questions like:
+
+- "How does the RAG functionality work in this codebase?"
+- "What database schema is being used?"
+- "How are the API routes structured?"
+- "What are the main React components and their purposes?"
+
+</Step>
+
 </Steps>
 
-<Snippet>
-```bash
-# Check Node.js version
-node --version  # Should be 18.0.0 or higher
-
-# Check npm version
-npm --version
-
-# Verify dependencies
-npm list --depth=0
-
-# Test build
-npm run build
-````
-
-</Snippet>
-
-<Callout type="info">
-  **Success Indicators**: - No dependency warnings - Build completes without
-  errors - All TypeScript types are valid
-</Callout>
-
----
-
-## Interactive Elements
-
-### Setup Checklist
-
-<Callout type="info">
-  **Complete this checklist to verify your setup**: ✅ Repository cloned
-  successfully ✅ Dependencies installed without errors ✅ Environment file
-  created and configured ✅ Node.js version 18+ installed ✅ Build process
-  completes successfully ✅ No TypeScript errors
-</Callout>
-
-### Troubleshooting Common Issues
-
-<Callout type="warning">
-  **Issue**: `npm install` fails with permission errors **Solution**: Use `npm
-  install --legacy-peer-deps` or check your Node.js version
-</Callout>
-
-<Callout type="warning">
-  **Issue**: TypeScript errors during build **Solution**: Ensure you have the
-  correct TypeScript version and all type definitions
-</Callout>
-
-<Callout type="warning">
-  **Issue**: Environment variables not recognized **Solution**: Restart your
-  development server after adding environment variables
-</Callout>
-
----
-
-## Reflection Questions
-
-Take a moment to reflect on what you've learned:
-
-1. **What are the main benefits of using a starter template?**
-
-   - Consider development speed and best practices
-   - Think about production readiness
-
-2. **How does the project structure support scalability?**
-
-   - Consider the separation of concerns
-   - Think about maintainability
-
-3. **What role do environment variables play in the setup?**
-   - Consider security and configuration management
-   - Think about deployment flexibility
-
----
-
-## Next Steps
-
-You've successfully set up the development environment! In the next section, you'll:
-
-- **Configure PostgreSQL database** with pgvector extension
-- **Set up database migrations** and schema
-- **Test database connectivity**
-
-Ready to continue? Proceed to [Section 2.2: Database Setup](/learning-paths/rag-chatbot/module-2-2).
-
-<Callout>
-  **Key Takeaway**: A well-structured starter project provides a solid
-  foundation for building production-ready RAG applications with modern best
-  practices.
-</Callout>
+<Info>
+  **Learning Tip**: This activity helps you understand the codebase from an AI
+  perspective, which can reveal patterns and relationships you might miss when
+  reading the code manually. Use this as a foundation for the hands-on
+  development work in the upcoming modules.
+</Info>
