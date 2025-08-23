@@ -1,441 +1,369 @@
 ---
 title: "2.2 Database Setup"
-description: "Configure PostgreSQL database with pgvector extension, set up database migrations, and test connectivity."
+description: "Create a Postgres database with Vercel and configure environment variables for the RAG application."
+---
+
+import { AIPromptReflection } from "/snippets/ai-prompt-reflection.jsx";
+
+## Prerequisites
+
+<Info>
+  **Recommended**: Use Cursor's integrated terminal for all command-line
+  operations in the course. This provides a seamless development experience with
+  your code editor.
+</Info>
+
+### Opening Cursor's Terminal
+
+You can open the terminal in Cursor in several ways:
+
+<AccordionGroup>
+
+<Accordion title="Option 1: Using the menu">
+
+1. Go to `Terminal` → `New Terminal` in the top menu
+
+</Accordion>
+
+<Accordion title="Option 2: Using keyboard shortcut">
+
+- **macOS**: `Ctrl + `` (backtick)
+- **Windows/Linux**: `Ctrl + `` (backtick)
+
+</Accordion>
+
+<Accordion title="Option 3: Using the command palette">
+
+1. Press `Cmd/Ctrl + Shift + P` to open the command palette
+2. Type "Terminal: Create New Terminal"
+3. Press Enter
+
+</Accordion>
+
+</AccordionGroup>
+
+<Info>
+  **Terminal Location**: The terminal will appear at the bottom of your Cursor
+  window. You can resize it by dragging the top edge.
+</Info>
+
 ---
 
 ## Learning Objectives
 
 By the end of this section, you will be able to:
 
-- Set up PostgreSQL database with pgvector extension
-- Configure database connection and environment variables
+- Create a free Postgres database using Vercel's Neon integration
+- Configure environment variables for database connection
+- Set up OpenAI API key for embeddings and chat functionality
 - Run database migrations to create the initial schema
-- Test database connectivity and verify setup
 
-<Callout>**Duration**: 40 minutes</Callout>
-
----
-
-## PostgreSQL with pgvector Overview
-
-PostgreSQL with the pgvector extension provides the vector storage capabilities needed for RAG applications:
-
-<Columns cols={2}>
-  <Card title="PostgreSQL" icon="database">
-    Robust, open-source relational database
-  </Card>
-  <Card title="pgvector Extension" icon="layers">
-    Vector operations and similarity search
-  </Card>
-</Columns>
-<Columns cols={2}>
-  <Card title="HNSW Index" icon="zap">
-    Fast approximate nearest neighbor search
-  </Card>
-  <Card title="Drizzle ORM" icon="code">
-    Type-safe database operations
-  </Card>
-</Columns>
-
-### Why pgvector?
-
-<Callout type="info">
-  **Vector Storage**: pgvector allows PostgreSQL to store and query
-  high-dimensional vectors (embeddings)
-</Callout>
-
-<Callout type="info">
-  **Similarity Search**: Efficient algorithms for finding similar vectors using
-  cosine similarity
-</Callout>
-
-<Callout type="info">
-  **Production Ready**: Battle-tested extension used by many production RAG
-  applications
-</Callout>
+<Callout>**Duration**: 30 minutes</Callout>
 
 ---
 
-## Step 1: Install PostgreSQL
+## Create Database
+
+You will need a Postgres database to complete this tutorial. We'll use Vercel's Neon integration to create a free Postgres database.
+
+<Info>
+  **Why Vercel + Neon?**: This combination provides a free, production-ready
+  PostgreSQL database with pgvector support, perfect for RAG applications.
+</Info>
+
+---
+
+## Setting up Postgres with Vercel
+
+<Info>
+  **Need a Vercel account?** If you don't have a Vercel account yet, follow the
+  [Getting Started with
+  Vercel](https://vercel.com/docs/getting-started-with-vercel) guide to create
+  one first.
+</Info>
 
 <Steps>
-  <Step title="1. Install PostgreSQL">
-    Install PostgreSQL on your local machine
-  </Step>
-  <Step title="2. Install pgvector extension">
-    Add the pgvector extension to PostgreSQL
-  </Step>
-  <Step title="3. Create database">
-    Create a new database for your RAG application
-  </Step>
-</Steps>
 
-### Installation Options
+<Step title="Navigate to Vercel">
 
-<CodeGroup>
-  <CodeGroupItem title="macOS (Homebrew)">
-```bash
-# Install PostgreSQL
-brew install postgresql
-
-# Start PostgreSQL service
-
-brew services start postgresql
-
-# Install pgvector
-
-brew install pgvector
-
-````
-  </CodeGroupItem>
-  <CodeGroupItem title="Ubuntu/Debian">
-```bash
-# Install PostgreSQL
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-
-# Install pgvector
-sudo apt install postgresql-14-pgvector
-````
-
-  </CodeGroupItem>
-  <CodeGroupItem title="Windows">
-```bash
-# Download from postgresql.org
-# Install pgvector from https://github.com/pgvector/pgvector
-```
-  </CodeGroupItem>
-</CodeGroup>
-
-<Callout type="warning">
-  **Note**: The exact installation commands may vary based on your PostgreSQL
-  version and operating system
-</Callout>
-
----
-
-## Step 2: Configure Database
-
-<Steps>
-  <Step title="1. Access PostgreSQL">
-    Connect to PostgreSQL as the postgres user
-  </Step>
-  <Step title="2. Create database">
-    Create a new database for your application
-  </Step>
-  <Step title="3. Enable pgvector">
-    Enable the pgvector extension in your database
-  </Step>
-</Steps>
-
-<Snippet>
-```bash
-# Connect to PostgreSQL as postgres user
-sudo -u postgres psql
-
-# Create a new database
-
-CREATE DATABASE rag_chatbot;
-
-# Connect to the new database
-
-\c rag_chatbot
-
-# Enable pgvector extension
-
-CREATE EXTENSION IF NOT EXISTS vector;
-
-# Verify extension is installed
-
-\dx
-
-# Exit PostgreSQL
-
-\q
-
-````
-</Snippet>
-
-<Callout type="info">
-  **Database Name**: You can use any name for your database. `rag_chatbot` is just an example.
-</Callout>
-
----
-
-## Step 3: Configure Environment Variables
-
-Update your `.env.local` file with the correct database connection string:
-
-<CodeGroup>
-  <CodeGroupItem title="Local Development">
-```bash
-# PostgreSQL connection string
-DATABASE_URL=postgresql://postgres:password@localhost:5432/rag_chatbot
-
-# For Vercel deployment
-POSTGRES_URL=postgresql://postgres:password@localhost:5432/rag_chatbot
-````
-
-  </CodeGroupItem>
-  <CodeGroupItem title="Connection String Format">
-```bash
-# Format: postgresql://username:password@host:port/database
-DATABASE_URL=postgresql://[username]:[password]@[host]:[port]/[database]
-```
-  </CodeGroupItem>
-</CodeGroup>
-
-### Connection String Components
-
-<Columns cols={2}>
-  <Card title="username" icon="user">
-    PostgreSQL user (default: postgres)
-  </Card>
-  <Card title="password" icon="lock">
-    User password (set during installation)
-  </Card>
-</Columns>
-<Columns cols={2}>
-  <Card title="host" icon="server">
-    Database host (localhost for local development)
-  </Card>
-  <Card title="port" icon="hash">
-    PostgreSQL port (default: 5432)
-  </Card>
-</Columns>
-
-<Callout type="warning">
-  **Security**: Use strong passwords and never commit database credentials to
-  version control
-</Callout>
-
----
-
-## Step 4: Run Database Migrations
-
-<Steps>
-  <Step title="1. Generate migrations">
-    Create migration files based on your schema
-  </Step>
-  <Step title="2. Run migrations">Apply the migrations to create tables</Step>
-  <Step title="3. Verify schema">Check that tables are created correctly</Step>
-</Steps>
-
-<Snippet>
-```bash
-# Generate migration files
-npm run db:generate
-
-# Run migrations
-
-npm run db:migrate
-
-# Open Drizzle Studio to verify
-
-npm run db:studio
-
-````
-</Snippet>
-
-### Understanding Migrations
-
-<CodeGroup>
-  <CodeGroupItem title="Migration Generation">
-```bash
-# This command analyzes your schema and creates migration files
-npm run db:generate
-
-# Creates files in drizzle/migrations/
-# Example: 0000_initial.sql
-````
-
-  </CodeGroupItem>
-  <CodeGroupItem title="Migration Execution">
-```bash
-# This command applies migrations to your database
-npm run db:migrate
-
-# Creates tables, indexes, and extensions
-
-# Safe to run multiple times
-
-````
-  </CodeGroupItem>
-</CodeGroup>
-
-<Callout type="info">
-  **Drizzle Studio**: A web interface for viewing and managing your database
-</Callout>
-
----
-
-## Step 5: Verify Database Setup
-
-<Steps>
-  <Step title="1. Test connection">
-    Verify your application can connect to the database
-  </Step>
-  <Step title="2. Check tables">
-    Ensure all tables are created correctly
-  </Step>
-  <Step title="3. Test pgvector">
-    Verify vector operations work properly
-  </Step>
-  <Step title="Environment Configuration">
-
-You can perform the following steps in your terminal or using your code editor.
-
-1. Create your local environment file from the template
-
-```bash Terminal
-cp .env.example .env.local
-```
-
-2. Update `.env.local` with your OpenAI API key and database connection string
-
-```bash env.local
-# OpenAI API Key (required for embeddings and chat)
-OPENAI_API_KEY=sk-your-openai-api-key-here
-# OpenAI Model (optional, defaults to gpt-4o)
-OPENAI_MODEL=gpt-4o
-# Database URL for the cloud with Vercel
-POSTGRES_URL=postgresql://username:password@localhost:5432/rag_chatbot
-```
-
-<Warning>
-  Never commit your `.env.local` file to version control. It's already in
-  `.gitignore`
-</Warning>
+1. Go to [Vercel.com](https://vercel.com) and make sure you're logged in
+2. Navigate to your team homepage
+3. Click on the **Integrations** tab
 
 </Step>
+
+<Step title="Browse the Marketplace">
+
+1. Click **Browse Marketplace**
+2. Search for `Neon` in the search bar
+3. Click on **Neon** and click **Install**
+
+</Step>
+
+<Step title="Create Database">
+
+1. On the "Get Started with Neon" page, select your region (e.g., Washington, D.C., U.S. East) - select a region close to where the majority of your users are located
+2. Turn off **Auth** (for this tutorial)
+3. Click **Continue**
+4. Name your database (you can use the default name or rename it to something like "RagTutorial")
+5. Click **Create** in the bottom right corner
+
+</Step>
+
+<Step title="Get Connection String">
+
+1. After seeing "Database created successfully", click **Done**
+2. You'll be redirected to your database instance
+3. In the **Quick Start** section, click **Show secrets** in `.env.local`
+4. Copy the full **DATABASE_URL** environment variable
+
+<Info>
+  **Save this URL**: You'll need this connection string for your environment
+  variables in the next step.
+</Info>
+
+</Step>
+
 </Steps>
 
-<Snippet>
-```bash
-# Test database connection
-npm run dev
+---
 
-# Check for connection errors in the console
-# Should see "Database connected successfully"
-````
+## Configure Environment Variables
 
-</Snippet>
+Now that you have your database, you need to add the connection string as an environment variable.
 
-### Database Schema Verification
+<Steps>
 
-<MDXImage
-  srcLight="/images/database-schema-light.png"
-  srcDark="/images/database-schema-dark.png"
-  width={700}
-  height={500}
-  alt="Database Schema Diagram"
-/>
+<Step title="Create Environment File">
 
-<Callout type="info">
-  **Expected Tables**: - `resources` - Stores your knowledge base content -
-  `embeddings` - Stores vector embeddings (will be created later) -
-  `__drizzle_migrations` - Tracks applied migrations
-</Callout>
+Make a copy of the `.env.example` file and rename it to `.env`:
+
+**Option 1: Using the command line**
+
+```bash Terminal
+cp .env.example .env
+```
+
+**Option 2: Using Cursor's file manager**
+
+1. In the file explorer (left sidebar), right-click on `.env.example`
+2. Select `Copy` from the context menu
+3. Right-click in the file explorer area
+4. Select `Paste` from the context menu
+5. Rename the copied file from `.env.example (copy)` to `.env`
+
+</Step>
+
+<Step title="Configure Database URL">
+
+1. Open the new `.env` file
+2. You should see an item called `DATABASE_URL`
+3. Copy in your database connection string after the equals sign
+
+```env .env
+DATABASE_URL=postgresql://username:password@host:port/database
+```
+
+</Step>
+
+<Step title="Add OpenAI API Key">
+
+1. Go to [platform.openai.com](https://platform.openai.com) and sign in to your account
+2. Click on the Settings gear icon <Icon icon="settings" /> in the top right corner
+3. Select **"API Keys"** on the left side bar
+4. Click **"Create new secret key"**
+5. Give your API key a name (e.g., "RAG Tutorial") and select the **Default project**
+6. Click **"Create secret key"**
+7. **Important**: Copy the API key immediately - you won't be able to see it again
+8. Once you have your API key, paste it into your `.env` file:
+
+```env .env
+OPENAI_API_KEY=sk-your-openai-api-key-here
+DATABASE_URL=postgresql://username:password@host:port/database
+```
+
+</Step>
+
+</Steps>
+
+<Warning>
+  **Security**: Never commit your `.env` file to version control. It's already
+  in `.gitignore` for safety.
+</Warning>
 
 ---
 
-## Step 6: Test pgvector Functionality
+## Migrate Database
 
-Let's verify that pgvector is working correctly:
+Once you have your Postgres database and environment variables set up, you can run your first database migration.
 
-<Snippet>
-```sql
--- Connect to your database
-psql postgresql://postgres:password@localhost:5432/rag_chatbot
+<Steps>
 
--- Test vector operations
-SELECT '[1,2,3]'::vector;
+<Step title="Run Migration">
 
--- Test similarity calculation
-SELECT '[1,2,3]'::vector <=> '[4,5,6]'::vector as distance;
+Run the following command to set up your database schema in your terminal:
 
--- Test HNSW index creation (will be used later)
-CREATE INDEX test_idx ON test_table USING hnsw (embedding vector_cosine_ops);
+<CodeGroup>
+
+```bash npm
+npm run db:migrate
+```
+
+```bash pnpm
+pnpm db:migrate
+```
+
+```bash yarn
+yarn db:migrate
+```
+
+</CodeGroup>
+
+You should see the following output:
+
+```bash Terminal
+⏳ Running migrations...
+✅ Migrations completed in 1986 ms
 
 ```
-</Snippet>
 
-<Callout type="info">
-  **Vector Operations**: These commands verify that pgvector can handle vector data types and similarity calculations
-</Callout>
+</Step>
+
+<Step title="What Happens">
+
+This command will:
+
+1. First add the **pgvector** extension to your database
+2. Then create a new table for your resources schema that is defined in `lib/db/schema/resources.ts`
+3. This schema has four columns: `id`, `content`, `createdAt`, and `updatedAt`
+
+</Step>
+
+</Steps>
+
+<Info>
+  **pgvector Extension**: This extension enables PostgreSQL to store and query
+  vector embeddings, which is essential for RAG functionality.
+</Info>
 
 ---
 
-## Interactive Elements
+## Verify Database Setup
 
-### Database Setup Checklist
+<Steps>
 
-<Callout type="info">
-  **Complete this checklist to verify your database setup**:
+<Step title="Check Migration Success">
 
-  ✅ PostgreSQL installed and running
-  ✅ pgvector extension enabled
-  ✅ Database created successfully
-  ✅ Environment variables configured
-  ✅ Migrations run without errors
-  ✅ Drizzle Studio accessible
-  ✅ Application connects to database
-  ✅ Vector operations working
-</Callout>
+1. Look for success messages in your terminal
+2. You should see output indicating that the pgvector extension was added and tables were created
 
-### Troubleshooting Common Issues
+</Step>
 
-<Callout type="warning">
-  **Issue**: `CREATE EXTENSION vector` fails
-  **Solution**: Ensure pgvector is installed and PostgreSQL is restarted
-</Callout>
+<Step title="Optional: View Database">
 
-<Callout type="warning">
-  **Issue**: Connection refused error
-  **Solution**: Check if PostgreSQL is running and port 5432 is accessible
-</Callout>
+You have two options to view your database:
 
-<Callout type="warning">
-  **Issue**: Migration fails with permission errors
-  **Solution**: Ensure your database user has CREATE privileges
-</Callout>
+**Option 1: Drizzle Studio (Local)**
 
-<Callout type="warning">
-  **Issue**: Drizzle Studio won't start
-  **Solution**: Check your DATABASE_URL format and database connectivity
-</Callout>
+Run this command in your terminal:
+
+<CodeGroup>
+
+```bash npm
+npm run db:studio
+```
+
+```bash pnpm
+pnpm db:studio
+```
+
+```bash yarn
+yarn db:studio
+```
+
+</CodeGroup>
+
+You should see the following at the end of the console output:
+
+```bash Terminal
+Drizzle Studio is up and running on https://local.drizzle.studio
+
+```
+
+Open the link in your browser to see a web interface where you can see your database tables.
+
+**Option 2: Vercel Dashboard (Cloud)**
+
+1. Go to your [Vercel Dashboard](https://vercel.com/dashboard)
+2. Navigate to the **Storage** tab
+3. Find your Neon database and click on it
+4. Click on the **Open in Neon** button to view your database in Neon console
+5. Click **Tables** on the left sidebar. You should see a **Resources** table with 4 columns: `id`, `content`, `createdAt`, and `updatedAt` with no data
+
+<Info>
+  **Both options work**: Drizzle Studio is great for local development, while
+  the Vercel dashboard is convenient for viewing your cloud database directly.
+</Info>
+
+</Step>
+
+</Steps>
+
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+
+<Accordion title="Migration fails with connection errors">
+
+**Possible causes and solutions:**
+
+1. **Check your DATABASE_URL format** - Ensure it follows the pattern: `postgresql://username:password@host:port/database`
+
+2. **Verify your database is running** - Check your Vercel dashboard to ensure the database is active
+
+3. **Check network connectivity** - Ensure your local machine can reach the database host
+
+4. **Verify credentials** - Double-check the username and password in your connection string
+
+</Accordion>
+
+<Accordion title="pgvector extension fails to install">
+
+**This is usually resolved by:**
+
+1. **Using Neon database** - Neon comes with pgvector pre-installed
+2. **Checking database permissions** - Ensure your database user has CREATE EXTENSION privileges
+3. **Contacting support** - If using a different provider, check their pgvector support
+
+</Accordion>
+
+</AccordionGroup>
 
 ---
 
 ## Reflection Questions
 
-Take a moment to reflect on what you've learned:
+Take a moment to reflect on what you've learned. Think about it first and then use AI to refine your answers.
 
-1. **Why is pgvector essential for RAG applications?**
-   - Consider the role of vector storage in semantic search
-   - Think about performance implications
+<AIPromptReflection
+  question="Why is a cloud database beneficial for this tutorial? Consider accessibility, scalability, and pgvector support, as well as deployment and collaboration."
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+  cardTitle="Cloud Database"
+/>
 
-2. **How do migrations help with database management?**
-   - Consider version control for database schema
-   - Think about team collaboration and deployment
+<AIPromptReflection
+  question="What role does the pgvector extension play in RAG applications? Consider vector storage and similarity search capabilities, as well as performance and functionality."
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+  cardTitle="pgvector Extension"
+/>
 
-3. **What security considerations are important for database setup?**
-   - Consider credential management
-   - Think about production deployment
-
----
-
-## Next Steps
-
-You've successfully set up your database! In the next section, you'll:
-
-- **Start the development server** and explore the application
-- **Understand the project structure** and existing functionality
-- **Test the basic application** to ensure everything works
-
-Ready to continue? Proceed to [Section 2.3: Development Environment](/learning-paths/rag-chatbot/module-2-3).
-
-<Callout>
-  **Key Takeaway**: A properly configured PostgreSQL database with pgvector provides the foundation for storing and querying embeddings efficiently in your RAG application.
-</Callout>
-```
+<AIPromptReflection
+  question="How do environment variables help with security and configuration? Consider credential management and deployment flexibility, as well as development vs production environments."
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+  cardTitle="Environment Variables"
+/>
