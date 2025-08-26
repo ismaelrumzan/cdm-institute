@@ -1,428 +1,138 @@
 ---
-title: "3.2 Vector Database Implementation"
-description: "Set up vector columns in the embeddings table, implement HNSW indexing strategies, and optimize for similarity search performance."
+title: "3.2 Add Embedding Logic"
+description: "Write logic to chunk content and generate embeddings using AI SDK."
 ---
 
-## Learning Objectives
+import { AIPromptReflection } from "/snippets/ai-prompt-reflection.jsx";
 
-By the end of this section, you will be able to:
+## Overview
 
-- Implement vector storage with pgvector columns
-- Create HNSW indexes for fast similarity search
-- Understand indexing strategies and performance optimization
-- Set up proper database relationships for embeddings
-
-<Callout>**Duration**: 30 minutes</Callout>
+To create an embedding, you will start with a piece of source material (unknown length), break it down into smaller chunks, embed each chunk, and then save the chunk to the database.
 
 ---
 
-## Vector Storage Implementation
-
-### Creating the Embeddings Table
+## Write the function to chunk content
 
 <Steps>
-  <Step title="1. Define the schema">
-    Create the embeddings table with vector columns
+  <Step title="Setting Up the AI Directory">
+    Create a file `embedding.ts` in the `lib/ai` directory
   </Step>
-  <Step title="2. Establish relationships">
-    Link embeddings to resources with foreign keys
+  <Step title="Generate Chunks">
+    Let's start by creating a function to break the source material into small chunks. Add the following code to `lib/ai/embedding.ts`:
+
+    ```typescript
+    const generateChunks = (input: string): string[] => {
+      return input
+        .trim()
+        .split(".")
+        .filter((i) => i !== "");
+    };
+    ```
+
+    This function will take an input string and split it by periods, filtering out any empty items. This will return an array of strings. It is worth experimenting with different chunking techniques in your projects as the best technique will vary.
+
   </Step>
-  <Step title="3. Add metadata fields">
-    Include chunk information and embedding metadata
+  <Step title="Install AI SDK">
+    You will use the AI SDK to create embeddings. This will require two more dependencies, which you can install by running the following command:
+
+    ```bash
+    pnpm add ai @ai-sdk/react @ai-sdk/openai
+    ```
+
+    This will install the AI SDK, AI SDK's React hooks, and AI SDK's OpenAI provider.
+
+    The AI SDK is designed to be a unified interface to interact with any large language model. This means that you can change model and providers with just one line of code!
+
+  </Step>
+  <Step title="Generate Embeddings">
+    Let's add a function to generate embeddings. Copy the following code into your `lib/ai/embedding.ts` file:
+
+    ```typescript
+    import { embedMany } from "ai";
+    import { openai } from "@ai-sdk/openai";
+
+    const embeddingModel = openai.embedding("text-embedding-ada-002");
+
+    const generateChunks = (input: string): string[] => {
+      return input
+        .trim()
+        .split(".")
+        .filter((i) => i !== "");
+    };
+
+    export const generateEmbeddings = async (
+      value: string
+    ): Promise<Array<{ embedding: number[]; content: string }>> => {
+      const chunks = generateChunks(value);
+      const { embeddings } = await embedMany({
+        model: embeddingModel,
+        values: chunks,
+      });
+      return embeddings.map((e, i) => ({ content: chunks[i], embedding: e }));
+    };
+    ```
+
   </Step>
 </Steps>
 
-<CodeGroup>
-  <CodeGroupItem title="Enhanced Schema">
-```typescript
-// drizzle/schema.ts
-import { pgTable, text, timestamp, integer, vector } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
+---
 
-export const resources = pgTable("resources", {
-  id: text("id").primaryKey(),
-  content: text("content").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+## Understanding the Code
 
-export const embeddings = pgTable("embeddings", {
-  id: text("id").primaryKey(),
-  resourceId: text("resource_id")
-    .notNull()
-    .references(() => resources.id, { onDelete: "cascade" }),
-  content: text("content").notNull(),
-  embedding: vector("embedding", { dimensions: 1536 }),
-  chunkIndex: integer("chunk_index").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+In this code, you first define the model you want to use for the embeddings. In this example, you are using OpenAI's text-embedding-ada-002 embedding model.
 
-// Define relationships
-export const resourcesRelations = relations(resources, ({ many }) => ({
-embeddings: many(embeddings),
-}))
+Next, you create an asynchronous function called `generateEmbeddings`. This function will take in the source material (`value`) as an input and return a promise of an array of objects, each containing an embedding and content. Within the function, you first generate chunks for the input. Then, you pass those chunks to the `embedMany` function imported from the AI SDK which will return embeddings of the chunks you passed in. Finally, you map over and return the embeddings in a format that is ready to save in the database.
 
-export const embeddingsRelations = relations(embeddings, ({ one }) => ({
-  resource: one(resources, {
-    fields: [embeddings.resourceId],
-    references: [resources.id],
-  }),
-}))
-```
-  </CodeGroupItem>
-  <CodeGroupItem title="Generated SQL">
-```sql
-CREATE TABLE embeddings (
-  id TEXT PRIMARY KEY,
-  resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  embedding vector(1536),
-  chunk_index INTEGER NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
-);
+<AIPromptReflection
+  question="Explain the code in the embedding.ts file. What does each function do? How does the chunking process work? What is the purpose of the generateEmbeddings function and how does it integrate with the AI SDK? What is the expected output format and why is it structured this way?"
+    chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+  context={`Here's the complete code for lib/ai/embedding.ts:
 
--- Create HNSW index for fast similarity search
-CREATE INDEX embeddings_embedding_idx ON embeddings
-USING hnsw (embedding vector_cosine_ops);
+\`\`\`typescript
+import { embedMany } from "ai";
+import { openai } from "@ai-sdk/openai";
 
-````
-  </CodeGroupItem>
-</CodeGroup>
+const embeddingModel = openai.embedding("text-embedding-ada-002");
+
+const generateChunks = (input: string): string[] => {
+return input
+.trim()
+.split(".")
+.filter((i) => i !== "");
+};
+
+export const generateEmbeddings = async (
+  value: string
+): Promise<Array<{ embedding: number[]; content: string }>> => {
+  const chunks = generateChunks(value);
+  const { embeddings } = await embedMany({
+    model: embeddingModel,
+    values: chunks,
+  });
+  return embeddings.map((e, i) => ({ content: chunks[i], embedding: e }));
+};
+\`\`\``}
+/>
 
 ---
 
-## Vector Column Configuration
-
-### Understanding Vector Types
+## Key Components
 
 <Columns cols={2}>
-  <Card title="Dimensions" icon="ruler">
-    **1536 dimensions** for OpenAI's text-embedding-ada-002 model
-    **Configurable** for different embedding models
+  <Card title="Chunking Function" icon="scissors">
+    **generateChunks**: Splits input text by periods and filters out empty
+    strings
   </Card>
-  <Card title="Data Type" icon="database">
-    **pgvector vector type** for efficient storage
-    **Optimized** for similarity operations
+  <Card title="Embedding Model" icon="zap">
+    **text-embedding-ada-002**: OpenAI's embedding model with 1536 dimensions
   </Card>
 </Columns>
 <Columns cols={2}>
-  <Card title="Storage" icon="hard-drive">
-    **Compressed storage** for memory efficiency
-    **Fast retrieval** for similarity search
+  <Card title="Batch Processing" icon="layers">
+    **embedMany**: Processes multiple chunks at once for efficiency
   </Card>
-  <Card title="Operations" icon="calculator">
-    **Cosine similarity** calculations
-    **Euclidean distance** support
+  <Card title="Output Format" icon="output">
+    **Structured Result**: Returns array of objects with content and embedding
   </Card>
 </Columns>
-
-### Vector Column Benefits
-
-<Callout type="info">
-  **Efficient Storage**: pgvector optimizes vector storage for fast similarity operations
-</Callout>
-
-<Callout type="info">
-  **Native Operations**: Built-in support for vector similarity calculations
-</Callout>
-
-<Callout type="info">
-  **Index Support**: Compatible with HNSW and IVFFlat indexes for fast search
-</Callout>
-
----
-
-## HNSW Index Implementation
-
-### What is HNSW?
-
-<Callout type="info">
-  **Hierarchical Navigable Small World**: A graph-based algorithm for approximate nearest neighbor search
-</Callout>
-
-<Callout type="info">
-  **Fast Search**: Provides sub-millisecond search times even with millions of vectors
-</Callout>
-
-<Callout type="info">
-  **High Accuracy**: Maintains high recall while being extremely fast
-</Callout>
-
-### HNSW vs IVFFlat Comparison
-
-<Columns cols={2}>
-  <Card title="HNSW" icon="zap">
-    **Speed**: Extremely fast search
-    **Memory**: Higher memory usage
-    **Accuracy**: High recall
-    **Best for**: Real-time applications
-  </Card>
-  <Card title="IVFFlat" icon="database">
-    **Speed**: Fast search
-    **Memory**: Lower memory usage
-    **Accuracy**: Good recall
-    **Best for**: Large datasets
-  </Card>
-</Columns>
-
-### Creating HNSW Index
-
-<CodeGroup>
-  <CodeGroupItem title="Drizzle Schema">
-```typescript
-// The index is automatically created when using vector type
-// with HNSW configuration in the schema
-export const embeddings = pgTable('embeddings', {
-  // ... other fields
-  embedding: vector('embedding', { dimensions: 1536 }),
-  // HNSW index will be created automatically
-})
-````
-
-  </CodeGroupItem>
-  <CodeGroupItem title="Manual SQL">
-```sql
--- Create HNSW index manually if needed
-CREATE INDEX embeddings_embedding_idx ON embeddings 
-USING hnsw (embedding vector_cosine_ops)
-WITH (m = 16, ef_construction = 64);
-
--- Parameters:
--- m: Maximum number of connections per layer (default: 16)
--- ef_construction: Search depth during construction (default: 64)
-
-````
-  </CodeGroupItem>
-</CodeGroup>
-
----
-
-## Performance Optimization
-
-### Index Tuning Parameters
-
-<CodeGroup>
-  <CodeGroupItem title="Construction Parameters">
-```sql
--- Optimize for construction speed vs search speed
-CREATE INDEX embeddings_embedding_idx ON embeddings
-USING hnsw (embedding vector_cosine_ops)
-WITH (
-  m = 16,              -- More connections = faster search, slower build
-  ef_construction = 64 -- Higher values = better accuracy, slower build
-);
-````
-
-  </CodeGroupItem>
-  <CodeGroupItem title="Search Parameters">
-```sql
--- Optimize search queries
-SET hnsw.ef_search = 40; -- Search depth (higher = more accurate, slower)
-
--- Use in queries
-SELECT \* FROM embeddings
-ORDER BY embedding <=> '[0.1, 0.2, ...]'::vector
-LIMIT 10;
-
-````
-  </CodeGroupItem>
-</CodeGroup>
-
-### Performance Monitoring
-
-<Callout type="info">
-  **Query Performance**: Monitor query execution times for similarity searches
-</Callout>
-
-<Callout type="info">
-  **Index Size**: Track index size and memory usage
-</Callout>
-
-<Callout type="info">
-  **Recall Accuracy**: Measure search result quality and relevance
-</Callout>
-
----
-
-## Database Relationships
-
-### Foreign Key Constraints
-
-<CodeGroup>
-  <CodeGroupItem title="Cascade Delete">
-```typescript
-// When a resource is deleted, all its embeddings are deleted
-resourceId: text('resource_id').notNull().references(() => resources.id, { onDelete: 'cascade' })
-````
-
-  </CodeGroupItem>
-  <CodeGroupItem title="Referential Integrity">
-```sql
--- Ensures data consistency
-FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
-```
-  </CodeGroupItem>
-</CodeGroup>
-
-### Relationship Benefits
-
-<Columns cols={2}>
-  <Card title="Data Integrity" icon="shield">
-    Ensures embeddings belong to valid resources Prevents orphaned embedding
-    records
-  </Card>
-  <Card title="Cascade Operations" icon="trash">
-    Automatic cleanup when resources are deleted Maintains database consistency
-  </Card>
-</Columns>
-<Columns cols={2}>
-  <Card title="Query Efficiency" icon="zap">
-    Enables efficient joins between tables Optimizes data retrieval patterns
-  </Card>
-  <Card title="Maintenance" icon="wrench">
-    Easier database maintenance and cleanup Clear data ownership and
-    relationships
-  </Card>
-</Columns>
-
----
-
-## Migration Strategy
-
-### Safe Migration Process
-
-<Steps>
-  <Step title="1. Backup existing data">
-    Create a backup of your current database
-  </Step>
-  <Step title="2. Generate migration">
-    Create migration files for the new schema
-  </Step>
-  <Step title="3. Test migration">
-    Test the migration on a copy of your data
-  </Step>
-  <Step title="4. Apply migration">
-    Run the migration on your production database
-  </Step>
-</Steps>
-
-<Snippet>
-```bash
-# Backup your database
-pg_dump rag_chatbot > backup.sql
-
-# Generate migration
-
-npm run db:generate
-
-# Test migration (optional)
-
-npm run db:migrate --dry-run
-
-# Apply migration
-
-npm run db:migrate
-
-```
-</Snippet>
-
-### Migration Safety
-
-<Callout type="warning">
-  **Always backup**: Create a backup before running migrations
-</Callout>
-
-<Callout type="warning">
-  **Test first**: Test migrations on a copy of your data
-</Callout>
-
-<Callout type="warning">
-  **Rollback plan**: Have a plan to rollback if issues occur
-</Callout>
-
----
-
-## Interactive Elements
-
-### Vector Database Checklist
-
-<Callout type="info">
-  **Complete this checklist to verify your vector database setup**:
-
-  ✅ Embeddings table created with vector columns
-  ✅ Foreign key relationships established
-  ✅ HNSW index created for similarity search
-  ✅ Migration applied successfully
-  ✅ Database relationships working
-  ✅ Vector operations tested
-  ✅ Performance benchmarks established
-</Callout>
-
-### Performance Testing
-
-<Callout type="info">
-  **Test your vector database performance**:
-
-  1. Insert test embeddings and measure insertion speed
-  2. Run similarity searches and measure query performance
-  3. Test with different index parameters
-  4. Monitor memory usage and index size
-</Callout>
-
----
-
-## Troubleshooting Common Issues
-
-<Callout type="warning">
-  **Issue**: pgvector extension not available
-  **Solution**: Ensure pgvector is installed and enabled in your database
-</Callout>
-
-<Callout type="warning">
-  **Issue**: HNSW index creation fails
-  **Solution**: Check available memory and reduce index parameters
-</Callout>
-
-<Callout type="warning">
-  **Issue**: Vector dimension mismatch
-  **Solution**: Ensure embedding dimensions match the vector column definition
-</Callout>
-
-<Callout type="warning">
-  **Issue**: Poor search performance
-  **Solution**: Tune HNSW parameters and monitor query execution plans
-</Callout>
-
----
-
-## Reflection Questions
-
-Take a moment to reflect on what you've learned:
-
-1. **How does HNSW indexing improve similarity search performance?**
-   - Consider the trade-offs between speed and accuracy
-   - Think about scalability implications
-
-2. **What are the benefits of using foreign key relationships in this context?**
-   - Consider data integrity and maintenance
-   - Think about query optimization
-
-3. **How would you optimize the vector database for your specific use case?**
-   - Consider your data size and query patterns
-   - Think about performance requirements
-
----
-
-## Next Steps
-
-You've implemented vector storage! In the next section, you'll:
-
-- **Run database migrations** safely
-- **Validate the schema** and relationships
-- **Test vector operations** and performance
-
-Ready to continue? Proceed to [Section 3.3: Migration and Validation](/learning-paths/rag-chatbot/module-3-3).
-
-<Callout>
-  **Key Takeaway**: Proper vector database implementation with HNSW indexing provides the foundation for fast, accurate similarity search in RAG applications.
-</Callout>
-```

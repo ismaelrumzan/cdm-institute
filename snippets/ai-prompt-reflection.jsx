@@ -6,6 +6,7 @@ export const AIPromptReflection = ({
   chatgptButtonText = "Ask ChatGPT",
   claudeButtonText = "Ask Claude",
   className = "",
+  context = null,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [pageContext, setPageContext] = useState("");
@@ -14,6 +15,14 @@ export const AIPromptReflection = ({
 
   // Get page context and file path when component mounts
   useEffect(() => {
+    // If context is provided, use it instead of reading from page
+    if (context) {
+      setPageContext(context);
+      setPageURL("Provided Context");
+      setFilePath("context");
+      return;
+    }
+
     // Extract page title and content for context
     const pageTitle = document.title || "Current Page";
     const mainContent = document.querySelector("main") || document.body;
@@ -27,13 +36,13 @@ export const AIPromptReflection = ({
     // Convert URL path to file path format
     const filePathFromUrl = currentPath.replace(/^\//, "").replace(/\/$/, "");
     setFilePath(filePathFromUrl);
-  }, []);
+  }, [context]);
 
   const handleAIToolClick = (tool) => {
     // Create the full prompt with file path and context
-    const fullPrompt = `Read from ${pageURL} and then answer the question: ${question}
-
-Context: ${pageContext}`;
+    const fullPrompt = context
+      ? `${question}\n\nContext: ${context}`
+      : `Read from ${pageURL} and then answer the question: ${question}\n\nContext: ${pageContext}`;
 
     try {
       if (tool === "chatgpt") {

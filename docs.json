@@ -44,6 +44,15 @@
                       "learning-paths/rag-chatbot/module-2-2",
                       "learning-paths/rag-chatbot/module-2-3"
                     ]
+                  },
+                  {
+                    "group": "Module 3: Create Embeddings Table and Add Embedding Logic",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-3-home",
+                      "learning-paths/rag-chatbot/module-3-1",
+                      "learning-paths/rag-chatbot/module-3-2",
+                      "learning-paths/rag-chatbot/module-3-3"
+                    ]
                   }
                 ]
               }
