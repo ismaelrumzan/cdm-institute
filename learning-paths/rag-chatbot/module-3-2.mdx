@@ -20,7 +20,7 @@ To create an embedding, you will start with a piece of source material (unknown 
   <Step title="Generate Chunks">
     Let's start by creating a function to break the source material into small chunks. Add the following code to `lib/ai/embedding.ts`:
 
-    ```typescript
+    ```typescript lib/ai/embedding.ts
     const generateChunks = (input: string): string[] => {
       return input
         .trim()
@@ -47,7 +47,7 @@ To create an embedding, you will start with a piece of source material (unknown 
   <Step title="Generate Embeddings">
     Let's add a function to generate embeddings. Copy the following code into your `lib/ai/embedding.ts` file:
 
-    ```typescript
+    ```typescript lib/ai/embedding.ts highlight={1-4,13-22} lines
     import { embedMany } from "ai";
     import { openai } from "@ai-sdk/openai";
 
@@ -79,7 +79,7 @@ To create an embedding, you will start with a piece of source material (unknown 
 
 ## Understanding the Code
 
-In this code, you first define the model you want to use for the embeddings. In this example, you are using OpenAI's text-embedding-ada-002 embedding model.
+In this code, you first define the model you want to use for the embeddings. In this example, you are using OpenAI's `text-embedding-ada-002` embedding model.
 
 Next, you create an asynchronous function called `generateEmbeddings`. This function will take in the source material (`value`) as an input and return a promise of an array of objects, each containing an embedding and content. Within the function, you first generate chunks for the input. Then, you pass those chunks to the `embedMany` function imported from the AI SDK which will return embeddings of the chunks you passed in. Finally, you map over and return the embeddings in a format that is ready to save in the database.
 

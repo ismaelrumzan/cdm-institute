@@ -3,24 +3,13 @@ title: "3.3 Update Server Action"
 description: "Integrate embedding generation into the resource creation workflow."
 ---
 
-## Learning Objectives
-
-By the end of this section, you will be able to:
-
-- Understand the current createResource function
-- Update the server action to generate embeddings
-- Integrate embedding storage into the workflow
-- Complete the embedding generation pipeline
-
-<Callout>**Duration**: 30 minutes</Callout>
-
----
+import { AIPromptReflection } from "/snippets/ai-prompt-reflection.jsx";
 
 ## Current Server Action
 
 Open the file at `lib/actions/resources.ts`. This file has one function, `createResource`, which, as the name implies, allows you to create a resource.
 
-```typescript
+```typescript lib/actions/resources.ts
 "use server";
 
 import {
@@ -47,7 +36,13 @@ export const createResource = async (input: NewResourceParams) => {
 };
 ```
 
-This function is a Server Action, as denoted by the "use server"; directive at the top of the file. This means that it can be called anywhere in your Next.js application. This function will take an input, run it through a Zod schema to ensure it adheres to the correct schema, and then creates a new resource in the database. This is the ideal location to generate and store embeddings of the newly created resources.
+This function is a [Server Action](https://nextjs.org/docs/app/guides/backend-for-frontend#server-actions), as denoted by the `"use server";` directive at the top of the file. This means that it can be called anywhere in your Next.js application. This function will take an input, run it through a Zod schema to ensure it adheres to the correct schema, and then creates a new resource in the database. This is the ideal location to generate and store embeddings of the newly created resources.
+
+<AIPromptReflection
+  question="What is a Zod schema? How does it work? How does `insertResourceSchema` check if the input is valid?"
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+/>
 
 ---
 
@@ -55,7 +50,7 @@ This function is a Server Action, as denoted by the "use server"; directive at t
 
 Update the file with the following code:
 
-```typescript
+```typescript lib/actions/resources.ts lines highlight={9-10,21-27}
 "use server";
 
 import {
@@ -124,51 +119,134 @@ First, you call the `generateEmbeddings` function created in the previous step, 
 
 ---
 
-## Workflow Steps
+## Test the Implementation
 
-<Steps>
-  <Step title="1. Input Validation">
-    Parse and validate the input using Zod schema
-  </Step>
-  <Step title="2. Create Resource">
-    Insert the resource into the database and get the created record
-  </Step>
-  <Step title="3. Generate Embeddings">
-    Call generateEmbeddings function with the content
-  </Step>
-  <Step title="4. Store Embeddings">
-    Insert all embeddings into the embeddings table with resourceId
-  </Step>
-  <Step title="5. Return Success">
-    Return success message indicating both operations completed
-  </Step>
-</Steps>
+Let's create a simple test to verify that your embedding generation is working correctly.
 
----
+### Create a Test Function
 
-## Key Takeaways
+Add the following test function to your `lib/ai/embedding.ts` file:
+
+```typescript
+// Test function - you can remove this after testing
+export const testEmbeddingGeneration = async () => {
+  const testContent =
+    "This is a test document. It contains multiple sentences. Each sentence will become a chunk. The chunks will be converted to embeddings.";
+
+  try {
+    console.log("Testing embedding generation...");
+    const result = await generateEmbeddings(testContent);
+
+    console.log("✅ Embedding generation successful!");
+    console.log(`📊 Generated ${result.length} embeddings`);
+    console.log(`📝 First chunk: "${result[0]?.content}"`);
+    console.log(
+      `🔢 First embedding dimensions: ${result[0]?.embedding.length}`
+    );
+
+    return result;
+  } catch (error) {
+    console.error("❌ Embedding generation failed:", error);
+    throw error;
+  }
+};
+```
+
+### Run the Test
+
+You can test the function by calling it in your browser's developer console or by adding a temporary test route:
+
+<AccordionGroup>
+  <Accordion title="Option 1: Browser Developer Console">
+    1. **Open Developer Tools**:
+
+    - Press `F12` or right-click and select "Inspect"
+    - Go to the "Console" tab
+
+    2. **Import the function** (if using ES modules):
+
+    ```javascript
+    import { testEmbeddingGeneration } from "./lib/ai/embedding";
+    ```
+
+    3. **Or call it directly** (if the function is globally available):
+    ```javascript
+    testEmbeddingGeneration()
+      .then((result) => console.log("Test completed successfully"))
+      .catch((error) => console.error("Test failed:", error));
+    ```
+
+  </Accordion>
+
+  <Accordion title="Option 2: Create a Test Route">
+    Add a temporary test route to your Next.js app:
+
+    ```typescript
+    // app/api/test-embeddings/route.ts
+    import { testEmbeddingGeneration } from "@/lib/ai/embedding";
+
+    export async function GET() {
+      try {
+        const result = await testEmbeddingGeneration();
+        return Response.json({ success: true, result });
+      } catch (error) {
+        return Response.json({ success: false, error: error.message });
+      }
+    }
+    ```
+
+    Then visit `/api/test-embeddings` in your browser to run the test.
+
+  </Accordion>
+
+  <Accordion title="Option 3: Test File">
+    Create a test file and run it with Node.js:
+
+    ```typescript
+    // test-embeddings.js
+    import { testEmbeddingGeneration } from "./lib/ai/embedding";
+
+    testEmbeddingGeneration()
+      .then((result) => console.log("Test completed successfully"))
+      .catch((error) => console.error("Test failed:", error));
+    ```
+
+  </Accordion>
+</AccordionGroup>
+
+### Expected Output
+
+If everything is working correctly, you should see output similar to:
+
+```
+Testing embedding generation...
+✅ Embedding generation successful!
+📊 Generated 4 embeddings
+📝 First chunk: "This is a test document"
+🔢 First embedding dimensions: 1536
+Test completed successfully
+```
+
+### What to Check
 
 <Columns cols={2}>
-  <Card title="Integration" icon="git-merge">
-    - Seamlessly integrated embedding generation - Maintains existing API
-    interface - Enhanced error handling
+  <Card title="Function Execution" icon="play">
+    - No errors during execution - Console logs appear as expected - Function
+    returns an array of embeddings
   </Card>
-  <Card title="Data Flow" icon="flow">
-    - Resource creation triggers embedding generation - Automatic storage of
-    embeddings - Proper relationship maintenance
+  <Card title="Output Format" icon="check">
+    - Each embedding has content and embedding properties - Embedding arrays
+    have 1536 dimensions - Content matches the input chunks
   </Card>
 </Columns>
 
-## Next Steps
+<Warning>
+  **Remember**: This test function is for development purposes only. Remove it
+  from your production code after testing.
+</Warning>
 
-Congratulations! You've successfully implemented the complete embedding generation workflow. In the next module, you'll learn how to:
-
-- Implement similarity search using the stored embeddings
-- Build the retrieval component of your RAG system
-- Create a complete question-answering pipeline
-
-Ready to continue? Move on to [Module 4: Implementing Similarity Search](/learning-paths/rag-chatbot/module-4-home) to build the retrieval component of your RAG system.
-
-```
-
-```
+<AIPromptReflection
+  question="What could cause the embedding generation to fail? What are common issues when testing AI SDK integration? How would you debug if the test doesn't work as expected?"
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+/>
