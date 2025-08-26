@@ -1,452 +1,252 @@
 ---
-title: "3.3 Migration and Validation"
-description: "Run database migrations safely, validate the schema and relationships, and test vector operations to ensure everything works correctly."
+title: "3.3 Update Server Action"
+description: "Integrate embedding generation into the resource creation workflow."
 ---
 
-## Learning Objectives
+import { AIPromptReflection } from "/snippets/ai-prompt-reflection.jsx";
 
-By the end of this section, you will be able to:
+## Current Server Action
 
-- Run database migrations safely without data loss
-- Validate the enhanced schema and relationships
-- Test vector operations and similarity search
-- Ensure the database setup is working correctly
+Open the file at `lib/actions/resources.ts`. This file has one function, `createResource`, which, as the name implies, allows you to create a resource.
 
-<Callout>**Duration**: 20 minutes</Callout>
+```typescript lib/actions/resources.ts
+"use server";
 
----
+import {
+  NewResourceParams,
+  insertResourceSchema,
+  resources,
+} from "@/lib/db/schema/resources";
+import { db } from "../db";
 
-## Safe Migration Execution
+export const createResource = async (input: NewResourceParams) => {
+  try {
+    const { content } = insertResourceSchema.parse(input);
 
-### Pre-Migration Checklist
+    const [resource] = await db
+      .insert(resources)
+      .values({ content })
+      .returning();
 
-<Callout type="info">
-  **Complete this checklist before running migrations**: ✅ Database backup
-  created ✅ Development environment tested ✅ Schema changes reviewed ✅
-  Rollback plan prepared ✅ Team notified (if applicable)
-</Callout>
-
-### Migration Process
-
-<Steps>
-  <Step title="1. Create backup">Backup your current database state</Step>
-  <Step title="2. Generate migration">
-    Create migration files from schema changes
-  </Step>
-  <Step title="3. Review migration">
-    Check the generated SQL for correctness
-  </Step>
-  <Step title="4. Apply migration">Run the migration on your database</Step>
-  <Step title="5. Verify results">
-    Validate that all changes were applied correctly
-  </Step>
-</Steps>
-
-<Snippet>
-```bash
-# Step 1: Create backup
-pg_dump rag_chatbot > backup_$(date +%Y%m%d_%H%M%S).sql
-
-# Step 2: Generate migration
-
-npm run db:generate
-
-# Step 3: Review the generated migration file
-
-cat drizzle/migrations/0001_add_embeddings.sql
-
-# Step 4: Apply migration
-
-npm run db:migrate
-
-# Step 5: Verify migration
-
-npm run db:studio
-
-````
-</Snippet>
-
----
-
-## Migration File Analysis
-
-### Understanding Generated Migration
-
-<CodeGroup>
-  <CodeGroupItem title="Migration File">
-```sql
--- drizzle/migrations/0001_add_embeddings.sql
-CREATE TABLE IF NOT EXISTS "embeddings" (
-  "id" text PRIMARY KEY,
-  "resource_id" text NOT NULL,
-  "content" text NOT NULL,
-  "embedding" vector(1536),
-  "chunk_index" integer NOT NULL,
-  "created_at" timestamp DEFAULT now()
-);
-
--- Create foreign key constraint
-ALTER TABLE "embeddings" ADD CONSTRAINT "embeddings_resource_id_resources_id_fk"
-FOREIGN KEY ("resource_id") REFERENCES "resources"("id") ON DELETE cascade;
-
--- Create HNSW index
-CREATE INDEX "embeddings_embedding_idx" ON "embeddings"
-USING hnsw ("embedding" vector_cosine_ops);
-````
-
-  </CodeGroupItem>
-  <CodeGroupItem title="Migration Verification">
-```sql
--- Check if tables exist
-SELECT table_name FROM information_schema.tables 
-WHERE table_schema = 'public' AND table_name IN ('resources', 'embeddings');
-
--- Check if indexes exist
-SELECT indexname FROM pg_indexes
-WHERE tablename = 'embeddings' AND indexname LIKE '%embedding%';
-
--- Check foreign key constraints
-SELECT conname, conrelid::regclass, confrelid::regclass
-FROM pg_constraint WHERE contype = 'f';
-
-````
-  </CodeGroupItem>
-</CodeGroup>
-
----
-
-## Schema Validation
-
-### Table Structure Verification
-
-<Steps>
-  <Step title="1. Check table creation">
-    Verify that the embeddings table was created
-  </Step>
-  <Step title="2. Validate columns">
-    Ensure all columns have correct types and constraints
-  </Step>
-  <Step title="3. Check relationships">
-    Verify foreign key constraints are in place
-  </Step>
-  <Step title="4. Confirm indexes">
-    Ensure HNSW index was created successfully
-  </Step>
-</Steps>
-
-<Snippet>
-```sql
--- Connect to your database
-psql postgresql://postgres:password@localhost:5432/rag_chatbot
-
--- Check table structure
-\d embeddings
-
--- Check foreign key constraints
-SELECT
-  tc.table_name,
-  kcu.column_name,
-  ccu.table_name AS foreign_table_name,
-  ccu.column_name AS foreign_column_name
-FROM information_schema.table_constraints AS tc
-JOIN information_schema.key_column_usage AS kcu
-  ON tc.constraint_name = kcu.constraint_name
-JOIN information_schema.constraint_column_usage AS ccu
-  ON ccu.constraint_name = tc.constraint_name
-WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name='embeddings';
-
--- Check indexes
-\di embeddings*
-````
-
-</Snippet>
-
-### Expected Results
-
-<Callout type="info">
-  **Expected Table Structure**: - `embeddings` table with columns: id,
-  resource_id, content, embedding, chunk_index, created_at - Foreign key
-  constraint linking resource_id to resources.id - HNSW index on the embedding
-  column
-</Callout>
-
----
-
-## Vector Operations Testing
-
-### Test Vector Insertion
-
-<Steps>
-  <Step title="1. Insert test data">Add a test resource and embedding</Step>
-  <Step title="2. Verify storage">Check that vectors are stored correctly</Step>
-  <Step title="3. Test relationships">
-    Ensure foreign key relationships work
-  </Step>
-</Steps>
-
-<Snippet>
-```sql
--- Insert test resource
-INSERT INTO resources (id, content) VALUES 
-('test-1', 'This is a test resource about machine learning');
-
--- Insert test embedding (simplified vector for testing)
-INSERT INTO embeddings (id, resource_id, content, embedding, chunk_index) VALUES
-('emb-1', 'test-1', 'This is a test resource about machine learning',
-'[0.1, 0.2, 0.3, ...]'::vector, 0);
-
--- Verify insertion
-SELECT r.content, e.content, e.embedding
-FROM resources r
-JOIN embeddings e ON r.id = e.resource_id
-WHERE r.id = 'test-1';
-
-````
-</Snippet>
-
-### Test Similarity Search
-
-<CodeGroup>
-  <CodeGroupItem title="Basic Similarity Query">
-```sql
--- Test similarity search with a query vector
-SELECT
-  e.content,
-  e.embedding <=> '[0.1, 0.2, 0.3, ...]'::vector as distance
-FROM embeddings e
-ORDER BY distance
-LIMIT 5;
-````
-
-  </CodeGroupItem>
-  <CodeGroupItem title="Similarity with Resource Info">
-```sql
--- Similarity search with resource information
-SELECT 
-  r.content as resource_content,
-  e.content as chunk_content,
-  e.embedding <=> '[0.1, 0.2, 0.3, ...]'::vector as distance
-FROM embeddings e
-JOIN resources r ON e.resource_id = r.id
-ORDER BY distance
-LIMIT 5;
+    return "Resource successfully created.";
+  } catch (e) {
+    if (e instanceof Error)
+      return e.message.length > 0 ? e.message : "Error, please try again.";
+  }
+};
 ```
-  </CodeGroupItem>
-</CodeGroup>
+
+This function is a [Server Action](https://nextjs.org/docs/app/guides/backend-for-frontend#server-actions), as denoted by the `"use server";` directive at the top of the file. This means that it can be called anywhere in your Next.js application. This function will take an input, run it through a Zod schema to ensure it adheres to the correct schema, and then creates a new resource in the database. This is the ideal location to generate and store embeddings of the newly created resources.
+
+<AIPromptReflection
+  question="What is a Zod schema? How does it work? How does `insertResourceSchema` check if the input is valid?"
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+/>
 
 ---
 
-## Performance Validation
+## Updated Server Action
 
-### Index Performance Testing
+Update the file with the following code:
 
-<Steps>
-  <Step title="1. Test query performance">
-    Measure similarity search response times
-  </Step>
-  <Step title="2. Check index usage">Verify that HNSW index is being used</Step>
-  <Step title="3. Monitor resource usage">
-    Check memory and CPU usage during operations
-  </Step>
-</Steps>
+```typescript lib/actions/resources.ts lines highlight={9-10,21-27}
+"use server";
 
-<Snippet>
-```sql
--- Enable query timing
-\timing on
+import {
+  NewResourceParams,
+  insertResourceSchema,
+  resources,
+} from "@/lib/db/schema/resources";
+import { db } from "../db";
+import { generateEmbeddings } from "../ai/embedding";
+import { embeddings as embeddingsTable } from "../db/schema/embeddings";
 
--- Test similarity search performance
-SELECT
-e.content,
-e.embedding <=> '[0.1, 0.2, 0.3, ...]'::vector as distance
-FROM embeddings e
-ORDER BY distance
-LIMIT 10;
+export const createResource = async (input: NewResourceParams) => {
+  try {
+    const { content } = insertResourceSchema.parse(input);
 
--- Check query execution plan
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT
-e.content,
-e.embedding <=> '[0.1, 0.2, 0.3, ...]'::vector as distance
-FROM embeddings e
-ORDER BY distance
-LIMIT 10;
+    const [resource] = await db
+      .insert(resources)
+      .values({ content })
+      .returning();
 
-````
-</Snippet>
+    const embeddings = await generateEmbeddings(content);
+    await db.insert(embeddingsTable).values(
+      embeddings.map((embedding) => ({
+        resourceId: resource.id,
+        ...embedding,
+      }))
+    );
 
-### Performance Benchmarks
-
-<Callout type="info">
-  **Expected Performance**:
-  - Similarity search: < 10ms for small datasets
-  - Index creation: Varies based on data size
-  - Memory usage: Monitor with pg_stat_statements
-</Callout>
+    return "Resource successfully created and embedded.";
+  } catch (error) {
+    return error instanceof Error && error.message.length > 0
+      ? error.message
+      : "Error, please try again.";
+  }
+};
+```
 
 ---
 
-## Data Integrity Testing
+## Understanding the Changes
 
-### Foreign Key Testing
+First, you call the `generateEmbeddings` function created in the previous step, passing in the source material (`content`). Once you have your embeddings of the source material, you can save them to the database, passing the `resourceId` alongside each embedding.
 
-<Steps>
-  <Step title="1. Test cascade delete">
-    Delete a resource and verify embeddings are removed
-  </Step>
-  <Step title="2. Test constraint violations">
-    Try to insert invalid foreign key references
-  </Step>
-  <Step title="3. Verify data consistency">
-    Check that all embeddings have valid resource references
-  </Step>
-</Steps>
+### Key Changes Made
 
-<Snippet>
-```sql
--- Test cascade delete
-DELETE FROM resources WHERE id = 'test-1';
-
--- Verify embeddings were deleted
-SELECT COUNT(*) FROM embeddings WHERE resource_id = 'test-1';
-
--- Test constraint violation (should fail)
-INSERT INTO embeddings (id, resource_id, content, embedding, chunk_index)
-VALUES ('emb-2', 'non-existent-resource', 'test', '[0.1, 0.2, 0.3, ...]'::vector, 0);
-
--- Check data consistency
-SELECT
-  COUNT(*) as total_embeddings,
-  COUNT(DISTINCT resource_id) as unique_resources,
-  COUNT(*) - COUNT(DISTINCT resource_id) as orphaned_embeddings
-FROM embeddings;
-````
-
-</Snippet>
+<Columns cols={2}>
+  <Card title="Import Statements" icon="import">
+    - Added import for generateEmbeddings function - Added import for embeddings
+    table schema
+  </Card>
+  <Card title="Embedding Generation" icon="zap">
+    - Call generateEmbeddings with content - Process the returned embeddings
+    array
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Database Storage" icon="database">
+    - Insert embeddings into embeddings table - Map each embedding with
+    resourceId
+  </Card>
+  <Card title="Success Message" icon="check">
+    - Updated return message to indicate embedding creation - Enhanced error
+    handling
+  </Card>
+</Columns>
 
 ---
 
-## Interactive Elements
+## Test the Implementation
 
-### Migration Validation Checklist
+Let's create a simple test to verify that your embedding generation is working correctly.
 
-<Callout type="info">
-  **Complete this checklist to verify your migration**: ✅ Database backup
-  created successfully ✅ Migration files generated correctly ✅ Migration
-  applied without errors ✅ Tables created with correct structure ✅ Foreign key
-  constraints established ✅ HNSW index created successfully ✅ Vector
-  operations working correctly ✅ Similarity search performing well ✅ Data
-  integrity maintained ✅ Performance benchmarks met
-</Callout>
+### Create a Test Function
 
-### Testing Commands
+Add the following test function to your `lib/ai/embedding.ts` file:
 
-<CodeGroup>
-  <CodeGroupItem title="Schema Validation">
-```bash
-# Check table structure
-npm run db:studio
+```typescript
+// Test function - you can remove this after testing
+export const testEmbeddingGeneration = async () => {
+  const testContent =
+    "This is a test document. It contains multiple sentences. Each sentence will become a chunk. The chunks will be converted to embeddings.";
 
-# Verify migration status
+  try {
+    console.log("Testing embedding generation...");
+    const result = await generateEmbeddings(testContent);
 
-npm run db:migrate --dry-run
+    console.log("✅ Embedding generation successful!");
+    console.log(`📊 Generated ${result.length} embeddings`);
+    console.log(`📝 First chunk: "${result[0]?.content}"`);
+    console.log(
+      `🔢 First embedding dimensions: ${result[0]?.embedding.length}`
+    );
 
-````
-  </CodeGroupItem>
-  <CodeGroupItem title="Performance Testing">
-```bash
-# Test application startup
-npm run dev
+    return result;
+  } catch (error) {
+    console.error("❌ Embedding generation failed:", error);
+    throw error;
+  }
+};
+```
 
-# Check for database connection errors
-# Monitor console output for any issues
-````
+### Run the Test
 
-  </CodeGroupItem>
-</CodeGroup>
+You can test the function by calling it in your browser's developer console or by adding a temporary test route:
 
----
+<AccordionGroup>
+  <Accordion title="Option 1: Browser Developer Console">
+    1. **Open Developer Tools**:
 
-## Troubleshooting Migration Issues
+    - Press `F12` or right-click and select "Inspect"
+    - Go to the "Console" tab
 
-<Callout type="warning">
-  **Issue**: Migration fails with permission errors **Solution**: Ensure your
-  database user has CREATE and ALTER privileges
-</Callout>
+    2. **Import the function** (if using ES modules):
 
-<Callout type="warning">
-  **Issue**: HNSW index creation fails **Solution**: Check available memory and
-  reduce index parameters
-</Callout>
+    ```javascript
+    import { testEmbeddingGeneration } from "./lib/ai/embedding";
+    ```
 
-<Callout type="warning">
-  **Issue**: Foreign key constraint fails **Solution**: Verify that referenced
-  tables exist and have correct primary keys
-</Callout>
+    3. **Or call it directly** (if the function is globally available):
+    ```javascript
+    testEmbeddingGeneration()
+      .then((result) => console.log("Test completed successfully"))
+      .catch((error) => console.error("Test failed:", error));
+    ```
 
-<Callout type="warning">
-  **Issue**: Vector operations return errors **Solution**: Ensure pgvector
-  extension is enabled and vector dimensions match
-</Callout>
+  </Accordion>
 
----
+  <Accordion title="Option 2: Create a Test Route">
+    Add a temporary test route to your Next.js app:
 
-## Rollback Strategy
+    ```typescript
+    // app/api/test-embeddings/route.ts
+    import { testEmbeddingGeneration } from "@/lib/ai/embedding";
 
-### If Migration Fails
+    export async function GET() {
+      try {
+        const result = await testEmbeddingGeneration();
+        return Response.json({ success: true, result });
+      } catch (error) {
+        return Response.json({ success: false, error: error.message });
+      }
+    }
+    ```
 
-<Steps>
-  <Step title="1. Stop the application">Prevent further data corruption</Step>
-  <Step title="2. Restore from backup">
-    Use the backup created before migration
-  </Step>
-  <Step title="3. Investigate issues">Identify and fix the root cause</Step>
-  <Step title="4. Retry migration">Apply the migration again after fixes</Step>
-</Steps>
+    Then visit `/api/test-embeddings` in your browser to run the test.
 
-<Snippet>
-```bash
-# Restore from backup
-psql postgresql://postgres:password@localhost:5432/rag_chatbot < backup_20231201_143022.sql
+  </Accordion>
 
-# Verify restoration
+  <Accordion title="Option 3: Test File">
+    Create a test file and run it with Node.js:
 
-npm run db:studio
+    ```typescript
+    // test-embeddings.js
+    import { testEmbeddingGeneration } from "./lib/ai/embedding";
+
+    testEmbeddingGeneration()
+      .then((result) => console.log("Test completed successfully"))
+      .catch((error) => console.error("Test failed:", error));
+    ```
+
+  </Accordion>
+</AccordionGroup>
+
+### Expected Output
+
+If everything is working correctly, you should see output similar to:
 
 ```
-</Snippet>
-
----
-
-## Reflection Questions
-
-Take a moment to reflect on what you've learned:
-
-1. **What are the most critical aspects of a safe migration process?**
-   - Consider backup strategies and rollback plans
-   - Think about testing and validation procedures
-
-2. **How do you ensure data integrity during schema changes?**
-   - Consider foreign key constraints and relationships
-   - Think about data validation and testing
-
-3. **What performance metrics are most important for vector operations?**
-   - Consider search speed and accuracy
-   - Think about scalability and resource usage
-
----
-
-## Next Steps
-
-Congratulations! You've successfully enhanced your database schema. In the next module, you'll:
-
-- **Integrate AI SDK** with OpenAI for embedding generation
-- **Implement chunking strategies** for text processing
-- **Create embedding utilities** for your RAG application
-
-Ready to continue? Proceed to [Module 4: AI SDK Integration and Embedding Generation](/learning-paths/rag-chatbot/module-4-home).
-
-<Callout>
-  **Key Takeaway**: Proper migration execution and validation ensure that your enhanced database schema works correctly and maintains data integrity for your RAG application.
-</Callout>
+Testing embedding generation...
+✅ Embedding generation successful!
+📊 Generated 4 embeddings
+📝 First chunk: "This is a test document"
+🔢 First embedding dimensions: 1536
+Test completed successfully
 ```
+
+### What to Check
+
+<Columns cols={2}>
+  <Card title="Function Execution" icon="play">
+    - No errors during execution - Console logs appear as expected - Function
+    returns an array of embeddings
+  </Card>
+  <Card title="Output Format" icon="check">
+    - Each embedding has content and embedding properties - Embedding arrays
+    have 1536 dimensions - Content matches the input chunks
+  </Card>
+</Columns>
+
+<Warning>
+  **Remember**: This test function is for development purposes only. Remove it
+  from your production code after testing.
+</Warning>
+
+<AIPromptReflection
+  question="What could cause the embedding generation to fail? What are common issues when testing AI SDK integration? How would you debug if the test doesn't work as expected?"
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+/>
