@@ -53,6 +53,14 @@
                       "learning-paths/rag-chatbot/module-3-2",
                       "learning-paths/rag-chatbot/module-3-3"
                     ]
+                  },
+                  {
+                    "group": "Module 4: AI SDK Integration and Chat Interface",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-4-home",
+                      "learning-paths/rag-chatbot/module-4-1",
+                      "learning-paths/rag-chatbot/module-4-2"
+                    ]
                   }
                 ]
               }
