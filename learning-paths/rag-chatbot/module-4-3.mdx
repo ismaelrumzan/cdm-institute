@@ -1,0 +1,356 @@
+---
+title: "4.3 Alternative AI Providers with Free Credits"
+description: "Learn how to switch to alternative AI providers that offer free credits, avoiding OpenAI quota limits while maintaining the same functionality."
+---
+
+import { AIPromptReflection } from "/snippets/ai-prompt-reflection.jsx";
+
+## Why Alternative Providers?
+
+If you're hitting OpenAI's quota limits on a free account, you can easily switch to other AI providers that offer generous free tiers. The AI SDK makes this transition seamless with its unified interface.
+
+<Warning>
+  **Free Tier Limits**: While these providers offer free credits, they still
+  have usage limits. Monitor your usage to avoid unexpected charges.
+</Warning>
+
+---
+
+## Popular Free Providers
+
+Here are some excellent alternatives with generous free tiers:
+
+<Columns cols={2}>
+  <Card title="Groq" icon="zap">
+    **Free Tier**: 100 requests/day **Models**: Llama, Mixtral, Gemma **Speed**:
+    Ultra-fast inference
+  </Card>
+  <Card title="DeepInfra" icon="cloud">
+    **Free Tier**: $5/month credit **Models**: Llama, DeepSeek, Mistral
+    **Features**: Multiple model support
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Together.ai" icon="users">
+    **Free Tier**: $25/month credit **Models**: Llama, CodeLlama, Mistral
+    **Features**: Open source models
+  </Card>
+  <Card title="Fireworks" icon="sparkles">
+    **Free Tier**: $5/month credit **Models**: Llama, Mixtral, Custom
+    **Features**: Fast inference
+  </Card>
+</Columns>
+
+---
+
+## Installing Alternative Providers
+
+Install the provider packages you want to use:
+
+<CodeGroup>
+
+```bash groq-install.sh
+npm install @ai-sdk/groq
+```
+
+```bash deepinfra-install.sh
+npm install @ai-sdk/deepinfra
+```
+
+```bash together-install.sh
+npm install @ai-sdk/together
+```
+
+```bash fireworks-install.sh
+npm install @ai-sdk/fireworks
+```
+
+</CodeGroup>
+
+---
+
+## Setting Up API Keys
+
+Get API keys from your chosen provider:
+
+<AccordionGroup>
+  <Accordion title="Groq Setup" icon="zap">
+    <Steps>
+      <Step title="Visit Groq Console">
+        Go to [console.groq.com](https://console.groq.com) and sign up for a free account.
+      </Step>
+      <Step title="Generate API Key">
+        Navigate to the API Keys section in your dashboard and create a new API key.
+      </Step>
+      <Step title="Add to Environment">
+        Add the API key to your `.env` file:
+        ```bash
+        GROQ_API_KEY=your-groq-key-here
+        ```
+      </Step>
+    </Steps>
+  </Accordion>
+
+<Accordion title="DeepInfra Setup" icon="cloud">
+  <Steps>
+    <Step title="Visit DeepInfra">
+      Go to [deepinfra.com](https://deepinfra.com) and create a free account.
+    </Step>
+    <Step title="Get API Key">
+      Navigate to your account settings and generate a new API key.
+    </Step>
+    <Step title="Add to Environment">
+      Add the API key to your `.env` file: ```bash
+      DEEPINFRA_API_KEY=your-deepinfra-key-here ```
+    </Step>
+  </Steps>
+</Accordion>
+
+<Accordion title="Together.ai Setup" icon="users">
+  <Steps>
+    <Step title="Visit Together.ai">
+      Go to [together.ai](https://together.ai) and sign up for a free account.
+    </Step>
+    <Step title="Generate API Key">
+      Navigate to the API Keys section and create a new API key.
+    </Step>
+    <Step title="Add to Environment">
+      Add the API key to your `.env` file: ```bash
+      TOGETHER_API_KEY=your-together-key-here ```
+    </Step>
+  </Steps>
+</Accordion>
+
+  <Accordion title="Fireworks Setup" icon="sparkles">
+    <Steps>
+      <Step title="Visit Fireworks">
+        Go to [fireworks.ai](https://fireworks.ai) and create a free account.
+      </Step>
+      <Step title="Get API Key">
+        Navigate to your account dashboard and generate a new API key.
+      </Step>
+      <Step title="Add to Environment">
+        Add the API key to your `.env` file:
+        ```bash
+        FIREWORKS_API_KEY=your-fireworks-key-here
+        ```
+      </Step>
+    </Steps>
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Updating Your API Route
+
+Let's modify your chat route to use an alternative provider. Here are examples for each:
+
+<CodeGroup>
+
+```typescript app/api/chat/groq-route.ts
+import { groq } from "@ai-sdk/groq";
+import { convertToModelMessages, streamText, UIMessage } from "ai";
+
+export const maxDuration = 30;
+
+export async function POST(req: Request) {
+  const { messages }: { messages: UIMessage[] } = await req.json();
+
+  const result = streamText({
+    model: groq("llama-3.3-70b-versatile"),
+    system: `You are a helpful assistant. Check your knowledge base before answering any questions.
+    Only respond to questions using information from tool calls.
+    If no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
+    messages: convertToModelMessages(messages),
+  });
+
+  return result.toUIMessageStreamResponse();
+}
+```
+
+```typescript app/api/chat/deepinfra-route.ts
+import { deepinfra } from "@ai-sdk/deepinfra";
+import { convertToModelMessages, streamText, UIMessage } from "ai";
+
+export const maxDuration = 30;
+
+export async function POST(req: Request) {
+  const { messages }: { messages: UIMessage[] } = await req.json();
+
+  const result = streamText({
+    model: deepinfra("meta-llama/Llama-3.3-70B-Instruct"),
+    system: `You are a helpful assistant. Check your knowledge base before answering any questions.
+    Only respond to questions using information from tool calls.
+    If no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
+    messages: convertToModelMessages(messages),
+  });
+
+  return result.toUIMessageStreamResponse();
+}
+```
+
+```typescript app/api/chat/together-route.ts
+import { together } from "@ai-sdk/together";
+import { convertToModelMessages, streamText, UIMessage } from "ai";
+
+export const maxDuration = 30;
+
+export async function POST(req: Request) {
+  const { messages }: { messages: UIMessage[] } = await req.json();
+
+  const result = streamText({
+    model: together("meta-llama/Llama-3.3-70B-Instruct"),
+    system: `You are a helpful assistant. Check your knowledge base before answering any questions.
+    Only respond to questions using information from tool calls.
+    If no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
+    messages: convertToModelMessages(messages),
+  });
+
+  return result.toUIMessageStreamResponse();
+}
+```
+
+```typescript app/api/chat/fireworks-route.ts
+import { fireworks } from "@ai-sdk/fireworks";
+import { convertToModelMessages, streamText, UIMessage } from "ai";
+
+export const maxDuration = 30;
+
+export async function POST(req: Request) {
+  const { messages }: { messages: UIMessage[] } = await req.json();
+
+  const result = streamText({
+    model: fireworks("accounts/fireworks/models/llama-v3-70b-instruct"),
+    system: `You are a helpful assistant. Check your knowledge base before answering any questions.
+    Only respond to questions using information from tool calls.
+    If no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
+    messages: convertToModelMessages(messages),
+  });
+
+  return result.toUIMessageStreamResponse();
+}
+```
+
+</CodeGroup>
+
+---
+
+## Model Comparison
+
+Different providers offer different models. Here's a quick comparison:
+
+| Provider    | Model                   | Context Window | Speed      | Best For          |
+| ----------- | ----------------------- | -------------- | ---------- | ----------------- |
+| Groq        | llama-3.3-70b-versatile | 8K             | Ultra-fast | General chat      |
+| DeepInfra   | Llama-3.3-70B-Instruct  | 8K             | Fast       | Code & reasoning  |
+| Together.ai | Llama-3.3-70B-Instruct  | 8K             | Medium     | Open source focus |
+| Fireworks   | llama-v3-70b-instruct   | 8K             | Fast       | Production apps   |
+
+<Info>
+  **Recommendation**: Start with Groq for its speed and generous free tier. The
+  Llama 3.3 70B model is excellent for general conversation and reasoning tasks.
+</Info>
+
+---
+
+## Testing Your New Provider
+
+<Steps>
+  <Step title="Update Environment Variables">
+    Add your chosen provider's API key to `.env`
+  </Step>
+  <Step title="Restart Development Server">```bash pnpm run dev ```</Step>
+  <Step title="Test the Chat">
+    Send a message and verify you get the "Sorry, I don't know" response (since
+    we haven't implemented RAG yet).
+  </Step>
+</Steps>
+
+```bash .env
+GROQ_API_KEY=your-groq-key
+DEEPINFRA_API_KEY=your-deepinfra-key
+TOGETHER_API_KEY=your-together-key
+FIREWORKS_API_KEY=your-fireworks-key
+```
+
+---
+
+## Fallback Strategy
+
+You can implement a fallback strategy to switch providers if one fails:
+
+```typescript app/api/chat/route.ts
+import { groq } from "@ai-sdk/groq";
+import { deepinfra } from "@ai-sdk/deepinfra";
+import { convertToModelMessages, streamText, UIMessage } from "ai";
+
+export const maxDuration = 30;
+
+export async function POST(req: Request) {
+  const { messages }: { messages: UIMessage[] } = await req.json();
+
+  try {
+    // Try Groq first
+    const result = streamText({
+      model: groq("llama-3.3-70b-versatile"),
+      system: `You are a helpful assistant. Check your knowledge base before answering any questions.
+      Only respond to questions using information from tool calls.
+      If no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
+      messages: convertToModelMessages(messages),
+    });
+
+    return result.toUIMessageStreamResponse();
+  } catch (error) {
+    // Fallback to DeepInfra
+    const result = streamText({
+      model: deepinfra("meta-llama/Llama-3.3-70B-Instruct"),
+      system: `You are a helpful assistant. Check your knowledge base before answering any questions.
+      Only respond to questions using information from tool calls.
+      If no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
+      messages: convertToModelMessages(messages),
+    });
+
+    return result.toUIMessageStreamResponse();
+  }
+}
+```
+
+---
+
+## Cost Optimization Tips
+
+<Columns cols={2}>
+  <Card title="Monitor Usage" icon="activity">
+    **Track API calls** to stay within free limits **Set up alerts** for
+    approaching limits
+  </Card>
+  <Card title="Choose Efficient Models" icon="zap">
+    **Use smaller models** for simple tasks **Leverage caching** when possible
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Implement Rate Limiting" icon="clock">
+    **Add delays** between requests **Queue requests** to avoid bursts
+  </Card>
+  <Card title="Use Multiple Providers" icon="layers">
+    **Distribute load** across providers **Implement fallbacks** for reliability
+  </Card>
+</Columns>
+
+---
+
+## Extension tasks
+
+<AIPromptReflection
+  cardTitle="Provider Selection"
+  question="What factors should you consider when choosing between different AI providers for a production application? How do you evaluate cost, performance, and reliability?"
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+/>
+
+<AIPromptReflection
+  cardTitle="Model Comparison"
+  question="Compare the performance and capabilities of Llama 3.3 70B vs GPT-4o for different types of tasks. When would you choose one over the other?"
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+/>
