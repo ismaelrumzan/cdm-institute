@@ -62,7 +62,17 @@
                       "learning-paths/rag-chatbot/module-4-2",
                       "learning-paths/rag-chatbot/module-4-3"
                     ]
-                  }
+                  },
+                  {
+                    "group": "Module 5: Tools for Knowledge Base Management",
+                    "pages": [
+                      "learning-paths/rag-chatbot/module-5-home",
+                      "learning-paths/rag-chatbot/module-5-1",
+                      "learning-paths/rag-chatbot/module-5-2",
+                      "learning-paths/rag-chatbot/module-5-3"
+                    ]
+                  },
+                  "learning-paths/rag-chatbot/conclusion"
                 ]
               }
             ]

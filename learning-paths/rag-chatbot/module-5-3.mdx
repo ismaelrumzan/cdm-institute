@@ -1,896 +1,294 @@
 ---
-title: "5.3 Testing and Validation"
-description: "Test the complete resource management system, implement monitoring and performance tracking, and create comprehensive validation procedures."
+title: "5.3 Retrieving Information Tool"
+description: "Implement a tool to search and retrieve relevant information from your knowledge base using semantic similarity."
 ---
 
-## Learning Objectives
+import { AIPromptReflection } from "/snippets/ai-prompt-reflection.jsx";
 
-By the end of this section, you will be able to:
+## The Missing Piece: Information Retrieval
 
-- Test the complete resource management system end-to-end
-- Implement monitoring and performance tracking
-- Create comprehensive validation procedures
-- Ensure system reliability and performance
+The model can now add and embed arbitrary information to your knowledge base. However, it still isn't able to query it. Let's create a new tool to allow the model to answer questions by finding relevant information in your knowledge base.
 
-<Callout>**Duration**: 25 minutes</Callout>
+<Info>
+  To find similar content, you will need to embed the user's query, search the
+  database for semantic similarities, then pass those items to the model as
+  context alongside the query.
+</Info>
 
 ---
 
-## Comprehensive Testing Strategy
+## Updating Embedding Logic
 
-### Testing Pyramid for RAG Applications
+First, let's update your embedding logic file (`lib/ai/embedding.ts`) to add functions for finding relevant content:
 
-<Callout type="info">
-  **Unit Tests**: Test individual functions and components
-</Callout>
+```typescript lib/ai/embedding.ts lines highlight="1,3-5,27-34, 36-49"
+import { embed, embedMany } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { db } from "../db";
+import { cosineDistance, desc, gt, sql } from "drizzle-orm";
+import { embeddings } from "../db/schema/embeddings";
 
-<Callout type="info">
-  **Integration Tests**: Test interactions between components
-</Callout>
+const embeddingModel = openai.embedding("text-embedding-ada-002");
 
-<Callout type="info">
-  **End-to-End Tests**: Test complete user workflows
-</Callout>
+const generateChunks = (input: string): string[] => {
+  return input
+    .trim()
+    .split(".")
+    .filter((i) => i !== "");
+};
 
-### Test Categories
+export const generateEmbeddings = async (
+  value: string
+): Promise<Array<{ embedding: number[]; content: string }>> => {
+  const chunks = generateChunks(value);
+  const { embeddings } = await embedMany({
+    model: embeddingModel,
+    values: chunks,
+  });
+  return embeddings.map((e, i) => ({ content: chunks[i], embedding: e }));
+};
 
-<Columns cols={3}>
-  <Card title="Unit Tests" icon="test-tube">
-    **Functions**: Validation, chunking, embedding generation **Tools**: Jest,
-    Vitest **Coverage**: 80%+
+export const generateEmbedding = async (value: string): Promise<number[]> => {
+  const input = value.replaceAll("\\n", " ");
+  const { embedding } = await embed({
+    model: embeddingModel,
+    value: input,
+  });
+  return embedding;
+};
+
+export const findRelevantContent = async (userQuery: string) => {
+  const userQueryEmbedded = await generateEmbedding(userQuery);
+  const similarity = sql<number>`1 - (${cosineDistance(
+    embeddings.embedding,
+    userQueryEmbedded
+  )})`;
+  const similarGuides = await db
+    .select({ name: embeddings.content, similarity })
+    .from(embeddings)
+    .where(gt(similarity, 0.5))
+    .orderBy((t) => desc(t.similarity))
+    .limit(4);
+  return similarGuides;
+};
+```
+
+### New Functions Explained
+
+<Steps>
+  <Step title="generateEmbedding">
+    Generates a single embedding from an input string for query purposes.
+  </Step>
+  <Step title="findRelevantContent">
+    Embeds the user's query, searches the database for similar items using
+    cosine similarity, then returns relevant items.
+  </Step>
+  <Step title="Similarity Threshold">
+    Only returns results with similarity greater than 0.5 to ensure relevance.
+  </Step>
+  <Step title="Result Limiting">
+    Limits results to 4 items to avoid overwhelming the model with context.
+  </Step>
+</Steps>
+
+---
+
+## Adding the Information Retrieval Tool
+
+Now, go back to your route handler (`app/api/chat/route.ts`) and add a new tool called `getInformation`:
+
+```typescript app/api/chat/route.ts lines highlight="11,37-43"
+import { createResource } from "@/lib/actions/resources";
+import { openai } from "@ai-sdk/openai";
+import {
+  convertToModelMessages,
+  streamText,
+  tool,
+  UIMessage,
+  stepCountIs,
+} from "ai";
+import { z } from "zod";
+import { findRelevantContent } from "@/lib/ai/embedding";
+
+// Allow streaming responses up to 30 seconds
+export const maxDuration = 30;
+
+export async function POST(req: Request) {
+  const { messages }: { messages: UIMessage[] } = await req.json();
+
+  const result = streamText({
+    model: openai("gpt-4o"),
+    messages: convertToModelMessages(messages),
+    stopWhen: stepCountIs(5),
+    system: `You are a helpful assistant. Check your knowledge base before answering any questions.
+    Only respond to questions using information from tool calls.
+    if no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
+    tools: {
+      addResource: tool({
+        description: `add a resource to your knowledge base.
+          If the user provides a random piece of knowledge unprompted, use this tool without asking for confirmation.`,
+        inputSchema: z.object({
+          content: z
+            .string()
+            .describe("the content or resource to add to your knowledge base"),
+        }),
+        execute: async ({ content }) => createResource({ content }),
+      }),
+      getInformation: tool({
+        description: `get information from your knowledge base to answer questions.`,
+        inputSchema: z.object({
+          question: z.string().describe("the users question"),
+        }),
+        execute: async ({ question }) => findRelevantContent(question),
+      }),
+    },
+  });
+
+  return result.toUIMessageStreamResponse();
+}
+```
+
+---
+
+## Understanding Semantic Search
+
+The `findRelevantContent` function uses vector similarity to find the most relevant information:
+
+<Columns cols={2}>
+  <Card title="Query Embedding" icon="search">
+    **Vector Conversion**: The user's question is converted to a vector
+    representation.
   </Card>
-  <Card title="Integration Tests" icon="link">
-    **Components**: Server actions, database operations **Tools**: Testing
-    Library, MSW **Focus**: Data flow
+  <Card title="Similarity Calculation" icon="zap">
+    **Cosine Distance**: Measures similarity between query and stored
+    embeddings.
   </Card>
-  <Card title="E2E Tests" icon="user">
-    **Workflows**: Complete user journeys **Tools**: Playwright, Cypress
-    **Focus**: User experience
+</Columns>
+<Columns cols={2}>
+  <Card title="Threshold Filtering" icon="filter">
+    **Relevance Filter**: Only returns results above 0.5 similarity threshold.
+  </Card>
+  <Card title="Ranked Results" icon="list">
+    **Best Matches**: Results are ordered by similarity score (highest first).
   </Card>
 </Columns>
 
 ---
 
-## Unit Testing Implementation
+## Testing the Complete RAG Flow
 
-### Validation Function Tests
+<Steps>
+  <Step title="Refresh the Page">
+    Head back to the browser, refresh the page to ensure the new tool is loaded.
+  </Step>
+  <Step title="Ask a Question">
+    Ask for your favorite food (or any information you previously added to the
+    knowledge base).
+  </Step>
+  <Step title="Observe Tool Calls">
+    You should see the model call the `getInformation` tool, then use the
+    relevant information to formulate a response.
+  </Step>
+  <Step title="Verify Response Quality">
+    The model should now provide informative answers based on your stored
+    knowledge.
+  </Step>
+</Steps>
 
-<CodeGroup>
-  <CodeGroupItem title="Validation Tests">
-```typescript
-// __tests__/validation.test.ts
-import { validateCreateResource } from '@/lib/validation'
-
-describe('validateCreateResource', () => {
-it('should validate valid content', () => {
-const formData = new FormData()
-formData.append('content', 'Valid content for testing')
-
-    const result = validateCreateResource(formData)
-
-    expect(result.success).toBe(true)
-    expect(result.data?.content).toBe('Valid content for testing')
-
-})
-
-it('should reject empty content', () => {
-const formData = new FormData()
-formData.append('content', '')
-
-    const result = validateCreateResource(formData)
-
-    expect(result.success).toBe(false)
-    expect(result.errors).toContain('Content is required')
-
-})
-
-it('should reject content that is too long', () => {
-const formData = new FormData()
-formData.append('content', 'a'.repeat(100001))
-
-    const result = validateCreateResource(formData)
-
-    expect(result.success).toBe(false)
-    expect(result.errors).toContain('Content too long')
-
-})
-
-it('should handle missing content field', () => {
-const formData = new FormData()
-
-    const result = validateCreateResource(formData)
-
-    expect(result.success).toBe(false)
-    expect(result.errors).toContain('Content is required')
-
-})
-})
-
-````
-  </CodeGroupItem>
-  <CodeGroupItem title="Chunking Tests">
-```typescript
-// __tests__/chunking.test.ts
-import { chunkTextFixed, chunkTextSemantic, chunkTextOverlapping } from '@/lib/chunking'
-
-describe('Chunking Functions', () => {
-  const testText = 'This is a test document with multiple sentences. It contains various content that should be chunked appropriately. The chunking should work correctly for different strategies.'
-
-  describe('chunkTextFixed', () => {
-    it('should chunk text into fixed-size pieces', () => {
-      const chunks = chunkTextFixed(testText, 50)
-
-      expect(chunks.length).toBeGreaterThan(1)
-      chunks.forEach(chunk => {
-        expect(chunk.length).toBeLessThanOrEqual(50)
-      })
-    })
-
-    it('should handle text shorter than chunk size', () => {
-      const shortText = 'Short text'
-      const chunks = chunkTextFixed(shortText, 50)
-
-      expect(chunks).toHaveLength(1)
-      expect(chunks[0]).toBe(shortText)
-    })
-  })
-
-  describe('chunkTextSemantic', () => {
-    it('should chunk by paragraphs', () => {
-      const multiParagraphText = `First paragraph.
-
-      Second paragraph.
-
-      Third paragraph.`
-
-      const chunks = chunkTextSemantic(multiParagraphText)
-
-      expect(chunks.length).toBe(3)
-      chunks.forEach(chunk => {
-        expect(chunk.trim().length).toBeGreaterThan(0)
-      })
-    })
-  })
-
-  describe('chunkTextOverlapping', () => {
-    it('should create overlapping chunks', () => {
-      const chunks = chunkTextOverlapping(testText, 50, 10)
-
-      expect(chunks.length).toBeGreaterThan(1)
-
-      // Check for overlap between consecutive chunks
-      for (let i = 0; i < chunks.length - 1; i++) {
-        const currentChunk = chunks[i]
-        const nextChunk = chunks[i + 1]
-
-        // Should have some overlap
-        expect(currentChunk.length + nextChunk.length).toBeGreaterThan(testText.length)
-      }
-    })
-  })
-})
-````
-
-  </CodeGroupItem>
-</CodeGroup>
+<Info>
+  With both tools implemented, you now have a complete RAG system! The AI can
+  both store new information and retrieve relevant content to answer questions.
+</Info>
 
 ---
 
-## Integration Testing
+## How the Complete Flow Works
 
-### Server Action Integration Tests
+Here's the complete RAG flow in action:
 
-<CodeGroup>
-  <CodeGroupItem title="Server Action Tests">
-```typescript
-// __tests__/actions.test.ts
-import { createResource } from '@/app/actions'
-import { db } from '@/lib/db'
-import { resources, embeddings } from '@/drizzle/schema'
-import { eq } from 'drizzle-orm'
+1. **User Input**: User asks a question or provides information
+2. **AI Analysis**: Model determines whether to add information or retrieve it
+3. **Tool Selection**: Model chooses between `addResource` or `getInformation`
+4. **Tool Execution**: Selected tool performs its function
+5. **Result Processing**: Tool results are sent back to the model
+6. **Response Generation**: Model generates a response using the tool results
+7. **User Output**: Final response is streamed to the user
 
-// Mock the embedding pipeline
-jest.mock('@/lib/embedding-pipeline', () => ({
-processTextToEmbeddings: jest.fn().mockResolvedValue([
-{
-content: 'Test chunk 1',
-chunkIndex: 0,
-embedding: [0.1, 0.2, 0.3, ...Array(1533).fill(0)]
-},
-{
-content: 'Test chunk 2',
-chunkIndex: 1,
-embedding: [0.4, 0.5, 0.6, ...Array(1533).fill(0)]
-}
-])
-}))
-
-describe('createResource Server Action', () => {
-beforeEach(async () => {
-// Clean up database before each test
-await db.delete(embeddings)
-await db.delete(resources)
-})
-
-afterAll(async () => {
-// Clean up after all tests
-await db.delete(embeddings)
-await db.delete(resources)
-})
-
-it('should create resource with embeddings successfully', async () => {
-const formData = new FormData()
-formData.append('content', 'Test content for embedding generation')
-
-    const result = await createResource(formData)
-
-    expect(result.success).toBe(true)
-    expect(result.resourceId).toBeDefined()
-    expect(result.embeddingStatus).toBe('completed')
-    expect(result.embeddingCount).toBe(2)
-
-    // Verify resource was created in database
-    const createdResource = await db.select()
-      .from(resources)
-      .where(eq(resources.id, result.resourceId!))
-      .limit(1)
-
-    expect(createdResource).toHaveLength(1)
-    expect(createdResource[0].content).toBe('Test content for embedding generation')
-
-    // Verify embeddings were created
-    const createdEmbeddings = await db.select()
-      .from(embeddings)
-      .where(eq(embeddings.resourceId, result.resourceId!))
-
-    expect(createdEmbeddings).toHaveLength(2)
-
-})
-
-it('should handle validation errors', async () => {
-const formData = new FormData()
-formData.append('content', '')
-
-    const result = await createResource(formData)
-
-    expect(result.success).toBe(false)
-    expect(result.errors).toContain('Content is required')
-
-})
-
-it('should handle embedding generation failures gracefully', async () => {
-// Mock embedding failure
-const { processTextToEmbeddings } = require('@/lib/embedding-pipeline')
-processTextToEmbeddings.mockRejectedValueOnce(new Error('API Error'))
-
-    const formData = new FormData()
-    formData.append('content', 'Test content')
-
-    const result = await createResource(formData)
-
-    expect(result.success).toBe(true)
-    expect(result.embeddingStatus).toBe('failed')
-
-    // Resource should still be created
-    const createdResource = await db.select()
-      .from(resources)
-      .where(eq(resources.id, result.resourceId!))
-      .limit(1)
-
-    expect(createdResource).toHaveLength(1)
-
-})
-})
-
-````
-  </CodeGroupItem>
-  <CodeGroupItem title="Database Integration Tests">
-```typescript
-// __tests__/database.test.ts
-import { db } from '@/lib/db'
-import { resources, embeddings } from '@/drizzle/schema'
-import { storeEmbeddingsBatch } from '@/lib/embedding-storage'
-import { nanoid } from 'nanoid'
-
-describe('Database Operations', () => {
-  beforeEach(async () => {
-    await db.delete(embeddings)
-    await db.delete(resources)
-  })
-
-  afterAll(async () => {
-    await db.delete(embeddings)
-    await db.delete(resources)
-  })
-
-  it('should store embeddings with proper relationships', async () => {
-    const resourceId = nanoid()
-
-    // Create resource
-    await db.insert(resources).values({
-      id: resourceId,
-      content: 'Test content'
-    })
-
-    // Store embeddings
-    const chunkedContent = [
-      {
-        content: 'Chunk 1',
-        chunkIndex: 0,
-        embedding: [0.1, 0.2, 0.3, ...Array(1533).fill(0)]
-      },
-      {
-        content: 'Chunk 2',
-        chunkIndex: 1,
-        embedding: [0.4, 0.5, 0.6, ...Array(1533).fill(0)]
-      }
-    ]
-
-    await storeEmbeddingsBatch(resourceId, chunkedContent)
-
-    // Verify embeddings were stored
-    const storedEmbeddings = await db.select()
-      .from(embeddings)
-      .where(eq(embeddings.resourceId, resourceId))
-
-    expect(storedEmbeddings).toHaveLength(2)
-    expect(storedEmbeddings[0].content).toBe('Chunk 1')
-    expect(storedEmbeddings[1].content).toBe('Chunk 2')
-  })
-
-  it('should handle cascade deletes', async () => {
-    const resourceId = nanoid()
-
-    // Create resource with embeddings
-    await db.insert(resources).values({
-      id: resourceId,
-      content: 'Test content'
-    })
-
-    await storeEmbeddingsBatch(resourceId, [
-      {
-        content: 'Chunk 1',
-        chunkIndex: 0,
-        embedding: [0.1, 0.2, 0.3, ...Array(1533).fill(0)]
-      }
-    ])
-
-    // Delete resource
-    await db.delete(resources).where(eq(resources.id, resourceId))
-
-    // Verify embeddings were also deleted
-    const remainingEmbeddings = await db.select()
-      .from(embeddings)
-      .where(eq(embeddings.resourceId, resourceId))
-
-    expect(remainingEmbeddings).toHaveLength(0)
-  })
-})
-````
-
-  </CodeGroupItem>
-</CodeGroup>
+<Columns cols={2}>
+  <Card title="Information Addition" icon="plus">
+    <ul>
+      <li>**When**: User provides new information</li>{" "}
+      <li>**Tool**: `addResource`</li>{" "}
+      <li>**Result**: Information stored and embedded</li>
+    </ul>
+  </Card>
+  <Card title="Information Retrieval" icon="search">
+    <ul>
+      <li>**When**: User asks a question</li>{" "}
+      <li>**Tool**: `getInformation`</li>{" "}
+      <li>**Result**: Relevant content found and used</li>
+    </ul>
+  </Card>
+</Columns>
 
 ---
 
-## End-to-End Testing
+## Testing Different Scenarios
 
-### Complete Workflow Testing
-
-<CodeGroup>
-  <CodeGroupItem title="E2E Test Setup">
-```typescript
-// e2e/resource-management.spec.ts
-import { test, expect } from '@playwright/test'
-
-test.describe('Resource Management E2E', () => {
-test.beforeEach(async ({ page }) => {
-await page.goto('/')
-})
-
-test('should create resource with embeddings successfully', async ({ page }) => {
-// Fill in the form
-await page.fill('textarea[name="content"]', 'This is a test document about machine learning and artificial intelligence.')
-
-    // Submit the form
-    await page.click('button[type="submit"]')
-
-    // Wait for success message
-    await expect(page.locator('text=Resource created successfully')).toBeVisible()
-
-    // Verify resource appears in the list
-    await expect(page.locator('text=This is a test document about machine learning')).toBeVisible()
-
-    // Check embedding status
-    await expect(page.locator('text=Embeddings generated successfully')).toBeVisible()
-
-})
-
-test('should handle validation errors', async ({ page }) => {
-// Try to submit empty form
-await page.click('button[type="submit"]')
-
-    // Should show validation error
-    await expect(page.locator('text=Content is required')).toBeVisible()
-
-})
-
-test('should show embedding progress', async ({ page }) => {
-// Fill form with long content to trigger embedding generation
-const longContent = 'This is a very long document. '.repeat(100)
-await page.fill('textarea[name="content"]', longContent)
-
-    // Submit form
-    await page.click('button[type="submit"]')
-
-    // Should show progress indicator
-    await expect(page.locator('text=Generating embeddings...')).toBeVisible()
-
-    // Wait for completion
-    await expect(page.locator('text=Embeddings generated successfully')).toBeVisible({ timeout: 30000 })
-
-})
-
-test('should handle embedding failures gracefully', async ({ page }) => {
-// Mock API failure
-await page.route('**/openai/**', route => {
-route.fulfill({ status: 500, body: 'API Error' })
-})
-
-    // Submit form
-    await page.fill('textarea[name="content"]', 'Test content')
-    await page.click('button[type="submit"]')
-
-    // Should show failure message but resource should be created
-    await expect(page.locator('text=Resource created successfully')).toBeVisible()
-    await expect(page.locator('text=Embedding generation failed')).toBeVisible()
-
-})
-})
-
-````
-  </CodeGroupItem>
-  <CodeGroupItem title="Performance Testing">
-```typescript
-// e2e/performance.spec.ts
-import { test, expect } from '@playwright/test'
-
-test.describe('Performance Tests', () => {
-  test('should handle large content efficiently', async ({ page }) => {
-    const startTime = Date.now()
-
-    // Create large content
-    const largeContent = 'This is a large document. '.repeat(1000)
-    await page.fill('textarea[name="content"]', largeContent)
-
-    // Submit and measure time
-    await page.click('button[type="submit"]')
-
-    // Wait for completion
-    await expect(page.locator('text=Embeddings generated successfully')).toBeVisible({ timeout: 60000 })
-
-    const endTime = Date.now()
-    const duration = endTime - startTime
-
-    // Should complete within reasonable time
-    expect(duration).toBeLessThan(60000) // 60 seconds
-  })
-
-  test('should handle concurrent requests', async ({ browser }) => {
-    const promises = []
-
-    // Create multiple concurrent requests
-    for (let i = 0; i < 5; i++) {
-      const page = await browser.newPage()
-      promises.push(
-        page.goto('/').then(() => {
-          page.fill('textarea[name="content"]', `Concurrent test ${i}`)
-          return page.click('button[type="submit"]')
-        }).then(() => {
-          return page.waitForSelector('text=Resource created successfully', { timeout: 30000 })
-        })
-      )
-    }
-
-    // All should complete successfully
-    await Promise.all(promises)
-  })
-})
-````
-
-  </CodeGroupItem>
-</CodeGroup>
+<Steps>
+  <Step title="Test Information Addition">
+    Tell the model various pieces of information to build up your knowledge
+    base.
+  </Step>
+  <Step title="Test Information Retrieval">
+    Ask questions about the information you've added to see how well the
+    retrieval works.
+  </Step>
+  <Step title="Test Edge Cases">
+    Try asking questions about topics you haven't covered to see the "Sorry, I
+    don't know" response.
+  </Step>
+  <Step title="Test Similarity Matching">
+    Use different phrasings to ask the same question and see how well semantic
+    search works.
+  </Step>
+</Steps>
 
 ---
 
-## Monitoring and Performance Tracking
+## Understanding Similarity Scores
 
-### Performance Metrics Collection
+The similarity threshold of 0.5 means:
 
-<CodeGroup>
-  <CodeGroupItem title="Performance Monitoring">
-```typescript
-// lib/monitoring.ts
-export interface PerformanceMetrics {
-  operation: string
-  duration: number
-  success: boolean
-  error?: string
-  metadata?: Record<string, any>
-}
+- **0.5-1.0**: High similarity, very relevant content
+- **0.7-0.9**: Excellent matches, highly relevant
+- **0.5-0.7**: Good matches, relevant content
+- **Below 0.5**: Too dissimilar, filtered out
 
-class PerformanceMonitor {
-private metrics: PerformanceMetrics[] = []
-
-async trackOperation<T>(
-operation: string,
-fn: () => Promise<T>,
-metadata?: Record<string, any>
-): Promise<T> {
-const startTime = Date.now()
-
-    try {
-      const result = await fn()
-      const duration = Date.now() - startTime
-
-      this.metrics.push({
-        operation,
-        duration,
-        success: true,
-        metadata
-      })
-
-      return result
-    } catch (error) {
-      const duration = Date.now() - startTime
-
-      this.metrics.push({
-        operation,
-        duration,
-        success: false,
-        error: error.message,
-        metadata
-      })
-
-      throw error
-    }
-
-}
-
-getMetrics(): PerformanceMetrics[] {
-return [...this.metrics]
-}
-
-getAverageDuration(operation: string): number {
-const operationMetrics = this.metrics.filter(m => m.operation === operation)
-if (operationMetrics.length === 0) return 0
-
-    const totalDuration = operationMetrics.reduce((sum, m) => sum + m.duration, 0)
-    return totalDuration / operationMetrics.length
-
-}
-
-getSuccessRate(operation: string): number {
-const operationMetrics = this.metrics.filter(m => m.operation === operation)
-if (operationMetrics.length === 0) return 0
-
-    const successful = operationMetrics.filter(m => m.success).length
-    return successful / operationMetrics.length
-
-}
-}
-
-export const performanceMonitor = new PerformanceMonitor()
-```
-  </CodeGroupItem>
-  <CodeGroupItem title="Enhanced Server Action with Monitoring">
-```typescript
-// app/actions.ts
-import { performanceMonitor } from '@/lib/monitoring'
-
-export async function createResource(formData: FormData) {
-  return performanceMonitor.trackOperation(
-    'createResource',
-    async () => {
-      // Existing implementation...
-      const validation = validateCreateResource(formData)
-      
-      if (!validation.success) {
-        return {
-          success: false,
-          errors: validation.errors
-        }
-      }
-      
-      try {
-        const resourceId = nanoid()
-        const content = validation.data!.content
-        
-        // Track database operation
-        await performanceMonitor.trackOperation(
-          'database.insert.resource',
-          () => db.insert(resources).values({
-            id: resourceId,
-            content: content,
-          })
-        )
-        
-        // Track embedding generation
-        let embeddingStatus = 'pending'
-        let embeddingCount = 0
-        
-        try {
-          const chunkedContent = await performanceMonitor.trackOperation(
-            'embedding.generation',
-            () => processTextToEmbeddings(content, {
-              chunkSize: 1000,
-              overlapSize: 200,
-              batchSize: 5
-            }),
-            { contentLength: content.length }
-          )
-          
-          if (chunkedContent.length > 0) {
-            await performanceMonitor.trackOperation(
-              'database.insert.embeddings',
-              () => storeEmbeddingsBatch(resourceId, chunkedContent),
-              { embeddingCount: chunkedContent.length }
-            )
-            embeddingStatus = 'completed'
-            embeddingCount = chunkedContent.length
-          } else {
-            embeddingStatus = 'no_content'
-          }
-        } catch (embeddingError) {
-          embeddingStatus = 'failed'
-        }
-        
-        revalidatePath('/')
-        
-        return {
-          success: true,
-          resourceId,
-          embeddingStatus,
-          embeddingCount
-        }
-        
-      } catch (error) {
-        return handleServerActionError(error)
-      }
-    }
-  )
-}
-```
-  </CodeGroupItem>
-</CodeGroup>
+<Info>
+  You can adjust the similarity threshold based on your needs. Lower values
+  return more results but may be less relevant, while higher values ensure only
+  the most relevant content is returned.
+</Info>
 
 ---
 
-## Validation Procedures
+## Extension tasks
 
-### System Health Checks
+<AIPromptReflection
+  cardTitle="Semantic Search Optimization"
+  question="How would you optimize the semantic search algorithm for better performance and accuracy? What factors affect the quality of vector similarity search?"
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+/>
 
-<CodeGroup>
-  <CodeGroupItem title="Health Check API">
-```typescript
-// app/api/health/route.ts
-import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { performanceMonitor } from '@/lib/monitoring'
-
-export async function GET() {
-  const health = {
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    checks: {
-      database: false,
-      embedding: false,
-      performance: false
-    },
-    metrics: {
-      averageResourceCreationTime: 0,
-      embeddingSuccessRate: 0,
-      totalOperations: 0
-    }
-  }
-  
-  try {
-    // Check database connectivity
-    await db.select({ count: sql`count(*)` }).from(resources)
-    health.checks.database = true
-  } catch (error) {
-    health.status = 'unhealthy'
-    health.checks.database = false
-  }
-  
-  try {
-    // Check embedding service (simple test)
-    const testResponse = await fetch('https://api.openai.com/v1/models', {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-      }
-    })
-    health.checks.embedding = testResponse.ok
-  } catch (error) {
-    health.checks.embedding = false
-  }
-  
-  // Get performance metrics
-  const metrics = performanceMonitor.getMetrics()
-  health.metrics.totalOperations = metrics.length
-  health.metrics.averageResourceCreationTime = performanceMonitor.getAverageDuration('createResource')
-  health.metrics.embeddingSuccessRate = performanceMonitor.getSuccessRate('embedding.generation')
-  
-  const statusCode = health.status === 'healthy' ? 200 : 503
-  
-  return NextResponse.json(health, { status: statusCode })
-}
-```
-  </CodeGroupItem>
-  <CodeGroupItem title="Validation Script">
-```typescript
-// scripts/validate-system.ts
-import { performanceMonitor } from '@/lib/monitoring'
-import { createResource } from '@/app/actions'
-
-async function validateSystem() {
-console.log('Starting system validation...')
-
-const tests = [
-{
-name: 'Resource Creation',
-test: async () => {
-const formData = new FormData()
-formData.append('content', 'System validation test content')
-
-        const result = await createResource(formData)
-        return result.success
-      }
-    },
-    {
-      name: 'Embedding Generation',
-      test: async () => {
-        const formData = new FormData()
-        formData.append('content', 'Test content for embedding validation')
-
-        const result = await createResource(formData)
-        return result.embeddingStatus === 'completed'
-      }
-    },
-    {
-      name: 'Error Handling',
-      test: async () => {
-        const formData = new FormData()
-        formData.append('content', '')
-
-        const result = await createResource(formData)
-        return !result.success && result.errors?.includes('Content is required')
-      }
-    }
-
-]
-
-const results = []
-
-for (const test of tests) {
-try {
-const passed = await test.test()
-results.push({ name: test.name, passed, error: null })
-console.log(`✅ ${test.name}: ${passed ? 'PASSED' : 'FAILED'}`)
-} catch (error) {
-results.push({ name: test.name, passed: false, error: error.message })
-console.log(`❌ ${test.name}: FAILED - ${error.message}`)
-}
-}
-
-// Print performance metrics
-const metrics = performanceMonitor.getMetrics()
-console.log('\nPerformance Metrics:')
-console.log(`Total Operations: ${metrics.length}`)
-console.log(`Average Resource Creation Time: ${performanceMonitor.getAverageDuration('createResource')}ms`)
-console.log(`Embedding Success Rate: ${(performanceMonitor.getSuccessRate('embedding.generation') * 100).toFixed(1)}%`)
-
-const allPassed = results.every(r => r.passed)
-console.log(`\nValidation ${allPassed ? 'PASSED' : 'FAILED'}`)
-
-return allPassed
-}
-
-validateSystem().catch(console.error)
+<AIPromptReflection
+  cardTitle="RAG System Design"
+  question="What are the key considerations when designing a production RAG system? How do you balance accuracy, performance, and user experience?"
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+/>
 
 ```
-  </CodeGroupItem>
-</CodeGroup>
 
----
-
-## Interactive Elements
-
-### Testing Checklist
-
-<Callout type="info">
-  **Complete this checklist to verify your testing implementation**:
-
-  ✅ Unit tests cover validation functions
-  ✅ Unit tests cover chunking strategies
-  ✅ Integration tests cover server actions
-  ✅ Integration tests cover database operations
-  ✅ E2E tests cover complete user workflows
-  ✅ Performance tests validate system limits
-  ✅ Monitoring tracks key metrics
-  ✅ Health checks validate system status
-  ✅ Validation scripts can be run automatically
-  ✅ Test coverage meets requirements
-</Callout>
-
-### Performance Benchmarks
-
-<Callout type="info">
-  **Establish these performance benchmarks**:
-
-  1. Resource creation: < 5 seconds for typical content
-  2. Embedding generation: < 30 seconds for 1000-word content
-  3. Database operations: < 1 second for single operations
-  4. API response times: < 2 seconds for status checks
-  5. Memory usage: < 500MB for typical operations
-  6. Success rate: > 95% for embedding generation
-</Callout>
-
----
-
-## Troubleshooting Common Issues
-
-<Callout type="warning">
-  **Issue**: Tests failing intermittently
-  **Solution**: Add proper cleanup, use test databases, and implement retry logic
-</Callout>
-
-<Callout type="warning">
-  **Issue**: Performance tests timing out
-  **Solution**: Increase timeouts, optimize operations, and use realistic test data
-</Callout>
-
-<Callout type="warning">
-  **Issue**: Monitoring not capturing metrics
-  **Solution**: Verify monitoring integration, check async operations, and validate error handling
-</Callout>
-
-<Callout type="warning">
-  **Issue**: Health checks returning false positives
-  **Solution**: Implement more comprehensive checks, add timeout handling, and validate all dependencies
-</Callout>
-
----
-
-## Reflection Questions
-
-Take a moment to reflect on what you've learned:
-
-1. **What are the most critical areas to test in a RAG application?**
-   - Consider data integrity and user experience
-   - Think about performance and reliability
-
-2. **How does comprehensive testing improve system reliability?**
-   - Consider error prevention and early detection
-   - Think about confidence in deployments
-
-3. **What monitoring metrics are most important for your use case?**
-   - Consider user experience and business requirements
-   - Think about scalability and performance optimization
-
----
-
-## Next Steps
-
-You've completed comprehensive testing and validation! In the next module, you'll:
-
-- **Build the chat interface** with real-time streaming
-- **Implement the chat API** with AI model integration
-- **Create an engaging user experience**
-
-Ready to continue? Proceed to [Module 6: Building the Chat Interface](/learning-paths/rag-chatbot/module-6-home).
-
-<Callout>
-  **Key Takeaway**: Comprehensive testing and monitoring ensure system reliability, performance, and maintainability for production RAG applications.
-</Callout>
 ```
