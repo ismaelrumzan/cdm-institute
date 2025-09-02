@@ -1,49 +1,39 @@
 ---
-title: "Module 5: Server Actions and Data Management"
-description: "Understand and extend the existing Server Actions in the starter project. Create robust error handling and efficient data flow patterns."
+title: "Module 5 Overview"
+description: "Implement tools to add resources to your knowledge base and retrieve information for answering questions."
 ---
 
-## Learning Objectives
+## Takeaways
 
 By the end of this module, you will be able to:
 
-- Understand and extend the existing Server Actions in the starter project
-- Create robust error handling and validation
-- Design efficient data flow patterns
-- Implement proper TypeScript types and schemas
+- Create and configure tools that the AI model can call
+- Implement a tool to add resources to your knowledge base
+- Build a tool to retrieve relevant information from your knowledge base
+- Configure multi-step tool calls for better user experience
+- Test the complete RAG functionality end-to-end
 
-## Module Overview
-
-This module focuses on the server-side logic of your RAG application. You'll work with Next.js Server Actions, extend existing functionality, and build robust data management patterns that integrate with your embedding pipeline.
-
-<Callout>**Time Estimate**: 90 minutes total</Callout>
-
-## Module Structure
+## Module structure
 
 <Columns cols={3}>
   <Card
-    title="5.1 Server Actions Fundamentals"
-    icon="server"
+    title="5.1 Adding Resources Tool"
+    icon="plus-circle"
     href="/learning-paths/rag-chatbot/module-5-1">
-    **Duration**: 30 minutes
-    <br />
-    Understand Server Actions and review existing implementation.
+    Create a tool to add and embed resources to your knowledge base.
   </Card>
   <Card
-    title="5.2 Resource Management Enhancement"
-    icon="database"
+    title="5.2 Multi-Step Tool Calls"
+    icon="repeat"
     href="/learning-paths/rag-chatbot/module-5-2">
-    **Duration**: 35 minutes
-    <br />
-    Extend createResource to include embedding generation.
+    Configure multi-step tool calls for better user experience and confirmation.
   </Card>
   <Card
-    title="5.3 Testing and Validation"
-    icon="check-circle"
+    title="5.3 Retrieving Information Tool"
+    icon="search"
     href="/learning-paths/rag-chatbot/module-5-3">
-    **Duration**: 25 minutes
-    <br />
-    Test the enhanced pipeline and handle error scenarios.
+    Implement a tool to search and retrieve relevant information from your
+    knowledge base.
   </Card>
 </Columns>
 
@@ -51,57 +41,18 @@ This module focuses on the server-side logic of your RAG application. You'll wor
 
 Before starting this module, ensure you have:
 
-- Completed Module 4 (AI SDK Integration)
-- Understanding of Next.js Server Actions
-- Familiarity with TypeScript and Zod schemas
-- Basic knowledge of error handling patterns
+- Chat interface and API routes set up
+- Database schema and actions configured
 
-## Key Concepts You'll Learn
+## What you'll build
 
 <Columns cols={2}>
-  <Card title="Server Actions" icon="server">
-    Next.js server-side data mutations
+  <Card title="Resource Addition Tool" icon="plus-circle">
+    A tool that allows the AI to automatically add user-provided information to
+    your knowledge base.
   </Card>
-  <Card title="Type Safety" icon="shield">
-    Zod schemas and TypeScript integration
-  </Card>
-</Columns>
-<Columns cols={2}>
-  <Card title="Error Handling" icon="alert-triangle">
-    Graceful error management and recovery
-  </Card>
-  <Card title="Data Flow" icon="workflow">
-    Efficient patterns for data processing
+  <Card title="Information Retrieval Tool" icon="search">
+    A tool that searches your knowledge base for relevant content to answer user
+    questions.
   </Card>
 </Columns>
-
-## What You'll Build
-
-<Callout type="info">
-  **Enhanced Server Actions**: You'll extend the existing createResource
-  function to automatically generate and store embeddings.
-</Callout>
-
-<Callout type="warning">
-  **Integration Point**: This module connects the database layer with the AI
-  embedding pipeline.
-</Callout>
-
-## Module Resources
-
-<Callout type="info">
-  **Next.js Server Actions**: Documentation on server-side data mutations.
-</Callout>
-
-<Callout type="info">
-  **Zod Documentation**: Schema validation and type inference.
-</Callout>
-
-## Get Started
-
-Ready to enhance server-side functionality? Start with [Section 5.1: Server Actions Fundamentals](/learning-paths/rag-chatbot/module-5-1) to understand the existing implementation.
-
-<Callout>
-  **Pro Tip**: Pay attention to error handling patterns. Robust error management
-  is crucial for production applications.
-</Callout>

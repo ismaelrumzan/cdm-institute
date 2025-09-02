@@ -1,697 +1,216 @@
 ---
-title: "5.2 Resource Management Enhancement"
-description: "Extend createResource to include embedding generation, implement automatic embedding pipeline, and add robust error recovery."
+title: "5.2 Multi-Step Tool Calls"
+description: "Configure multi-step tool calls to provide better user experience and confirmation of actions."
 ---
 
-## Learning Objectives
+import { AIPromptReflection } from "/snippets/ai-prompt-reflection.jsx";
 
-By the end of this section, you will be able to:
+## Improving UX with Multi-Step Calls
 
-- Extend createResource to automatically generate embeddings
-- Implement embedding pipeline integration with error handling
-- Create robust error recovery mechanisms
-- Test the enhanced resource management system
+It would be nice if the model could summarize the action too. However, technically, once the model calls a tool, it has completed its generation as it 'generated' a tool call. How could you achieve this desired behavior?
 
-<Callout>**Duration**: 35 minutes</Callout>
+<Info>
+  The AI SDK has a feature called `stopWhen` which allows stopping conditions
+  when the model generates a tool call. If those stopping conditions haven't
+  been hit, the AI SDK will automatically send tool call results back to the
+  model!
+</Info>
 
 ---
 
-## Enhanced Resource Management
+## Configuring Multi-Step Processing
 
-### Integration with Embedding Pipeline
+Open your route handler (`app/api/chat/route.ts`) and add the following key to the `streamText` configuration object:
 
-<Callout type="info">
-  **Automatic Processing**: When a resource is created, embeddings are
-  automatically generated and stored
-</Callout>
+```typescript app/api/chat/route.ts lines highlight="8,24"
+import { createResource } from "@/lib/actions/resources";
+import { openai } from "@ai-sdk/openai";
+import {
+  convertToModelMessages,
+  streamText,
+  tool,
+  UIMessage,
+  stepCountIs,
+} from "ai";
+import { z } from "zod";
 
-<Callout type="info">
-  **Error Recovery**: If embedding generation fails, the resource is still
-  created but marked appropriately
-</Callout>
+// Allow streaming responses up to 30 seconds
+export const maxDuration = 30;
 
-<Callout type="info">
-  **Progress Tracking**: Users can see the status of embedding generation
-</Callout>
+export async function POST(req: Request) {
+  const { messages }: { messages: UIMessage[] } = await req.json();
 
-### Enhanced createResource Function
+  const result = streamText({
+    model: openai("gpt-4o"),
+    system: `You are a helpful assistant. Check your knowledge base before answering any questions.
+    Only respond to questions using information from tool calls.
+    if no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
+    messages: convertToModelMessages(messages),
+    stopWhen: stepCountIs(5),
+    tools: {
+      addResource: tool({
+        description: `add a resource to your knowledge base.
+          If the user provides a random piece of knowledge unprompted, use this tool without asking for confirmation.`,
+        inputSchema: z.object({
+          content: z
+            .string()
+            .describe("the content or resource to add to the knowledge base"),
+        }),
+        execute: async ({ content }) => createResource({ content }),
+      }),
+    },
+  });
 
-<CodeGroup>
-  <CodeGroupItem title="Complete Implementation">
-```typescript
-// app/actions.ts
-'use server'
-
-import { db } from '@/lib/db'
-import { resources } from '@/drizzle/schema'
-import { validateCreateResource } from '@/lib/validation'
-import { processTextToEmbeddings } from '@/lib/embedding-pipeline'
-import { storeEmbeddingsBatch } from '@/lib/embedding-storage'
-import { handleServerActionError } from '@/lib/error-handler'
-import { nanoid } from 'nanoid'
-import { revalidatePath } from 'next/cache'
-
-export async function createResource(formData: FormData) {
-  // Step 1: Validate input
-  const validation = validateCreateResource(formData)
-  
-  if (!validation.success) {
-    return {
-      success: false,
-      errors: validation.errors
-    }
-  }
-  
-  try {
-    const resourceId = nanoid()
-    const content = validation.data!.content
-    
-    // Step 2: Create resource first
-    await db.insert(resources).values({
-      id: resourceId,
-      content: content,
-    })
-    
-    // Step 3: Generate embeddings
-    let embeddingStatus = 'pending'
-    let embeddingCount = 0
-    
-    try {
-      const chunkedContent = await processTextToEmbeddings(content, {
-        chunkSize: 1000,
-        overlapSize: 200,
-        batchSize: 5
-      })
-      
-      if (chunkedContent.length > 0) {
-        await storeEmbeddingsBatch(resourceId, chunkedContent)
-        embeddingStatus = 'completed'
-        embeddingCount = chunkedContent.length
-      } else {
-        embeddingStatus = 'no_content'
-      }
-    } catch (embeddingError) {
-      console.error('Embedding generation failed:', embeddingError)
-      embeddingStatus = 'failed'
-      // Resource is still created, but without embeddings
-    }
-    
-    // Step 4: Revalidate cache
-    revalidatePath('/')
-    
-    return {
-      success: true,
-      resourceId,
-      embeddingStatus,
-      embeddingCount
-    }
-    
-  } catch (error) {
-    return handleServerActionError(error)
-  }
+  return result.toUIMessageStreamResponse();
 }
 ```
-  </CodeGroupItem>
-  <CodeGroupItem title="Status Tracking">
-```typescript
-// lib/types.ts
-export type EmbeddingStatus = 'pending' | 'completed' | 'failed' | 'no_content'
 
-export interface CreateResourceResponse extends ServerActionResponse {
-  resourceId?: string
-  embeddingStatus?: EmbeddingStatus
-  embeddingCount?: number
-}
-
-export interface ResourceWithStatus {
-  id: string
-  content: string
-  createdAt: Date
-  embeddingStatus: EmbeddingStatus
-  embeddingCount: number
-}
-```
-  </CodeGroupItem>
-</CodeGroup>
-
----
-
-## Error Recovery Mechanisms
-
-### Graceful Degradation
-
-<CodeGroup>
-  <CodeGroupItem title="Embedding Failure Handling">
-```typescript
-// lib/embedding-recovery.ts
-export async function handleEmbeddingFailure(
-  resourceId: string,
-  error: Error
-): Promise<{
-  success: boolean
-  status: EmbeddingStatus
-  retryable: boolean
-}> {
-  console.error(`Embedding failed for resource ${resourceId}:`, error)
-  
-  // Determine if error is retryable
-  const retryable = isRetryableError(error)
-  
-  // Update resource status
-  await db.update(resources)
-    .set({ 
-      embeddingStatus: 'failed',
-      embeddingError: error.message 
-    })
-    .where(eq(resources.id, resourceId))
-  
-  return {
-    success: false,
-    status: 'failed',
-    retryable
-  }
-}
-
-function isRetryableError(error: Error): boolean {
-// Network errors are usually retryable
-if (error.message.includes('network') || error.message.includes('timeout')) {
-return true
-}
-
-// Rate limiting is retryable
-if (error.message.includes('rate limit') || error.message.includes('429')) {
-return true
-}
-
-// API key issues are not retryable
-if (error.message.includes('unauthorized') || error.message.includes('401')) {
-return false
-}
-
-// Default to retryable
-return true
-}
-
-````
-  </CodeGroupItem>
-  <CodeGroupItem title="Retry Mechanism">
-```typescript
-// lib/embedding-retry.ts
-export async function retryEmbeddingGeneration(
-  resourceId: string,
-  maxRetries: number = 3
-): Promise<{
-  success: boolean
-  status: EmbeddingStatus
-  attempts: number
-}> {
-  const resource = await db.select()
-    .from(resources)
-    .where(eq(resources.id, resourceId))
-    .limit(1)
-
-  if (!resource[0]) {
-    return { success: false, status: 'failed', attempts: 0 }
-  }
-
-  let attempts = 0
-
-  while (attempts < maxRetries) {
-    attempts++
-
-    try {
-      const chunkedContent = await processTextToEmbeddings(resource[0].content)
-
-      if (chunkedContent.length > 0) {
-        await storeEmbeddingsBatch(resourceId, chunkedContent)
-
-        await db.update(resources)
-          .set({
-            embeddingStatus: 'completed',
-            embeddingCount: chunkedContent.length,
-            embeddingError: null
-          })
-          .where(eq(resources.id, resourceId))
-
-        return {
-          success: true,
-          status: 'completed',
-          attempts
-        }
-      }
-    } catch (error) {
-      console.error(`Retry attempt ${attempts} failed:`, error)
-
-      if (attempts === maxRetries) {
-        await db.update(resources)
-          .set({
-            embeddingStatus: 'failed',
-            embeddingError: `Failed after ${attempts} attempts: ${error.message}`
-          })
-          .where(eq(resources.id, resourceId))
-
-        return {
-          success: false,
-          status: 'failed',
-          attempts
-        }
-      }
-
-      // Wait before retry (exponential backoff)
-      await new Promise(resolve =>
-        setTimeout(resolve, Math.pow(2, attempts) * 1000)
-      )
-    }
-  }
-
-  return { success: false, status: 'failed', attempts }
-}
-````
-
-  </CodeGroupItem>
-</CodeGroup>
-
----
-
-## Progress Tracking and User Feedback
-
-### Real-Time Status Updates
-
-<CodeGroup>
-  <CodeGroupItem title="Status Component">
-```typescript
-// components/resource-status.tsx
-'use client'
-
-import { useState, useEffect } from "react";
-
-interface ResourceStatusProps {
-resourceId: string
-initialStatus: EmbeddingStatus
-}
-
-export function ResourceStatus({ resourceId, initialStatus }: ResourceStatusProps) {
-  const [status, setStatus] = useState<EmbeddingStatus>(initialStatus)
-  const [isPolling, setIsPolling] = useState(initialStatus === 'pending')
-
-useEffect(() => {
-if (status !== 'pending') return
-
-    const pollStatus = async () => {
-      try {
-        const response = await fetch(`/api/resources/${resourceId}/status`)
-        const data = await response.json()
-
-        setStatus(data.embeddingStatus)
-
-        if (data.embeddingStatus !== 'pending') {
-          setIsPolling(false)
-        }
-      } catch (error) {
-        console.error('Failed to poll status:', error)
-      }
-    }
-
-    const interval = setInterval(pollStatus, 2000)
-    return () => clearInterval(interval)
-
-}, [resourceId, status])
-
-const getStatusMessage = () => {
-switch (status) {
-case 'pending':
-return 'Generating embeddings...'
-case 'completed':
-return 'Embeddings generated successfully'
-case 'failed':
-return 'Embedding generation failed'
-case 'no_content':
-return 'No content to embed'
-default:
-return 'Unknown status'
-}
-}
-
-const getStatusIcon = () => {
-switch (status) {
-case 'pending':
-return '⏳'
-case 'completed':
-return '✅'
-case 'failed':
-return '❌'
-case 'no_content':
-return 'ℹ️'
-default:
-return '❓'
-}
-}
-
-return (
-<div className="flex items-center gap-2">
-<span>{getStatusIcon()}</span>
-<span>{getStatusMessage()}</span>
-{isPolling && <span className="animate-pulse">...</span>}
-</div>
-)
-}
-
-````
-  </CodeGroupItem>
-  <CodeGroupItem title="Status API Route">
-```typescript
-// app/api/resources/[id]/status/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { resources } from '@/drizzle/schema'
-import { eq } from 'drizzle-orm'
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const resource = await db.select({
-      id: resources.id,
-      embeddingStatus: resources.embeddingStatus,
-      embeddingCount: resources.embeddingCount,
-      embeddingError: resources.embeddingError
-    })
-    .from(resources)
-    .where(eq(resources.id, params.id))
-    .limit(1)
-
-    if (!resource[0]) {
-      return NextResponse.json(
-        { error: 'Resource not found' },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json({
-      id: resource[0].id,
-      embeddingStatus: resource[0].embeddingStatus,
-      embeddingCount: resource[0].embeddingCount,
-      embeddingError: resource[0].embeddingError
-    })
-  } catch (error) {
-    console.error('Error fetching resource status:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch status' },
-      { status: 500 }
-    )
-  }
-}
-````
-
-  </CodeGroupItem>
-</CodeGroup>
-
----
-
-## Enhanced Database Schema
-
-### Status Tracking Fields
-
-<CodeGroup>
-  <CodeGroupItem title="Updated Schema">
-```typescript
-// drizzle/schema.ts
-import { pgTable, text, timestamp, integer, boolean } from 'drizzle-orm/pg-core'
-
-export const resources = pgTable('resources', {
-  id: text('id').primaryKey(),
-  content: text('content').notNull(),
-  createdAt: timestamp('created_at').defaultNow(),
-  // New fields for embedding status
-  embeddingStatus: text('embedding_status').default('pending'),
-  embeddingCount: integer('embedding_count').default(0),
-  embeddingError: text('embedding_error'),
-  lastEmbeddingAttempt: timestamp('last_embedding_attempt'),
-})
-```
-  </CodeGroupItem>
-  <CodeGroupItem title="Migration">
-```sql
--- Add embedding status fields to resources table
-ALTER TABLE resources 
-ADD COLUMN embedding_status TEXT DEFAULT 'pending',
-ADD COLUMN embedding_count INTEGER DEFAULT 0,
-ADD COLUMN embedding_error TEXT,
-ADD COLUMN last_embedding_attempt TIMESTAMP;
-```
-  </CodeGroupItem>
-</CodeGroup>
-
----
-
-## Batch Processing and Optimization
-
-### Efficient Resource Processing
-
-<CodeGroup>
-  <CodeGroupItem title="Batch Resource Creation">
-```typescript
-// lib/batch-processing.ts
-export async function createResourcesBatch(
-  contents: string[]
-): Promise<{
-  success: boolean
-  results: Array<{
-    content: string
-    resourceId?: string
-    status: EmbeddingStatus
-    error?: string
-  }>
-}> {
-  const results = []
-  
-  for (const content of contents) {
-    try {
-      const formData = new FormData()
-      formData.append('content', content)
-      
-      const result = await createResource(formData)
-      
-      results.push({
-        content,
-        resourceId: result.resourceId,
-        status: result.embeddingStatus || 'failed',
-        error: result.errors?.join(', ')
-      })
-    } catch (error) {
-      results.push({
-        content,
-        status: 'failed',
-        error: error.message
-      })
-    }
-  }
-  
-  return {
-    success: results.some(r => r.status === 'completed'),
-    results
-  }
-}
-```
-  </CodeGroupItem>
-  <CodeGroupItem title="Concurrent Processing">
-```typescript
-// lib/concurrent-processing.ts
-export async function createResourcesConcurrent(
-  contents: string[],
-  concurrency: number = 3
-): Promise<{
-  success: boolean
-  results: Array<{
-    content: string
-    resourceId?: string
-    status: EmbeddingStatus
-    error?: string
-  }>
-}> {
-  const results = []
-  
-  // Process in batches to control concurrency
-  for (let i = 0; i < contents.length; i += concurrency) {
-    const batch = contents.slice(i, i + concurrency)
-    
-    const batchPromises = batch.map(async (content) => {
-      try {
-        const formData = new FormData()
-        formData.append('content', content)
-        
-        const result = await createResource(formData)
-        
-        return {
-          content,
-          resourceId: result.resourceId,
-          status: result.embeddingStatus || 'failed',
-          error: result.errors?.join(', ')
-        }
-      } catch (error) {
-        return {
-          content,
-          status: 'failed',
-          error: error.message
-        }
-      }
-    })
-    
-    const batchResults = await Promise.all(batchPromises)
-    results.push(...batchResults)
-  }
-  
-  return {
-    success: results.some(r => r.status === 'completed'),
-    results
-  }
-}
-```
-  </CodeGroupItem>
-</CodeGroup>
-
----
-
-## Testing and Validation
-
-### Comprehensive Testing
+### How `stopWhen` Works
 
 <Steps>
-  <Step title="1. Test successful resource creation">
-    Verify resource and embeddings are created correctly
+  <Step title="Tool Call Generation">
+    The model generates a tool call and completes its initial generation.
   </Step>
-  <Step title="2. Test embedding failure scenarios">
-    Verify graceful degradation when embeddings fail
+  <Step title="Tool Execution">
+    The AI SDK automatically executes the tool with the provided parameters.
   </Step>
-  <Step title="3. Test retry mechanism">
-    Verify automatic retry works correctly
+  <Step title="Result Processing">
+    Tool results are sent back to the model for additional processing.
   </Step>
-  <Step title="4. Test status tracking">
-    Verify real-time status updates work
+  <Step title="Continued Generation">
+    The model can now provide additional context, confirmation, or summary.
   </Step>
 </Steps>
 
-<Snippet>
-```typescript
-// test-enhanced-resource.ts
-import { createResource } from './app/actions'
-import { retryEmbeddingGeneration } from './lib/embedding-retry'
+---
 
-async function testEnhancedResourceManagement() {
-// Test 1: Successful creation
-const formData1 = new FormData()
-formData1.append('content', 'Test content for embedding generation')
+## Understanding Step Count
 
-const result1 = await createResource(formData1)
-console.log('Successful creation:', result1)
+The `stepCountIs(5)` configuration means the model can continue generating for up to 5 steps after the initial tool call. This allows for:
 
-// Test 2: Invalid content
-const formData2 = new FormData()
-formData2.append('content', '')
+<Columns cols={2}>
+  <Card title="Action Confirmation" icon="check-circle">
+    **User Feedback**: The model can confirm what action was taken and provide
+    context.
+  </Card>
+  <Card title="Additional Information" icon="info">
+    **Enhanced Responses**: The model can add relevant details or suggestions.
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Error Handling" icon="alert-triangle">
+    **Graceful Recovery**: The model can handle tool execution errors and
+    provide alternatives.
+  </Card>
+  <Card title="Context Building" icon="layers">
+    **Knowledge Expansion**: The model can build upon the tool results with
+    additional insights.
+  </Card>
+</Columns>
 
-const result2 = await createResource(formData2)
-console.log('Invalid content result:', result2)
+---
 
-// Test 3: Retry mechanism
-if (result1.success && result1.resourceId) {
-const retryResult = await retryEmbeddingGeneration(result1.resourceId)
-console.log('Retry result:', retryResult)
-}
-}
+## Testing Multi-Step Functionality
 
-testEnhancedResourceManagement()
+<Steps>
+  <Step title="Test the Enhanced Behavior">
+    Head back to the browser and tell the model your favorite pizza topping
+    (note: pineapple is not an option).
+  </Step>
+  <Step title="Observe the Response">
+    You should see a follow-up response from the model confirming the action and
+    providing additional context.
+  </Step>
+  <Step title="Verify Tool Call Flow">
+    The model will first call the tool, then provide a summary or confirmation
+    message.
+  </Step>
+</Steps>
 
+<Info>
+  With multi-step processing, the AI can now provide a much better user
+  experience by explaining what it did and why, rather than just executing the
+  tool silently.
+</Info>
+
+---
+
+## Alternative Stopping Conditions
+
+You can configure different stopping conditions based on your needs:
+
+<CodeGroup>
+
+```typescript stopWhen-examples.ts
+// Stop after a specific number of steps
+stopWhen: stepCountIs(3);
+
+// Stop when the model generates a specific pattern
+stopWhen: textMatches(/^I have|^The tool/);
+
+// Stop when the model reaches a certain token limit
+stopWhen: tokenCountIs(100);
+
+// Combine multiple conditions
+stopWhen: [stepCountIs(5), textMatches(/^Summary:/)];
 ```
-</Snippet>
+
+</CodeGroup>
 
 ---
 
-## Interactive Elements
+## Benefits of Multi-Step Processing
 
-### Enhanced Resource Management Checklist
-
-<Callout type="info">
-  **Complete this checklist to verify your enhanced resource management**:
-
-  ✅ Resource creation works with embedding generation
-  ✅ Error handling works for embedding failures
-  ✅ Status tracking provides real-time updates
-  ✅ Retry mechanism functions correctly
-  ✅ Database schema supports status tracking
-  ✅ Batch processing works efficiently
-  ✅ User feedback is clear and informative
-  ✅ Performance is acceptable for your use case
-</Callout>
-
-### Performance Monitoring
-
-<Callout type="info">
-  **Monitor these performance metrics**:
-
-  1. Resource creation time (with and without embeddings)
-  2. Embedding generation success rate
-  3. Retry success rate
-  4. Database operation performance
-  5. API response times for status checks
-  6. Memory usage during batch processing
-</Callout>
+<Columns cols={2}>
+  <Card title="Better User Experience" icon="smile">
+    **Clear Communication**: Users understand what actions were taken and why.
+  </Card>
+  <Card title="Error Recovery" icon="refresh">
+    **Graceful Handling**: The model can handle tool failures and provide
+    alternatives.
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Context Building" icon="layers">
+    **Rich Responses**: The model can build upon tool results with additional
+    insights.
+  </Card>
+  <Card title="Action Confirmation" icon="check-circle">
+    **User Confidence**: Users receive confirmation that their requests were
+    processed correctly.
+  </Card>
+</Columns>
 
 ---
 
-## Troubleshooting Common Issues
+## Testing Different Scenarios
 
-<Callout type="warning">
-  **Issue**: Embeddings not generating after resource creation
-  **Solution**: Check API keys, network connectivity, and embedding pipeline configuration
-</Callout>
+<Steps>
+  <Step title="Test Resource Addition">
+    Try telling the model various pieces of information to see how it handles
+    different types of content.
+  </Step>
+  <Step title="Observe Response Patterns">
+    Notice how the model confirms actions and provides context after tool
+    execution.
+  </Step>
+  <Step title="Check Database Updates">
+    Verify that resources are being properly added to your knowledge base.
+  </Step>
+</Steps>
 
-<Callout type="warning">
-  **Issue**: Status not updating in real-time
-  **Solution**: Verify polling mechanism and API route implementation
-</Callout>
-
-<Callout type="warning">
-  **Issue**: Retry mechanism not working
-  **Solution**: Check error classification logic and retry configuration
-</Callout>
-
-<Callout type="warning">
-  **Issue**: Performance issues with batch processing
-  **Solution**: Reduce concurrency, implement rate limiting, and optimize database operations
-</Callout>
-
----
-
-## Reflection Questions
-
-Take a moment to reflect on what you've learned:
-
-1. **How does automatic embedding generation improve the user experience?**
-   - Consider workflow efficiency and user expectations
-   - Think about error handling and feedback
-
-2. **What are the trade-offs between immediate and background embedding generation?**
-   - Consider user experience vs system performance
-   - Think about error recovery and retry strategies
-
-3. **How would you optimize the resource management system for your specific use case?**
-   - Consider your content types and processing requirements
-   - Think about scalability and performance needs
+<Warning>
+  Remember that the model will still respond "Sorry, I don't know" to questions
+  it can't answer, as we haven't implemented the retrieval tool yet.
+</Warning>
 
 ---
 
-## Next Steps
+## Extension task
 
-You've enhanced resource management! In the next section, you'll:
-
-- **Test and validate** the complete resource management system
-- **Implement monitoring** and performance tracking
-- **Create comprehensive testing** procedures
-
-Ready to continue? Proceed to [Section 5.3: Testing and Validation](/learning-paths/rag-chatbot/module-5-3).
-
-<Callout>
-  **Key Takeaway**: Enhanced resource management with automatic embedding generation and robust error handling provides a seamless user experience while maintaining system reliability.
-</Callout>
+<AIPromptReflection
+  question="How does multi-step processing improve the user experience compared to single-step tool calls? What are the trade-offs between allowing more steps vs. fewer steps?"
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+/>
 ```
