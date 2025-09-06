@@ -1,0 +1,136 @@
+---
+title: "File-Based Routing Basics"
+description: "Essential concepts for understanding Next.js App Router's file-based routing system for Module 1."
+---
+
+## Overview
+
+Next.js App Router uses a file-based routing system where the file structure in the `app` directory directly maps to URL routes. This approach simplifies routing configuration and provides better performance through automatic code splitting.
+
+## Route Segments
+
+Each folder in the `app` directory represents a route segment:
+
+```
+app/
+├── page.tsx          # / (root route)
+├── about/
+│   └── page.tsx      # /about
+├── blog/
+│   ├── page.tsx      # /blog
+│   └── [slug]/
+│       └── page.tsx  # /blog/[slug] (dynamic route)
+└── dashboard/
+    ├── page.tsx      # /dashboard
+    └── settings/
+        └── page.tsx  # /dashboard/settings
+```
+
+## Essential Special Files
+
+<Columns cols={2}>
+  <Card title="page.tsx" icon="file">
+    <ul className="list-disc list-inside">
+      <li>Makes a route publicly accessible</li>
+      <li>Required for a route to be accessible</li>
+      <li>Defines the UI for that route</li>
+    </ul>
+  </Card>
+  <Card title="layout.tsx" icon="list-tree">
+    <ul className="list-disc list-inside">
+      <li>Shared UI for multiple pages</li>
+      <li>Wraps child layouts and pages</li>
+      <li>Maintains state during navigation</li>
+    </ul>
+  </Card>
+</Columns>
+
+<Columns cols={2}>
+  <Card title="loading.tsx" icon="loader">
+    <ul className="list-disc list-inside">
+      <li>Loading UI for a route segment</li>
+      <li>Shows while page is loading</li>
+      <li>Automatically wraps page and children</li>
+    </ul>
+  </Card>
+  <Card title="not-found.tsx" icon="search">
+    <ul className="list-disc list-inside">
+      <li>404 page for a route segment</li>
+      <li>Shows when route is not found</li>
+      <li>Can be nested at different levels</li>
+    </ul>
+  </Card>
+</Columns>
+
+## Basic Navigation
+
+### Link Component
+
+```typescript
+import Link from "next/link";
+
+export default function Navigation() {
+  return (
+    <nav>
+      <Link href="/">Home</Link>
+      <Link href="/about">About</Link>
+      <Link href="/blog/hello-world">Blog Post</Link>
+    </nav>
+  );
+}
+```
+
+### Programmatic Navigation
+
+```typescript
+"use client";
+
+import { useRouter } from "next/navigation";
+
+export default function MyComponent() {
+  const router = useRouter();
+
+  const handleClick = () => {
+    router.push("/dashboard");
+    // or
+    router.replace("/login");
+    // or
+    router.back();
+  };
+
+  return <button onClick={handleClick}>Navigate</button>;
+}
+```
+
+## Basic Route Organization
+
+### Simple Structure
+
+```
+app/
+├── layout.tsx            # Root layout
+├── page.tsx              # Home page
+├── about/
+│   └── page.tsx          # About page
+└── contact/
+    └── page.tsx          # Contact page
+```
+
+### Nested Routes
+
+```
+app/
+├── layout.tsx            # Root layout
+├── page.tsx              # Home page
+└── dashboard/
+    ├── layout.tsx        # Dashboard layout
+    ├── page.tsx          # /dashboard
+    └── settings/
+        └── page.tsx      # /dashboard/settings
+```
+
+<Info>
+  **Key Takeaway**: Next.js file-based routing simplifies route management by
+  using the file system structure to define routes. Start with basic page.tsx
+  and layout.tsx files, then add loading.tsx and not-found.tsx as needed.
+</Info>

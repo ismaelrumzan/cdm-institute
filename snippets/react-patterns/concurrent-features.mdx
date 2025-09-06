@@ -1,0 +1,643 @@
+---
+title: "Concurrent Features"
+description: "Understanding React's concurrent features and how they improve user experience in Next.js applications."
+---
+
+## Overview
+
+React's concurrent features enable better user experiences by allowing React to interrupt rendering work to handle higher-priority updates. These features are particularly valuable in Next.js applications for creating responsive interfaces.
+
+## What are Concurrent Features?
+
+Concurrent features allow React to work on multiple tasks simultaneously and prioritize urgent updates over less critical ones.
+
+<Columns cols={2}>
+  <Card title="Concurrent Benefits" icon="zap">
+    <ul className="list-disc list-inside">
+      <li>Better responsiveness</li>
+      <li>Improved user experience</li>
+      <li>Non-blocking updates</li>
+      <li>Priority-based rendering</li>
+    </ul>
+  </Card>
+  <Card title="Concurrent Features" icon="star">
+    <ul className="list-disc list-inside">
+      <li>Automatic batching</li>
+      <li>Transitions</li>
+      <li>Suspense improvements</li>
+      <li>Concurrent rendering</li>
+    </ul>
+  </Card>
+</Columns>
+
+## Automatic Batching
+
+React 18 automatically batches state updates, reducing the number of re-renders and improving performance.
+
+### Before React 18
+
+```typescript
+// Multiple re-renders
+function handleClick() {
+  setCount((c) => c + 1); // Re-render 1
+  setFlag((f) => !f); // Re-render 2
+  setData((d) => d + 1); // Re-render 3
+}
+```
+
+### After React 18
+
+```typescript
+// Single re-render (automatic batching)
+function handleClick() {
+  setCount((c) => c + 1); // Batched
+  setFlag((f) => !f); // Batched
+  setData((d) => d + 1); // Batched
+  // Only one re-render
+}
+```
+
+### Batching in Event Handlers
+
+```typescript
+"use client";
+
+import { useState } from "react";
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+  const [flag, setFlag] = useState(false);
+
+  const handleClick = () => {
+    // These updates are automatically batched
+    setCount((c) => c + 1);
+    setFlag((f) => !f);
+
+    // Only one re-render will occur
+    console.log("Component will re-render once");
+  };
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <p>Flag: {flag ? "true" : "false"}</p>
+      <button onClick={handleClick}>Update Both</button>
+    </div>
+  );
+}
+```
+
+## Transitions
+
+Transitions allow you to mark state updates as non-urgent, enabling React to interrupt them for more important updates.
+
+### Basic Transitions
+
+```typescript
+"use client";
+
+import { useState, useTransition } from "react";
+
+export default function SearchResults() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSearch = (newQuery: string) => {
+    setQuery(newQuery); // Urgent update
+
+    startTransition(() => {
+      // Non-urgent update
+      setResults(expensiveSearch(newQuery));
+    });
+  };
+
+  return (
+    <div>
+      <input
+        value={query}
+        onChange={(e) => handleSearch(e.target.value)}
+        placeholder="Search..."
+      />
+
+      {isPending && <div>Searching...</div>}
+
+      <div className="results">
+        {results.map((result) => (
+          <div key={result.id}>{result.title}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### Transitions with useDeferredValue
+
+```typescript
+"use client";
+
+import { useState, useDeferredValue, useMemo } from "react";
+
+export default function ProductList() {
+  const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
+
+  const products = useMemo(() => {
+    return expensiveProductSearch(deferredQuery);
+  }, [deferredQuery]);
+
+  return (
+    <div>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search products..."
+      />
+
+      <div className="products">
+        {products.map((product) => (
+          <div key={product.id} className="product">
+            <h3>{product.name}</h3>
+            <p>{product.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## Concurrent Rendering
+
+### Interruptible Rendering
+
+```typescript
+"use client";
+
+import { useState, useTransition } from "react";
+
+export default function DataTable() {
+  const [data, setData] = useState([]);
+  const [isPending, startTransition] = useTransition();
+  const [filter, setFilter] = useState("");
+
+  const handleFilterChange = (newFilter: string) => {
+    setFilter(newFilter); // Urgent update
+
+    startTransition(() => {
+      // Non-urgent update - can be interrupted
+      const filteredData = expensiveFilter(data, newFilter);
+      setData(filteredData);
+    });
+  };
+
+  return (
+    <div>
+      <input
+        value={filter}
+        onChange={(e) => handleFilterChange(e.target.value)}
+        placeholder="Filter data..."
+      />
+
+      {isPending && <div>Filtering...</div>}
+
+      <table>
+        <tbody>
+          {data.map((row) => (
+            <tr key={row.id}>
+              <td>{row.name}</td>
+              <td>{row.value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+```
+
+## Advanced Concurrent Patterns
+
+### Priority Updates
+
+```typescript
+"use client";
+
+import { useState, useTransition, useDeferredValue } from "react";
+
+export default function Dashboard() {
+  const [urgentData, setUrgentData] = useState(null);
+  const [heavyData, setHeavyData] = useState(null);
+  const [isPending, startTransition] = useTransition();
+  const deferredHeavyData = useDeferredValue(heavyData);
+
+  const handleUrgentUpdate = () => {
+    // This update has high priority
+    setUrgentData(fetchUrgentData());
+  };
+
+  const handleHeavyUpdate = () => {
+    // This update has low priority
+    startTransition(() => {
+      setHeavyData(expensiveCalculation());
+    });
+  };
+
+  return (
+    <div className="dashboard">
+      <div className="urgent-section">
+        <h2>Urgent Updates</h2>
+        <button onClick={handleUrgentUpdate}>Update Urgent Data</button>
+        {urgentData && <div>{urgentData}</div>}
+      </div>
+
+      <div className="heavy-section">
+        <h2>Heavy Updates</h2>
+        <button onClick={handleHeavyUpdate}>Update Heavy Data</button>
+        {isPending && <div>Processing...</div>}
+        {deferredHeavyData && <div>{deferredHeavyData}</div>}
+      </div>
+    </div>
+  );
+}
+```
+
+### Concurrent Data Fetching
+
+```typescript
+"use client";
+
+import { useState, useTransition, useDeferredValue } from "react";
+
+export default function SearchInterface() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [isPending, startTransition] = useTransition();
+  const deferredQuery = useDeferredValue(query);
+
+  const handleSearch = async (searchQuery: string) => {
+    startTransition(async () => {
+      const searchResults = await fetchSearchResults(searchQuery);
+      setResults(searchResults);
+    });
+  };
+
+  return (
+    <div>
+      <input
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          handleSearch(e.target.value);
+        }}
+        placeholder="Search..."
+      />
+
+      {isPending && <div>Searching...</div>}
+
+      <div className="results">
+        {results.map((result) => (
+          <div key={result.id} className="result">
+            <h3>{result.title}</h3>
+            <p>{result.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## Performance Optimization
+
+### Optimizing Heavy Components
+
+```typescript
+"use client";
+
+import { useState, useTransition, useDeferredValue, useMemo } from "react";
+
+export default function LargeDataTable() {
+  const [data, setData] = useState([]);
+  const [filter, setFilter] = useState("");
+  const [sortBy, setSortBy] = useState("name");
+  const [isPending, startTransition] = useTransition();
+
+  const deferredFilter = useDeferredValue(filter);
+  const deferredSortBy = useDeferredValue(sortBy);
+
+  const processedData = useMemo(() => {
+    return expensiveDataProcessing(data, deferredFilter, deferredSortBy);
+  }, [data, deferredFilter, deferredSortBy]);
+
+  const handleFilterChange = (newFilter: string) => {
+    setFilter(newFilter);
+  };
+
+  const handleSortChange = (newSortBy: string) => {
+    setSortBy(newSortBy);
+  };
+
+  return (
+    <div>
+      <div className="controls">
+        <input
+          value={filter}
+          onChange={(e) => handleFilterChange(e.target.value)}
+          placeholder="Filter..."
+        />
+        <select
+          value={sortBy}
+          onChange={(e) => handleSortChange(e.target.value)}>
+          <option value="name">Name</option>
+          <option value="date">Date</option>
+          <option value="value">Value</option>
+        </select>
+      </div>
+
+      {isPending && <div>Processing data...</div>}
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Date</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {processedData.map((row) => (
+            <tr key={row.id}>
+              <td>{row.name}</td>
+              <td>{row.date}</td>
+              <td>{row.value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+```
+
+## Real-World Examples
+
+### Search with Debouncing
+
+```typescript
+"use client";
+
+import { useState, useTransition, useDeferredValue, useEffect } from "react";
+
+export default function SearchPage() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [isPending, startTransition] = useTransition();
+  const deferredQuery = useDeferredValue(query);
+
+  useEffect(() => {
+    if (deferredQuery) {
+      startTransition(async () => {
+        const searchResults = await searchAPI(deferredQuery);
+        setResults(searchResults);
+      });
+    }
+  }, [deferredQuery]);
+
+  return (
+    <div>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search..."
+      />
+
+      {isPending && <div>Searching...</div>}
+
+      <div className="results">
+        {results.map((result) => (
+          <div key={result.id} className="result">
+            <h3>{result.title}</h3>
+            <p>{result.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### Form with Heavy Validation
+
+```typescript
+"use client";
+
+import { useState, useTransition, useDeferredValue } from "react";
+
+export default function ContactForm() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
+  const [validation, setValidation] = useState({});
+  const [isPending, startTransition] = useTransition();
+
+  const deferredFormData = useDeferredValue(formData);
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    // Heavy validation in transition
+    startTransition(() => {
+      const validationResult = expensiveValidation(deferredFormData);
+      setValidation(validationResult);
+    });
+  };
+
+  return (
+    <form>
+      <div>
+        <input
+          type="text"
+          value={formData.name}
+          onChange={(e) => handleInputChange("name", e.target.value)}
+          placeholder="Name"
+        />
+        {validation.name && <span className="error">{validation.name}</span>}
+      </div>
+
+      <div>
+        <input
+          type="email"
+          value={formData.email}
+          onChange={(e) => handleInputChange("email", e.target.value)}
+          placeholder="Email"
+        />
+        {validation.email && <span className="error">{validation.email}</span>}
+      </div>
+
+      <div>
+        <textarea
+          value={formData.message}
+          onChange={(e) => handleInputChange("message", e.target.value)}
+          placeholder="Message"
+        />
+        {validation.message && (
+          <span className="error">{validation.message}</span>
+        )}
+      </div>
+
+      {isPending && <div>Validating...</div>}
+
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+## Best Practices
+
+### Concurrent Feature Usage
+
+<Steps>
+  <Step title="Identify Heavy Operations">
+    Find operations that can block the UI
+  </Step>
+  <Step title="Use Transitions">Wrap heavy operations in startTransition</Step>
+  <Step title="Defer Values">
+    Use useDeferredValue for expensive computations
+  </Step>
+  <Step title="Provide Feedback">Show loading states during transitions</Step>
+</Steps>
+
+### Performance Considerations
+
+<Columns cols={2}>
+  <Card title="Batching Benefits" icon="package">
+    <ul className="list-disc list-inside">
+      <li>Reduces re-renders</li>
+      <li>Improves performance</li>
+      <li>Automatic in React 18</li>
+      <li>Works in event handlers</li>
+    </ul>
+  </Card>
+  <Card title="Transition Benefits" icon="zap">
+    <ul className="list-disc list-inside">
+      <li>Non-blocking updates</li>
+      <li>Better responsiveness</li>
+      <li>Priority-based rendering</li>
+      <li>Improved user experience</li>
+    </ul>
+  </Card>
+</Columns>
+
+## Common Patterns
+
+### Progressive Loading
+
+```typescript
+"use client";
+
+import { useState, useTransition } from "react";
+
+export default function ProgressiveLoader() {
+  const [data, setData] = useState([]);
+  const [isPending, startTransition] = useTransition();
+
+  const loadData = () => {
+    startTransition(() => {
+      // Load data progressively
+      const newData = generateLargeDataset();
+      setData(newData);
+    });
+  };
+
+  return (
+    <div>
+      <button onClick={loadData}>Load Data</button>
+
+      {isPending && <div>Loading data...</div>}
+
+      <div className="data-grid">
+        {data.map((item) => (
+          <div key={item.id} className="data-item">
+            {item.content}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### Responsive Updates
+
+```typescript
+"use client";
+
+import { useState, useTransition, useDeferredValue } from "react";
+
+export default function ResponsiveInterface() {
+  const [input, setInput] = useState("");
+  const [output, setOutput] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  const deferredInput = useDeferredValue(input);
+
+  const processInput = (value: string) => {
+    startTransition(() => {
+      const processed = expensiveProcessing(value);
+      setOutput(processed);
+    });
+  };
+
+  return (
+    <div>
+      <input
+        value={input}
+        onChange={(e) => {
+          setInput(e.target.value);
+          processInput(e.target.value);
+        }}
+        placeholder="Type something..."
+      />
+
+      {isPending && <div>Processing...</div>}
+
+      <div className="output">{output}</div>
+    </div>
+  );
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+<Accordion title="Transitions Not Working">
+**Problem**: startTransition not improving responsiveness
+**Solution**: Ensure the operation inside startTransition is actually expensive and can be interrupted
+</Accordion>
+
+<Accordion title="Batching Issues">
+  **Problem**: Multiple re-renders still occurring **Solution**: Check that
+  updates are happening in event handlers or React-managed contexts
+</Accordion>
+
+<Accordion title="Performance Not Improved">
+  **Problem**: Concurrent features not providing expected performance benefits
+  **Solution**: Profile the application to identify actual bottlenecks
+</Accordion>
+
+<Accordion title="State Updates Lost">
+**Problem**: State updates being lost during transitions
+**Solution**: Ensure state updates are properly batched and not conflicting
+</Accordion>
+</AccordionGroup>
+
+<Info>
+  **Key Takeaway**: Concurrent features enable React to create more responsive
+  user interfaces by prioritizing urgent updates and allowing non-urgent work to
+  be interrupted. Use them to improve perceived performance and user experience.
+</Info>

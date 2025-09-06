@@ -1,0 +1,671 @@
+---
+title: "Server Actions"
+description: "Understanding Next.js server actions for secure, type-safe server-side operations and form handling."
+---
+
+## Overview
+
+Server Actions are a Next.js feature that allows you to run server-side code directly from client components. They provide a secure, type-safe way to handle form submissions and other server operations.
+
+<Columns cols={2}>
+  <Card title="Server Action Benefits" icon="server">
+    - Type-safe server operations - Automatic serialization - Built-in error
+    handling - Form integration
+  </Card>
+  <Card title="Use Cases" icon="target">
+    - Form submissions - Database mutations - File uploads - API integrations
+  </Card>
+</Columns>
+
+## Basic Server Actions
+
+### Simple Server Action
+
+```typescript
+// app/actions/user-actions.ts
+"use server";
+
+import { db } from "@/lib/database";
+import { revalidatePath } from "next/cache";
+
+export async function createUser(formData: FormData) {
+  try {
+    const user = await db.users.create({
+      data: {
+        name: formData.get("name") as string,
+        email: formData.get("email") as string,
+        role: formData.get("role") as string,
+      },
+    });
+
+    revalidatePath("/users");
+    return { success: true, user };
+  } catch (error) {
+    return { success: false, error: "Failed to create user" };
+  }
+}
+```
+
+### Using Server Actions in Forms
+
+```typescript
+// app/components/UserForm.tsx
+import { createUser } from "@/app/actions/user-actions";
+
+export default function UserForm() {
+  return (
+    <form action={createUser} className="space-y-4">
+      <div>
+        <label htmlFor="name">Name:</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          required
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="email">Email:</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          required
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="role">Role:</label>
+        <select id="role" name="role" className="w-full p-2 border rounded">
+          <option value="admin">Admin</option>
+          <option value="user">User</option>
+          <option value="viewer">Viewer</option>
+        </select>
+      </div>
+
+      <button
+        type="submit"
+        className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+        Create User
+      </button>
+    </form>
+  );
+}
+```
+
+## Advanced Server Actions
+
+### Server Action with Validation
+
+```typescript
+// app/actions/user-actions.ts
+"use server";
+
+import { db } from "@/lib/database";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+const userSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  role: z.enum(["admin", "user", "viewer"]),
+});
+
+export async function createUser(formData: FormData) {
+  try {
+    const data = {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      role: formData.get("role") as string,
+    };
+
+    // Validate input
+    const validationResult = userSchema.safeParse(data);
+
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: "Validation failed",
+        details: validationResult.error.errors,
+      };
+    }
+
+    // Check for existing user
+    const existingUser = await db.users.findUnique({
+      where: { email: data.email },
+    });
+
+    if (existingUser) {
+      return {
+        success: false,
+        error: "User with this email already exists",
+      };
+    }
+
+    const user = await db.users.create({
+      data: validationResult.data,
+    });
+
+    revalidatePath("/users");
+    return { success: true, user };
+  } catch (error) {
+    console.error("User creation error:", error);
+    return { success: false, error: "Failed to create user" };
+  }
+}
+```
+
+### Server Action with File Upload
+
+```typescript
+// app/actions/file-actions.ts
+"use server";
+
+import { writeFile } from "fs/promises";
+import { join } from "path";
+import { revalidatePath } from "next/cache";
+
+export async function uploadFile(formData: FormData) {
+  try {
+    const file = formData.get("file") as File;
+
+    if (!file) {
+      return { success: false, error: "No file provided" };
+    }
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
+    if (!allowedTypes.includes(file.type)) {
+      return { success: false, error: "Invalid file type" };
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      return { success: false, error: "File too large" };
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    const filename = `${Date.now()}-${file.name}`;
+    const path = join(process.cwd(), "public/uploads", filename);
+
+    await writeFile(path, buffer);
+
+    revalidatePath("/uploads");
+    return { success: true, filename };
+  } catch (error) {
+    console.error("File upload error:", error);
+    return { success: false, error: "Failed to upload file" };
+  }
+}
+```
+
+## Form Handling Patterns
+
+### Progressive Enhancement
+
+```typescript
+// app/components/ContactForm.tsx
+"use client";
+
+import { useState } from "react";
+import { submitContactForm } from "@/app/actions/contact-actions";
+
+export default function ContactForm() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = async (formData: FormData) => {
+    setIsSubmitting(true);
+    setMessage("");
+
+    try {
+      const result = await submitContactForm(formData);
+
+      if (result.success) {
+        setMessage("Message sent successfully!");
+        // Reset form
+        const form = document.getElementById("contact-form") as HTMLFormElement;
+        form?.reset();
+      } else {
+        setMessage(result.error || "Failed to send message");
+      }
+    } catch (error) {
+      setMessage("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form id="contact-form" action={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="name">Name:</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          required
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="email">Email:</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          required
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="message">Message:</label>
+        <textarea
+          id="message"
+          name="message"
+          required
+          rows={4}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:opacity-50">
+        {isSubmitting ? "Sending..." : "Send Message"}
+      </button>
+
+      {message && (
+        <div
+          className={`p-2 rounded ${
+            message.includes("success")
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
+          }`}>
+          {message}
+        </div>
+      )}
+    </form>
+  );
+}
+```
+
+### Multi-Step Forms
+
+```typescript
+// app/actions/multi-step-actions.ts
+"use server";
+
+import { db } from "@/lib/database";
+import { revalidatePath } from "next/cache";
+
+export async function saveStep1(formData: FormData) {
+  try {
+    const data = {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+    };
+
+    // Save to temporary storage or session
+    // This is a simplified example
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: "Failed to save step 1" };
+  }
+}
+
+export async function saveStep2(formData: FormData) {
+  try {
+    const data = {
+      company: formData.get("company") as string,
+      position: formData.get("position") as string,
+    };
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: "Failed to save step 2" };
+  }
+}
+
+export async function completeRegistration(formData: FormData) {
+  try {
+    const userData = {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      company: formData.get("company") as string,
+      position: formData.get("position") as string,
+    };
+
+    const user = await db.users.create({
+      data: userData,
+    });
+
+    revalidatePath("/users");
+    return { success: true, user };
+  } catch (error) {
+    return { success: false, error: "Failed to complete registration" };
+  }
+}
+```
+
+## Error Handling
+
+### Comprehensive Error Handling
+
+```typescript
+// app/actions/error-handling-actions.ts
+"use server";
+
+import { db } from "@/lib/database";
+import { revalidatePath } from "next/cache";
+
+export async function createPost(formData: FormData) {
+  try {
+    const title = formData.get("title") as string;
+    const content = formData.get("content") as string;
+    const authorId = formData.get("authorId") as string;
+
+    // Validate required fields
+    if (!title || !content || !authorId) {
+      return {
+        success: false,
+        error: "All fields are required",
+        field: !title ? "title" : !content ? "content" : "authorId",
+      };
+    }
+
+    // Check if author exists
+    const author = await db.users.findUnique({
+      where: { id: authorId },
+    });
+
+    if (!author) {
+      return {
+        success: false,
+        error: "Author not found",
+        field: "authorId",
+      };
+    }
+
+    // Create post
+    const post = await db.posts.create({
+      data: {
+        title,
+        content,
+        authorId,
+        publishedAt: new Date(),
+      },
+    });
+
+    revalidatePath("/posts");
+    return { success: true, post };
+  } catch (error) {
+    console.error("Post creation error:", error);
+
+    // Handle specific database errors
+    if (error instanceof Error) {
+      if (error.message.includes("Unique constraint")) {
+        return {
+          success: false,
+          error: "A post with this title already exists",
+          field: "title",
+        };
+      }
+    }
+
+    return {
+      success: false,
+      error: "Failed to create post. Please try again.",
+    };
+  }
+}
+```
+
+## Real-World Examples
+
+### E-commerce Product Management
+
+```typescript
+// app/actions/product-actions.ts
+"use server";
+
+import { db } from "@/lib/database";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+const productSchema = z.object({
+  name: z.string().min(1, "Product name is required"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  price: z.number().positive("Price must be positive"),
+  categoryId: z.string().min(1, "Category is required"),
+  stock: z.number().int().min(0, "Stock cannot be negative"),
+});
+
+export async function createProduct(formData: FormData) {
+  try {
+    const data = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+      price: parseFloat(formData.get("price") as string),
+      categoryId: formData.get("categoryId") as string,
+      stock: parseInt(formData.get("stock") as string),
+    };
+
+    // Validate input
+    const validationResult = productSchema.safeParse(data);
+
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: "Validation failed",
+        details: validationResult.error.errors,
+      };
+    }
+
+    // Check if category exists
+    const category = await db.categories.findUnique({
+      where: { id: data.categoryId },
+    });
+
+    if (!category) {
+      return {
+        success: false,
+        error: "Category not found",
+        field: "categoryId",
+      };
+    }
+
+    // Create product
+    const product = await db.products.create({
+      data: validationResult.data,
+      include: {
+        category: true,
+      },
+    });
+
+    revalidatePath("/products");
+    return { success: true, product };
+  } catch (error) {
+    console.error("Product creation error:", error);
+    return { success: false, error: "Failed to create product" };
+  }
+}
+
+export async function updateProduct(id: string, formData: FormData) {
+  try {
+    const data = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+      price: parseFloat(formData.get("price") as string),
+      categoryId: formData.get("categoryId") as string,
+      stock: parseInt(formData.get("stock") as string),
+    };
+
+    const validationResult = productSchema.safeParse(data);
+
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: "Validation failed",
+        details: validationResult.error.errors,
+      };
+    }
+
+    const product = await db.products.update({
+      where: { id },
+      data: validationResult.data,
+      include: {
+        category: true,
+      },
+    });
+
+    revalidatePath("/products");
+    revalidatePath(`/products/${id}`);
+    return { success: true, product };
+  } catch (error) {
+    console.error("Product update error:", error);
+    return { success: false, error: "Failed to update product" };
+  }
+}
+
+export async function deleteProduct(id: string) {
+  try {
+    await db.products.delete({
+      where: { id },
+    });
+
+    revalidatePath("/products");
+    return { success: true };
+  } catch (error) {
+    console.error("Product deletion error:", error);
+    return { success: false, error: "Failed to delete product" };
+  }
+}
+```
+
+## Best Practices
+
+### Server Action Best Practices
+
+<Steps>
+  <Step title="Input Validation">Always validate input data using schemas</Step>
+  <Step title="Error Handling">
+    Provide comprehensive error handling and user feedback
+  </Step>
+  <Step title="Revalidation">Use revalidatePath to update cached data</Step>
+  <Step title="Security">
+    Implement proper authentication and authorization
+  </Step>
+</Steps>
+
+### Performance Considerations
+
+<Columns cols={2}>
+  <Card title="Optimization Tips" icon="zap">
+    - Use database transactions for multiple operations - Implement proper
+    indexing - Cache frequently accessed data - Use connection pooling
+  </Card>
+  <Card title="Security Tips" icon="shield">
+    - Validate all inputs - Sanitize data before database operations - Implement
+    rate limiting - Use proper authentication
+  </Card>
+</Columns>
+
+## Common Patterns
+
+### CRUD Operations
+
+```typescript
+// app/actions/crud-actions.ts
+"use server";
+
+import { db } from "@/lib/database";
+import { revalidatePath } from "next/cache";
+
+export async function createItem(formData: FormData) {
+  // Create logic
+}
+
+export async function readItem(id: string) {
+  // Read logic
+}
+
+export async function updateItem(id: string, formData: FormData) {
+  // Update logic
+}
+
+export async function deleteItem(id: string) {
+  // Delete logic
+}
+```
+
+### Batch Operations
+
+```typescript
+// app/actions/batch-actions.ts
+"use server";
+
+import { db } from "@/lib/database";
+import { revalidatePath } from "next/cache";
+
+export async function bulkUpdateItems(formData: FormData) {
+  try {
+    const items = JSON.parse(formData.get("items") as string);
+
+    await db.$transaction(
+      items.map((item: any) =>
+        db.items.update({
+          where: { id: item.id },
+          data: item.data,
+        })
+      )
+    );
+
+    revalidatePath("/items");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to update items" };
+  }
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+<Accordion title="Server Action Not Working">
+**Problem**: Server action not executing or returning errors
+**Solution**: Check that the action has 'use server' directive and is properly imported
+</Accordion>
+
+<Accordion title="Form Data Not Received">
+  **Problem**: FormData is empty or missing fields **Solution**: Ensure form
+  inputs have proper name attributes and the form is submitted correctly
+</Accordion>
+
+<Accordion title="Validation Errors">
+  **Problem**: Validation is failing unexpectedly **Solution**: Check validation
+  schema and ensure data types match expected formats
+</Accordion>
+
+<Accordion title="Database Errors">
+**Problem**: Database operations failing in server actions
+**Solution**: Verify database connection and check for proper error handling
+</Accordion>
+</AccordionGroup>
+
+<Info>
+  **Key Takeaway**: Server Actions provide a powerful way to handle server-side
+  operations with type safety and automatic serialization. Use them for form
+  submissions, database operations, and other server-side tasks while
+  maintaining good error handling and validation practices.
+</Info>
+
+

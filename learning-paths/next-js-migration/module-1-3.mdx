@@ -1,0 +1,1122 @@
+---
+title: "1.3 Component Migration & Routing"
+description: "Migrate your first React components to Next.js and implement the new routing structure. Learn to convert VSL Service Center components while maintaining functionality."
+---
+
+import FileBasedRoutingBasics from "/snippets/nextjs-architecture/file-based-routing-basics.mdx";
+import LayoutsBasics from "/snippets/nextjs-architecture/layouts-basics.mdx";
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Migrate React components from Create React App to Next.js App Router
+- Convert React Router navigation to Next.js file-based routing
+- Implement proper component structure for Next.js applications
+- Set up layouts and nested routing for the VSL Service Center
+- Test migrated components and ensure functionality preservation
+
+<Info>**Duration**: 4-5 hours</Info>
+
+---
+
+## Part 1: Strategic Analysis & Planning
+
+### Component Migration Strategy
+
+We'll migrate components systematically, starting with the simplest UI components and progressing to more complex ones:
+
+<Accordion title="Review: File-Based Routing System">
+  <FileBasedRoutingBasics />
+</Accordion>
+
+### Migration Approach
+
+<Steps>
+  <Step title="UI Components First">
+    Start with pure UI components that have no business logic or external
+    dependencies
+  </Step>
+  <Step title="Layout Components Second">
+    Migrate navigation and layout components that define the application
+    structure
+  </Step>
+  <Step title="Business Logic Last">
+    Handle components with complex state management and API integrations
+  </Step>
+</Steps>
+
+### Migration Complexity Analysis
+
+<AccordionGroup>
+<Accordion title="Low Complexity (1-2 hours)">
+**Components**: Card, Badge, Stat, Table
+**Strategy**: Direct TypeScript conversion with proper interfaces
+**Dependencies**: React only
+</Accordion>
+
+<Accordion title="Medium Complexity (3-4 hours)">
+  **Components**: Navbar, Footer, Layout components **Strategy**: Convert
+  routing, add 'use client' where needed **Dependencies**: React, Next.js
+  navigation, localStorage
+</Accordion>
+
+<Accordion title="High Complexity (4-6 hours)">
+**Components**: Dashboard, Business logic components
+**Strategy**: Separate server/client logic, implement data fetching
+**Dependencies**: React, Next.js, API integration, state management
+</Accordion>
+</AccordionGroup>
+
+## Part 2: Hands-On Implementation
+
+### Component Migration Examples
+
+### Migration 1: Card Component
+
+Let's start by migrating the Card component from the VSL Service Center:
+
+**Original Component** (`src/Component/ui/Card.jsx`):
+
+```javascript
+import React from "react";
+
+const Card = ({ title, children, className = "", footer }) => {
+  return (
+    <div
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden ${className}`}>
+      {title && (
+        <div className="px-4 py-3 border-b dark:border-gray-700">
+          <h3 className="font-medium text-gray-800 dark:text-gray-200">
+            {title}
+          </h3>
+        </div>
+      )}
+      <div className="p-4">{children}</div>
+      {footer && (
+        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-750 border-t dark:border-gray-700">
+          {footer}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Card;
+```
+
+**Migrated Next.js Component** (`src/components/ui/Card.tsx`):
+
+```typescript
+import React from "react";
+
+interface CardProps {
+  title?: string;
+  children: React.ReactNode;
+  className?: string;
+  footer?: React.ReactNode;
+}
+
+const Card: React.FC<CardProps> = ({
+  title,
+  children,
+  className = "",
+  footer,
+}) => {
+  return (
+    <div
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden ${className}`}>
+      {title && (
+        <div className="px-4 py-3 border-b dark:border-gray-700">
+          <h3 className="font-medium text-gray-800 dark:text-gray-200">
+            {title}
+          </h3>
+        </div>
+      )}
+      <div className="p-4">{children}</div>
+      {footer && (
+        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-750 border-t dark:border-gray-700">
+          {footer}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Card;
+```
+
+### Migration 2: Navbar Component
+
+Now let's migrate the more complex Navbar component:
+
+**Original Component Analysis**:
+
+- Uses React Router's `Link` and `useNavigate`
+- Has complex state management with `useState` and `useEffect`
+- Makes API calls to fetch menu data
+- Uses localStorage for user data
+
+**Migrated Next.js Navbar** (`src/components/layout/Navbar.tsx`):
+
+```typescript
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import logo from "@/public/images/TSSCL_Logo.png";
+import userlogo from "@/public/images/user_logo.jpg";
+
+interface MenuItem {
+  Id: number;
+  MenuName: string;
+  Label: string;
+  RoutePath: string;
+  ParentId: number | null;
+  DisplayOrder: number;
+  IsActive: boolean;
+  IsCategory: boolean;
+}
+
+const Navbar: React.FC = () => {
+  const [sticky, setSticky] = useState(false);
+  const [showNav, setShowNav] = useState(false);
+  const [dropdowns, setDropdowns] = useState<Record<number, boolean>>({});
+  const [username, setUsername] = useState<string>("");
+  const [menuData, setMenuData] = useState<MenuItem[]>([]);
+  const router = useRouter();
+
+  const url = process.env.NEXT_PUBLIC_API_URL || "https://192.168.100.4/api";
+
+  useEffect(() => {
+    const user_id = localStorage.getItem("user_id");
+    setUsername(user_id || "");
+
+    if (user_id) {
+      fetchMenuData(user_id);
+    }
+  }, []);
+
+  const fetchMenuData = async (userId: string) => {
+    try {
+      const response = await fetch(`${url}/getAllMenusByUser`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user_id: userId }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setMenuData(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching menu data:", error);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("token");
+    router.push("/login");
+  };
+
+  const toggleDropdown = (menuId: number) => {
+    setDropdowns((prev) => ({
+      ...prev,
+      [menuId]: !prev[menuId],
+    }));
+  };
+
+  const renderMenuItems = (parentId: number | null = null) => {
+    return menuData
+      .filter((item) => item.ParentId === parentId && item.IsActive)
+      .sort((a, b) => a.DisplayOrder - b.DisplayOrder)
+      .map((item) => (
+        <div key={item.Id} className="relative">
+          {item.IsCategory ? (
+            <button
+              onClick={() => toggleDropdown(item.Id)}
+              className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100">
+              {item.Label}
+              <svg
+                className="ml-1 h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+          ) : (
+            <Link
+              href={item.RoutePath}
+              className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+              {item.Label}
+            </Link>
+          )}
+
+          {item.IsCategory && dropdowns[item.Id] && (
+            <div className="absolute left-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
+              {renderMenuItems(item.Id)}
+            </div>
+          )}
+        </div>
+      ));
+  };
+
+  return (
+    <nav className={`bg-white shadow-lg ${sticky ? "sticky top-0 z-50" : ""}`}>
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center">
+            <Link href="/" className="flex items-center">
+              <Image
+                src={logo}
+                alt="TSSCL Logo"
+                width={40}
+                height={40}
+                className="mr-2"
+              />
+              <span className="text-xl font-bold text-gray-800">
+                VSL Service Center
+              </span>
+            </Link>
+          </div>
+
+          <div className="hidden md:flex items-center space-x-4">
+            {renderMenuItems()}
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center">
+              <Image
+                src={userlogo}
+                alt="User"
+                width={32}
+                height={32}
+                className="rounded-full mr-2"
+              />
+              <span className="text-gray-700">{username}</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+export default Navbar;
+```
+
+## Routing Structure Implementation
+
+### File-Based Routing Setup
+
+Create the routing structure that mirrors the VSL Service Center navigation:
+
+```
+app/
+├── (auth)/
+│   ├── login/
+│   │   └── page.tsx
+│   └── layout.tsx
+├── dashboard/
+│   └── page.tsx
+├── master/
+│   ├── customers/
+│   │   └── page.tsx
+│   ├── suppliers/
+│   │   └── page.tsx
+│   ├── materials/
+│   │   └── page.tsx
+│   └── layout.tsx
+├── transactions/
+│   ├── inward/
+│   │   └── page.tsx
+│   ├── outward/
+│   │   └── page.tsx
+│   └── layout.tsx
+├── reports/
+│   └── page.tsx
+├── visitor/
+│   └── page.tsx
+├── yms/
+│   └── page.tsx
+├── layout.tsx
+└── page.tsx
+```
+
+### Root Layout Implementation
+
+**Root Layout** (`app/layout.tsx`):
+
+```typescript
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "VSL Service Center",
+  description: "Warehouse Management System",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        <div className="min-h-screen flex flex-col">
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </div>
+      </body>
+    </html>
+  );
+}
+```
+
+### Master Data Layout
+
+**Master Layout** (`app/master/layout.tsx`):
+
+```typescript
+import React from "react";
+
+export default function MasterLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">
+          Master Data Management
+        </h1>
+        <p className="text-gray-600 mt-2">Manage your warehouse master data</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+```
+
+## Hands-On Exercise: Component Migration
+
+### Exercise 1: Migrate the Badge Component
+
+1. **Examine the original Badge component:**
+
+   ```javascript
+   // From VSL Service Center: src/Component/ui/Badge.jsx
+   import React from "react";
+
+   const Badge = ({ children, variant = "default", size = "md" }) => {
+     const baseClasses = "inline-flex items-center font-medium rounded-full";
+     const variantClasses = {
+       default: "bg-gray-100 text-gray-800",
+       success: "bg-green-100 text-green-800",
+       warning: "bg-yellow-100 text-yellow-800",
+       error: "bg-red-100 text-red-800",
+     };
+     const sizeClasses = {
+       sm: "px-2 py-1 text-xs",
+       md: "px-2.5 py-0.5 text-sm",
+       lg: "px-3 py-1 text-base",
+     };
+
+     return (
+       <span
+         className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]}`}>
+         {children}
+       </span>
+     );
+   };
+
+   export default Badge;
+   ```
+
+2. **Migrate to Next.js with TypeScript:**
+
+   ```typescript
+   // Create: src/components/ui/Badge.tsx
+   import React from "react";
+
+   interface BadgeProps {
+     children: React.ReactNode;
+     variant?: "default" | "success" | "warning" | "error";
+     size?: "sm" | "md" | "lg";
+   }
+
+   const Badge: React.FC<BadgeProps> = ({
+     children,
+     variant = "default",
+     size = "md",
+   }) => {
+     const baseClasses = "inline-flex items-center font-medium rounded-full";
+     const variantClasses = {
+       default: "bg-gray-100 text-gray-800",
+       success: "bg-green-100 text-green-800",
+       warning: "bg-yellow-100 text-yellow-800",
+       error: "bg-red-100 text-red-800",
+     };
+     const sizeClasses = {
+       sm: "px-2 py-1 text-xs",
+       md: "px-2.5 py-0.5 text-sm",
+       lg: "px-3 py-1 text-base",
+     };
+
+     return (
+       <span
+         className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]}`}>
+         {children}
+       </span>
+     );
+   };
+
+   export default Badge;
+   ```
+
+### Exercise 2: Create a Test Page
+
+1. **Create a test page to verify component migration:**
+
+   ```typescript
+   // Create: app/test-components/page.tsx
+   import Card from "@/components/ui/Card";
+   import Badge from "@/components/ui/Badge";
+
+   export default function TestComponentsPage() {
+     return (
+       <div className="container mx-auto px-4 py-8">
+         <h1 className="text-3xl font-bold mb-8">Component Migration Test</h1>
+
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+           <Card title="Card Component Test">
+             <p>This is a test of the migrated Card component.</p>
+             <div className="mt-4">
+               <Badge variant="success">Success Badge</Badge>
+               <Badge variant="warning" className="ml-2">
+                 Warning Badge
+               </Badge>
+             </div>
+           </Card>
+
+           <Card title="Badge Variants">
+             <div className="space-y-2">
+               <Badge variant="default">Default</Badge>
+               <Badge variant="success">Success</Badge>
+               <Badge variant="warning">Warning</Badge>
+               <Badge variant="error">Error</Badge>
+             </div>
+           </Card>
+
+           <Card title="Badge Sizes">
+             <div className="space-y-2">
+               <Badge size="sm">Small Badge</Badge>
+               <Badge size="md">Medium Badge</Badge>
+               <Badge size="lg">Large Badge</Badge>
+             </div>
+           </Card>
+         </div>
+       </div>
+     );
+   }
+   ```
+
+### Exercise 3: Migrate Additional Components
+
+1. **Migrate the Table Component:**
+
+   ```typescript
+   // Create: src/components/ui/Table.tsx
+   import React from "react";
+
+   interface Column {
+     key: string;
+     header: string;
+     render?: (value: any, row: any) => React.ReactNode;
+   }
+
+   interface TableProps {
+     data?: any[];
+     columns?: Column[];
+     onRowClick?: (row: any, index: number) => void;
+     className?: string;
+     loading?: boolean;
+   }
+
+   const Table: React.FC<TableProps> = ({
+     data = [],
+     columns = [],
+     onRowClick,
+     className = "",
+     loading = false,
+   }) => {
+     if (loading) {
+       return (
+         <div className="flex justify-center items-center h-32">
+           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+         </div>
+       );
+     }
+
+     return (
+       <div className={`overflow-x-auto ${className}`}>
+         <table className="min-w-full bg-white border border-gray-200">
+           <thead className="bg-gray-50">
+             <tr>
+               {columns.map((column, index) => (
+                 <th
+                   key={index}
+                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                   {column.header}
+                 </th>
+               ))}
+             </tr>
+           </thead>
+           <tbody className="bg-white divide-y divide-gray-200">
+             {data.map((row, rowIndex) => (
+               <tr
+                 key={rowIndex}
+                 className={`hover:bg-gray-50 ${
+                   onRowClick ? "cursor-pointer" : ""
+                 }`}
+                 onClick={() => onRowClick && onRowClick(row, rowIndex)}>
+                 {columns.map((column, colIndex) => (
+                   <td
+                     key={colIndex}
+                     className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                     {column.render
+                       ? column.render(row[column.key], row)
+                       : row[column.key]}
+                   </td>
+                 ))}
+               </tr>
+             ))}
+           </tbody>
+         </table>
+       </div>
+     );
+   };
+
+   export default Table;
+   ```
+
+2. **Migrate the Stat Component:**
+
+   ```typescript
+   // Create: src/components/ui/Stat.tsx
+   import React from "react";
+
+   interface StatProps {
+     title: string;
+     value: string | number;
+     change?: {
+       value: string | number;
+       type: "increase" | "decrease" | "neutral";
+     };
+     icon?: React.ReactNode;
+     className?: string;
+   }
+
+   const Stat: React.FC<StatProps> = ({
+     title,
+     value,
+     change,
+     icon,
+     className = "",
+   }) => {
+     const getChangeColor = (type: string) => {
+       switch (type) {
+         case "increase":
+           return "text-green-600";
+         case "decrease":
+           return "text-red-600";
+         default:
+           return "text-gray-600";
+       }
+     };
+
+     return (
+       <div className={`bg-white p-6 rounded-lg shadow-md ${className}`}>
+         <div className="flex items-center justify-between">
+           <div>
+             <p className="text-sm font-medium text-gray-600">{title}</p>
+             <p className="text-2xl font-bold text-gray-900">{value}</p>
+             {change && (
+               <p className={`text-sm ${getChangeColor(change.type)}`}>
+                 {change.type === "increase"
+                   ? "+"
+                   : change.type === "decrease"
+                   ? "-"
+                   : ""}
+                 {change.value}
+               </p>
+             )}
+           </div>
+           {icon && <div className="text-gray-400">{icon}</div>}
+         </div>
+       </div>
+     );
+   };
+
+   export default Stat;
+   ```
+
+3. **Migrate the Footer Component:**
+
+   ```typescript
+   // Create: src/components/layout/Footer.tsx
+   import React from "react";
+   import Link from "next/link";
+
+   const Footer: React.FC = () => {
+     return (
+       <footer className="bg-gray-800 text-white py-8">
+         <div className="container mx-auto px-4">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+             <div>
+               <h3 className="text-lg font-semibold mb-4">
+                 VSL Service Center
+               </h3>
+               <p className="text-gray-300">Warehouse Management System</p>
+               <p className="text-gray-300">
+                 Streamlining operations for better efficiency
+               </p>
+             </div>
+             <div>
+               <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+               <ul className="space-y-2">
+                 <li>
+                   <Link
+                     href="/dashboard"
+                     className="text-gray-300 hover:text-white">
+                     Dashboard
+                   </Link>
+                 </li>
+                 <li>
+                   <Link
+                     href="/reports"
+                     className="text-gray-300 hover:text-white">
+                     Reports
+                   </Link>
+                 </li>
+                 <li>
+                   <Link
+                     href="/master"
+                     className="text-gray-300 hover:text-white">
+                     Master Data
+                   </Link>
+                 </li>
+               </ul>
+             </div>
+             <div>
+               <h3 className="text-lg font-semibold mb-4">Contact</h3>
+               <p className="text-gray-300">Email: info@vsl.com</p>
+               <p className="text-gray-300">Phone: +1-234-567-8900</p>
+               <p className="text-gray-300">
+                 Address: 123 Business St, City, State
+               </p>
+             </div>
+           </div>
+           <div className="border-t border-gray-700 mt-8 pt-8 text-center">
+             <p className="text-gray-300">
+               &copy; 2024 VSL Service Center. All rights reserved.
+             </p>
+           </div>
+         </div>
+       </footer>
+     );
+   };
+
+   export default Footer;
+   ```
+
+### Exercise 4: Test Navigation
+
+1. **Create basic pages for each route:**
+
+   ```typescript
+   // Create: app/dashboard/page.tsx
+   import Stat from "@/components/ui/Stat";
+   import Table from "@/components/ui/Table";
+
+   export default function DashboardPage() {
+     const stats = [
+       {
+         title: "Total Customers",
+         value: "1,234",
+         change: { value: "12%", type: "increase" },
+       },
+       {
+         title: "Active Orders",
+         value: "56",
+         change: { value: "3%", type: "decrease" },
+       },
+       {
+         title: "Revenue",
+         value: "$45,678",
+         change: { value: "8%", type: "increase" },
+       },
+       {
+         title: "Inventory",
+         value: "2,345",
+         change: { value: "0%", type: "neutral" },
+       },
+     ];
+
+     const tableData = [
+       { id: 1, name: "John Doe", email: "john@example.com", status: "Active" },
+       {
+         id: 2,
+         name: "Jane Smith",
+         email: "jane@example.com",
+         status: "Inactive",
+       },
+     ];
+
+     const columns = [
+       { key: "name", header: "Name" },
+       { key: "email", header: "Email" },
+       { key: "status", header: "Status" },
+     ];
+
+     return (
+       <div className="container mx-auto px-4 py-8">
+         <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+
+         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+           {stats.map((stat, index) => (
+             <Stat key={index} {...stat} />
+           ))}
+         </div>
+
+         <div className="bg-white rounded-lg shadow-md p-6">
+           <h2 className="text-xl font-semibold mb-4">Recent Customers</h2>
+           <Table data={tableData} columns={columns} />
+         </div>
+       </div>
+     );
+   }
+   ```
+
+2. **Test the navigation by visiting each route:**
+   - `/dashboard`
+   - `/master/customers`
+   - `/master/suppliers`
+   - `/master/materials`
+   - `/transactions/inward`
+   - `/transactions/outward`
+   - `/reports`
+   - `/visitor`
+   - `/yms`
+
+### Exercise 5: Complete Routing Structure Implementation
+
+1. **Create the complete routing structure:**
+
+   ```bash
+   # Create all required directories and files
+   mkdir -p app/{\(auth\),dashboard,master/{customers,suppliers,materials},transactions/{inward,outward},reports,visitor,yms}
+   ```
+
+2. **Implement Master Data Layout:**
+
+   ```typescript
+   // Create: app/master/layout.tsx
+   import React from "react";
+   import Link from "next/link";
+
+   export default function MasterLayout({
+     children,
+   }: {
+     children: React.ReactNode;
+   }) {
+     return (
+       <div className="container mx-auto px-4 py-8">
+         <div className="mb-6">
+           <h1 className="text-3xl font-bold text-gray-900">
+             Master Data Management
+           </h1>
+           <p className="text-gray-600 mt-2">
+             Manage your warehouse master data
+           </p>
+         </div>
+
+         <nav className="mb-8">
+           <div className="flex space-x-4">
+             <Link
+               href="/master/customers"
+               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+               Customers
+             </Link>
+             <Link
+               href="/master/suppliers"
+               className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+               Suppliers
+             </Link>
+             <Link
+               href="/master/materials"
+               className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">
+               Materials
+             </Link>
+           </div>
+         </nav>
+
+         {children}
+       </div>
+     );
+   }
+   ```
+
+3. **Create Master Data Pages:**
+
+   ```typescript
+   // Create: app/master/customers/page.tsx
+   import Table from "@/components/ui/Table";
+   import Card from "@/components/ui/Card";
+
+   export default function CustomersPage() {
+     const customers = [
+       { id: 1, name: "ABC Corp", email: "contact@abc.com", phone: "555-0123" },
+       { id: 2, name: "XYZ Ltd", email: "info@xyz.com", phone: "555-0456" },
+     ];
+
+     const columns = [
+       { key: "name", header: "Company Name" },
+       { key: "email", header: "Email" },
+       { key: "phone", header: "Phone" },
+     ];
+
+     return (
+       <Card title="Customer Management">
+         <Table data={customers} columns={columns} />
+       </Card>
+     );
+   }
+   ```
+
+4. **Implement Authentication Layout:**
+
+   ```typescript
+   // Create: app/(auth)/layout.tsx
+   import React from "react";
+
+   export default function AuthLayout({
+     children,
+   }: {
+     children: React.ReactNode;
+   }) {
+     return (
+       <div className="min-h-screen flex items-center justify-center bg-gray-50">
+         <div className="max-w-md w-full space-y-8">
+           <div className="text-center">
+             <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+               VSL Service Center
+             </h2>
+             <p className="mt-2 text-sm text-gray-600">
+               Sign in to your account
+             </p>
+           </div>
+           <div className="bg-white py-8 px-6 shadow rounded-lg">
+             {children}
+           </div>
+         </div>
+       </div>
+     );
+   }
+   ```
+
+5. **Create Login Page:**
+
+   ```typescript
+   // Create: app/(auth)/login/page.tsx
+   "use client";
+
+   import { useState } from "react";
+   import { useRouter } from "next/navigation";
+
+   export default function LoginPage() {
+     const [formData, setFormData] = useState({
+       email: "",
+       password: "",
+     });
+     const [isLoading, setIsLoading] = useState(false);
+     const router = useRouter();
+
+     const handleSubmit = async (e: React.FormEvent) => {
+       e.preventDefault();
+       setIsLoading(true);
+
+       // Simulate login process
+       setTimeout(() => {
+         localStorage.setItem("user_id", "user123");
+         router.push("/dashboard");
+         setIsLoading(false);
+       }, 1000);
+     };
+
+     return (
+       <form onSubmit={handleSubmit} className="space-y-6">
+         <div>
+           <label
+             htmlFor="email"
+             className="block text-sm font-medium text-gray-700">
+             Email address
+           </label>
+           <input
+             id="email"
+             name="email"
+             type="email"
+             required
+             value={formData.email}
+             onChange={(e) =>
+               setFormData((prev) => ({ ...prev, email: e.target.value }))
+             }
+             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+           />
+         </div>
+
+         <div>
+           <label
+             htmlFor="password"
+             className="block text-sm font-medium text-gray-700">
+             Password
+           </label>
+           <input
+             id="password"
+             name="password"
+             type="password"
+             required
+             value={formData.password}
+             onChange={(e) =>
+               setFormData((prev) => ({ ...prev, password: e.target.value }))
+             }
+             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+           />
+         </div>
+
+         <button
+           type="submit"
+           disabled={isLoading}
+           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+           {isLoading ? "Signing in..." : "Sign in"}
+         </button>
+       </form>
+     );
+   }
+   ```
+
+## Part 3: Reflection & Assessment
+
+### Assessment Criteria
+
+Your component migration will be evaluated based on:
+
+<Columns cols={2}>
+  <Card title="Component Quality" icon="code">
+    - Proper TypeScript implementation - Maintained functionality from original
+    - Clean, readable code structure - Proper prop types and interfaces
+  </Card>
+  <Card title="Routing Implementation" icon="route">
+    - Correct file-based routing structure - Proper layout implementation -
+    Working navigation between pages - Consistent URL structure
+  </Card>
+</Columns>
+
+### Common Migration Challenges & Solutions
+
+<AccordionGroup>
+<Accordion title="React Router to Next.js Navigation">
+**Challenge**: Converting `Link` and `useNavigate` to Next.js equivalents
+**Solution**: Use Next.js `Link` component and `useRouter` hook
+</Accordion>
+
+<Accordion title="Client-Side State Management">
+  **Challenge**: Components with `useState` and `useEffect` need 'use client'
+  directive **Solution**: Add 'use client' at the top of components that use
+  client-side features
+</Accordion>
+
+<Accordion title="Image Handling">
+  **Challenge**: Converting regular `img` tags to Next.js `Image` component
+  **Solution**: Use Next.js `Image` component with proper optimization
+</Accordion>
+
+<Accordion title="CSS and Styling">
+**Challenge**: Ensuring Tailwind CSS classes work correctly
+**Solution**: Test all styling and adjust classes as needed
+</Accordion>
+</AccordionGroup>
+
+### Reflection Questions
+
+1. **What was the most challenging aspect of migrating components?**
+
+   - Consider TypeScript conversion complexity
+   - Think about routing changes
+   - Reflect on state management differences
+
+2. **How did the migration improve your understanding of Next.js patterns?**
+
+   - Server vs client component distinctions
+   - File-based routing benefits
+   - Performance optimization opportunities
+
+3. **What would you do differently in future migrations?**
+   - Planning and preparation strategies
+   - Testing and validation approaches
+   - Documentation and organization methods
+
+### Extension Activities
+
+1. **Component Patterns:**
+
+   - Research compound component patterns
+   - Study render prop and higher-order component patterns
+   - Explore custom hooks for shared logic
+
+2. **Advanced Migration Techniques:**
+
+   - Learn about lazy loading for heavy components
+   - Study error boundary implementation
+   - Explore bundle optimization strategies
+
+## Next Steps
+
+After completing this lesson, you'll be ready to move on to **Lesson 1.4: Server vs Client Components**, where you'll:
+
+- Learn to distinguish between server and client components
+- Optimize your migrated components for Next.js architecture
+- Implement proper component patterns
+- Understand when to use each component type
+
+<Info>
+  **Key Takeaway**: Successful component migration requires understanding both
+  the original component's functionality and the new Next.js patterns. Take time
+  to test each migrated component thoroughly to ensure functionality is
+  preserved.
+</Info>

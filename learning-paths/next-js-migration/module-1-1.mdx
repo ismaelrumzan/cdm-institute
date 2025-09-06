@@ -1,0 +1,375 @@
+---
+title: "1.1 Create Next.js Project & Analyze Structure"
+description: "Set up your first Next.js project and analyze the VSL Service Center structure to understand what needs to be migrated. Learn the essential concepts through hands-on project creation."
+---
+
+import FileBasedRoutingBasics from "/snippets/nextjs-architecture/file-based-routing-basics.mdx";
+import ServerClientComponentsBasics from "/snippets/nextjs-architecture/server-client-components-basics.mdx";
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Explain the key differences between Next.js App Router and traditional React applications
+- Understand the concept of server components and client components
+- Describe the file-based routing system and its benefits
+- Identify when to use server vs client components
+- Understand the new data fetching patterns in Next.js
+
+<Info>**Duration**: 4-5 hours</Info>
+
+---
+
+## Part 1: Strategic Analysis & Understanding
+
+### Understanding Next.js App Router
+
+Next.js App Router represents a fundamental shift in how we build React applications. Unlike traditional React apps that run entirely in the browser, Next.js App Router introduces a hybrid approach that combines server-side and client-side rendering.
+
+### Traditional React vs Next.js App Router
+
+<Columns cols={2}>
+  <Card title="Traditional React (Create React App)" icon="code">
+    - Entire app runs in the browser - All components are client components -
+    JavaScript bundle sent to browser - SEO and performance challenges - Manual
+    routing configuration
+  </Card>
+  <Card title="Next.js App Router" icon="server">
+    - Hybrid server/client architecture - Server components by default -
+    Optimized bundle splitting - Built-in SEO and performance - File-based
+    routing system
+  </Card>
+</Columns>
+
+### Key Benefits of App Router
+
+<Steps>
+  <Step title="Better Performance">
+    Server components reduce JavaScript bundle size and improve initial page
+    load times
+  </Step>
+  <Step title="Enhanced SEO">
+    Server-side rendering provides better search engine optimization
+  </Step>
+  <Step title="Simplified Data Fetching">
+    Direct database access from server components eliminates API calls
+  </Step>
+  <Step title="Improved Developer Experience">
+    File-based routing and built-in optimizations streamline development
+  </Step>
+</Steps>
+
+### Server Components vs Client Components
+
+Understanding the distinction between server and client components is crucial for effective Next.js development.
+
+#### Server Components
+
+Server components run on the server and are rendered before being sent to the browser:
+
+<Columns cols={2}>
+  <Card title="When to Use Server Components" icon="server">
+    - Data fetching from databases - Accessing backend resources - Large
+    dependencies - Sensitive information - Static content
+  </Card>
+  <Card title="Server Component Benefits" icon="zap">
+    - Reduced bundle size - Better performance - Direct database access -
+    Enhanced security - SEO optimization
+  </Card>
+</Columns>
+
+#### Client Components
+
+Client components run in the browser and provide interactivity:
+
+<Columns cols={2}>
+  <Card title="When to Use Client Components" icon="monitor">
+    - Event handlers (onClick, onChange) - Browser APIs (localStorage,
+    geolocation) - State management (useState, useEffect) - Interactive features
+    - Third-party libraries
+  </Card>
+  <Card title="Client Component Features" icon="mouse-pointer">
+    - Event handling - State management - Browser API access - Real-time updates
+    - User interactions
+  </Card>
+</Columns>
+
+### File-Based Routing System
+
+Next.js App Router uses a file-based routing system that automatically creates routes based on your file structure.
+
+<Accordion title="Review if needed: File-Based Routing System">
+  <FileBasedRoutingBasics />
+</Accordion>
+
+### Data Fetching Patterns
+
+Next.js App Router introduces new patterns for data fetching that are more efficient than traditional approaches.
+
+#### Server Component Data Fetching
+
+```javascript
+// app/products/page.js
+async function ProductsPage() {
+  // Direct database access in server component
+  const products = await db.products.findMany();
+
+  return (
+    <div>
+      <h1>Products</h1>
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  );
+}
+```
+
+#### Client Component Data Fetching
+
+```javascript
+// app/components/ProductList.js
+"use client";
+
+import { useState, useEffect } from "react";
+
+export default function ProductList() {
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => setProducts(data));
+  }, []);
+
+  return (
+    <div>
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  );
+}
+```
+
+<Accordion title="Review if needed: Server and Client Components">
+  <ServerClientComponentsBasics />
+</Accordion>
+
+### Real-World Example: VSL Service Center
+
+Let's examine how the VSL Service Center application would benefit from Next.js App Router:
+
+#### Current React Structure (Create React App)
+
+```
+src/
+├── components/
+│   ├── Login/
+│   ├── Dashboard/
+│   ├── Reports/
+│   └── Transactions/
+├── services/
+│   └── api.js
+└── App.js
+```
+
+#### Next.js App Router Structure
+
+```
+app/
+├── (auth)/
+│   ├── login/
+│   │   └── page.js
+│   └── layout.js
+├── dashboard/
+│   ├── page.js
+│   └── layout.js
+├── reports/
+│   ├── page.js
+│   ├── [reportId]/
+│   │   └── page.js
+│   └── layout.js
+├── transactions/
+│   ├── page.js
+│   ├── inward/
+│   │   └── page.js
+│   └── outward/
+│       └── page.js
+└── layout.js
+```
+
+#### Migration Benefits for VSL Service Center
+
+<Columns cols={2}>
+  <Card title="Performance Improvements" icon="zap">
+    - Faster initial page loads - Reduced JavaScript bundle size - Better
+    caching strategies - Optimized data fetching
+  </Card>
+  <Card title="SEO & Accessibility" icon="search">
+    - Better search engine visibility - Improved accessibility - Social media
+    sharing - Progressive enhancement
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Developer Experience" icon="code">
+    - Simplified routing - Built-in optimizations - Better error handling -
+    Enhanced debugging
+  </Card>
+  <Card title="Scalability" icon="trending-up">
+    - Server-side rendering - Edge computing support - Automatic code splitting
+    - Performance monitoring
+  </Card>
+</Columns>
+
+## Part 2: Hands-On Implementation
+
+### Exercise 1: Create Your First Next.js App
+
+1. **Create a new Next.js project:**
+
+   ```bash terminal
+   npx create-next-app@latest vsl-migration --typescript --tailwind --eslint --app
+   cd vsl-migration
+   ```
+
+2. **Explore the project structure:**
+
+   - Examine the `app/` directory
+   - Look at the `page.js` and `layout.js` files
+   - Understand the file-based routing
+
+3. **Create a simple server component:**
+
+   ```javascript app/dashboard/page.js
+   export default function Dashboard() {
+     return (
+       <div>
+         <h1>VSL Service Center Dashboard</h1>
+         <p>This is a server component</p>
+       </div>
+     );
+   }
+   ```
+
+4. **Create a client component:**
+
+   ```javascript app/components/InteractiveButton.js
+   "use client";
+
+   import { useState } from "react";
+
+   export default function InteractiveButton() {
+     const [count, setCount] = useState(0);
+
+     return (
+       <button onClick={() => setCount(count + 1)}>
+         Clicked {count} times
+       </button>
+     );
+   }
+   ```
+
+### Exercise 2: Analyze VSL Service Center Structure
+
+1. **Examine the current VSL Service Center structure:**
+
+   - Review the component hierarchy
+   - Identify server vs client component candidates
+   - Plan the new routing structure
+
+2. **Create a migration plan:**
+   - List components that can be server components
+   - Identify components that need to be client components
+   - Plan the new file structure
+
+## Part 3: Reflection & Assessment
+
+### Self-Assessment Quiz
+
+Test your understanding of Next.js App Router concepts:
+
+1. What is the main difference between server and client components?
+
+   - Server components run on the server, client components run in the browser
+   - Server components are faster, client components are slower
+   - Server components use less memory, client components use more memory
+   - There is no difference between them
+
+2. Which file creates a route in Next.js App Router?
+
+   - `route.js`
+   - `page.js`
+   - `component.js`
+   - `index.js`
+
+3. When should you use a client component?
+
+   - For data fetching from databases
+   - For static content
+   - For event handlers and interactivity
+   - For SEO optimization
+
+4. What is the benefit of server components?
+
+   - They provide better interactivity
+   - They reduce JavaScript bundle size
+   - They offer better state management
+   - They provide real-time updates
+
+5. How does file-based routing work in Next.js?
+
+   - You manually configure routes in a config file
+   - Routes are automatically created based on file structure
+   - You use a routing library like React Router
+   - Routes are defined in the component files
+
+### Reflection Questions
+
+Take a moment to reflect on what you've learned:
+
+1. **How would migrating to Next.js App Router benefit the VSL Service Center application?**
+
+   - Consider performance improvements
+   - Think about SEO and accessibility benefits
+   - Reflect on developer experience improvements
+
+2. **Which components in the VSL Service Center would be good candidates for server components?**
+
+   - Think about components that fetch data
+   - Consider static content components
+   - Identify components that don't need interactivity
+
+3. **What challenges might you face when migrating from Create React App to Next.js?**
+
+   - Consider component compatibility
+   - Think about routing changes
+   - Reflect on data fetching patterns
+
+### Extension Activities
+
+1. **Plan Your Migration Strategy:**
+
+   - Create a component inventory for VSL Service Center
+   - Identify which components need to be client vs server
+   - Plan the new file structure
+
+2. **Explore Next.js Features:**
+
+   - Research new App Router capabilities
+   - Study server actions and form handling
+   - Learn about streaming and suspense patterns
+
+## Next Steps
+
+You've now understood the foundational concepts of Next.js App Router! In the next section, you'll learn about:
+
+- **Project setup and configuration** for enterprise applications
+- **Migration strategy development** for complex applications
+- **Environment configuration** and development tools
+
+<Info>
+  **Key Takeaway**: Next.js App Router provides a modern, performant approach to
+  building React applications with server-side rendering, file-based routing,
+  and optimized data fetching patterns.
+</Info>

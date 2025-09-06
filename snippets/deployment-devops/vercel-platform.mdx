@@ -1,0 +1,530 @@
+---
+title: "Vercel Platform Specifics"
+description: "Understanding Vercel's platform features and how to optimize Next.js applications for deployment on Vercel."
+---
+
+## Overview
+
+Vercel is a cloud platform designed specifically for Next.js applications. It provides automatic deployments, global CDN, serverless functions, and many other features that make it ideal for modern web applications.
+
+<Columns cols={2}>
+  <Card title="Vercel Benefits" icon="cloud">
+    - Automatic deployments - Global CDN - Serverless functions - Edge computing
+  </Card>
+  <Card title="Key Features" icon="star">
+    - Zero-config deployments - Preview deployments - Analytics and monitoring -
+    Environment management
+  </Card>
+</Columns>
+
+## Getting Started with Vercel
+
+### Initial Setup
+
+1. **Install Vercel CLI:**
+
+   ```bash
+   npm i -g vercel
+   ```
+
+2. **Login to Vercel:**
+
+   ```bash
+   vercel login
+   ```
+
+3. **Deploy your project:**
+   ```bash
+   vercel
+   ```
+
+### Project Configuration
+
+Create a `vercel.json` file in your project root:
+
+```json
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
+}
+```
+
+## Environment Variables
+
+### Setting Environment Variables
+
+1. **Via Vercel Dashboard:**
+
+   - Go to your project settings
+   - Navigate to Environment Variables
+   - Add your variables
+
+2. **Via CLI:**
+
+   ```bash
+   vercel env add DATABASE_URL
+   vercel env add JWT_SECRET
+   ```
+
+3. **Via vercel.json:**
+   ```json
+   {
+     "env": {
+       "DATABASE_URL": "@database-url",
+       "JWT_SECRET": "@jwt-secret"
+     }
+   }
+   ```
+
+### Environment-Specific Variables
+
+```bash
+# Production
+vercel env add DATABASE_URL production
+
+# Preview
+vercel env add DATABASE_URL preview
+
+# Development
+vercel env add DATABASE_URL development
+```
+
+## Deployment Strategies
+
+### Automatic Deployments
+
+Vercel automatically deploys when you push to your connected Git repository:
+
+```bash
+# Connect to Git repository
+vercel --prod
+
+# Deploy specific branch
+vercel --prod --target production
+```
+
+### Preview Deployments
+
+Every pull request gets a preview deployment:
+
+```bash
+# Deploy preview
+vercel --target preview
+
+# Deploy specific branch
+vercel --target preview --branch feature-branch
+```
+
+### Manual Deployments
+
+```bash
+# Deploy to production
+vercel --prod
+
+# Deploy with specific environment
+vercel --prod --env production
+```
+
+## Vercel-Specific Features
+
+### Edge Functions
+
+Create edge functions for global performance:
+
+```typescript
+// app/api/edge/route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+export const config = {
+  runtime: "edge",
+};
+
+export default function handler(request: NextRequest) {
+  return NextResponse.json({
+    message: "Hello from the edge!",
+    region: process.env.VERCEL_REGION,
+  });
+}
+```
+
+### Middleware
+
+Use Vercel's middleware for request handling:
+
+```typescript
+// middleware.ts
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export function middleware(request: NextRequest) {
+  // Add custom headers
+  const response = NextResponse.next();
+  response.headers.set("x-custom-header", "custom-value");
+
+  return response;
+}
+
+export const config = {
+  matcher: "/api/:path*",
+};
+```
+
+### Image Optimization
+
+Vercel provides automatic image optimization:
+
+```typescript
+// app/page.tsx
+import Image from "next/image";
+
+export default function Home() {
+  return (
+    <div>
+      <Image
+        src="/hero-image.jpg"
+        alt="Hero image"
+        width={800}
+        height={600}
+        priority
+        placeholder="blur"
+        blurDataURL="data:image/jpeg;base64,..."
+      />
+    </div>
+  );
+}
+```
+
+## Performance Optimization
+
+### Build Optimization
+
+```json
+// vercel.json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm ci",
+  "framework": "nextjs",
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
+}
+```
+
+### Caching Strategies
+
+```typescript
+// app/api/cached-data/route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(request: NextRequest) {
+  const data = await fetchExpensiveData();
+
+  return NextResponse.json(data, {
+    headers: {
+      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+    },
+  });
+}
+```
+
+### Static Generation
+
+```typescript
+// app/blog/[slug]/page.tsx
+import { generateStaticParams } from "next";
+
+export async function generateStaticParams() {
+  const posts = await fetch("https://api.example.com/posts").then((res) =>
+    res.json()
+  );
+
+  return posts.map((post: any) => ({
+    slug: post.slug,
+  }));
+}
+
+export default function BlogPost({ params }: { params: { slug: string } }) {
+  return <div>Blog post: {params.slug}</div>;
+}
+```
+
+## Database Integration
+
+### Vercel Postgres
+
+```typescript
+// lib/db.ts
+import { sql } from "@vercel/postgres";
+
+export async function getUsers() {
+  try {
+    const { rows } = await sql`SELECT * FROM users`;
+    return rows;
+  } catch (error) {
+    console.error("Database error:", error);
+    throw error;
+  }
+}
+```
+
+### Connection Pooling
+
+```typescript
+// lib/db.ts
+import { Pool } from "pg";
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+
+export async function query(text: string, params?: any[]) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(text, params);
+    return result;
+  } finally {
+    client.release();
+  }
+}
+```
+
+## Monitoring and Analytics
+
+### Vercel Analytics
+
+```typescript
+// app/layout.tsx
+import { Analytics } from "@vercel/analytics/react";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <Analytics />
+      </body>
+    </html>
+  );
+}
+```
+
+### Custom Analytics
+
+```typescript
+// lib/analytics.ts
+export function trackEvent(event: string, properties?: Record<string, any>) {
+  if (typeof window !== "undefined") {
+    // Send to analytics service
+    fetch("/api/analytics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event, properties }),
+    });
+  }
+}
+```
+
+## Security Best Practices
+
+### Environment Variables
+
+```typescript
+// lib/env.ts
+import { z } from "zod";
+
+const envSchema = z.object({
+  DATABASE_URL: z.string().url(),
+  JWT_SECRET: z.string().min(32),
+  NEXTAUTH_SECRET: z.string().min(32),
+  NEXTAUTH_URL: z.string().url(),
+});
+
+export const env = envSchema.parse(process.env);
+```
+
+### CORS Configuration
+
+```typescript
+// app/api/cors/route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(request: NextRequest) {
+  const response = NextResponse.json({ message: "Hello" });
+
+  response.headers.set("Access-Control-Allow-Origin", "https://yourdomain.com");
+  response.headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE"
+  );
+  response.headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
+
+  return response;
+}
+```
+
+## Advanced Configuration
+
+### Custom Domains
+
+```json
+// vercel.json
+{
+  "domains": ["yourdomain.com", "www.yourdomain.com"],
+  "redirects": [
+    {
+      "source": "/old-path",
+      "destination": "/new-path",
+      "permanent": true
+    }
+  ]
+}
+```
+
+### Headers Configuration
+
+```json
+// vercel.json
+{
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://yourdomain.com"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Rewrites and Redirects
+
+```json
+// vercel.json
+{
+  "rewrites": [
+    {
+      "source": "/api/proxy/(.*)",
+      "destination": "https://external-api.com/$1"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/old-page",
+      "destination": "/new-page",
+      "permanent": true
+    }
+  ]
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+<AccordionGroup>
+<Accordion title="Build Failures">
+**Problem**: Build failing on Vercel
+**Solution**: Check build logs, ensure all dependencies are in package.json, verify environment variables
+</Accordion>
+
+<Accordion title="Environment Variables">
+  **Problem**: Environment variables not available **Solution**: Ensure
+  variables are set in Vercel dashboard and match the environment
+  (production/preview/development)
+</Accordion>
+
+<Accordion title="Function Timeouts">
+  **Problem**: API routes timing out **Solution**: Increase maxDuration in
+  vercel.json, optimize database queries, use edge functions for simple
+  operations
+</Accordion>
+
+<Accordion title="CORS Issues">
+**Problem**: CORS errors in production
+**Solution**: Configure proper CORS headers in API routes or vercel.json
+</Accordion>
+</AccordionGroup>
+
+### Debugging
+
+```typescript
+// app/api/debug/route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(request: NextRequest) {
+  return NextResponse.json({
+    environment: process.env.NODE_ENV,
+    region: process.env.VERCEL_REGION,
+    url: request.url,
+    headers: Object.fromEntries(request.headers.entries()),
+  });
+}
+```
+
+## Best Practices
+
+### Deployment Best Practices
+
+<Steps>
+  <Step title="Environment Management">
+    Use different environments for development, staging, and production
+  </Step>
+  <Step title="Security">
+    Never commit secrets to version control, use Vercel's environment variables
+  </Step>
+  <Step title="Performance">
+    Optimize images, use static generation, implement proper caching
+  </Step>
+  <Step title="Monitoring">
+    Set up analytics and monitoring to track performance and errors
+  </Step>
+</Steps>
+
+### Optimization Tips
+
+<Columns cols={2}>
+  <Card title="Build Optimization" icon="package">
+    - Use npm ci for faster installs - Optimize bundle size - Use dynamic
+    imports - Implement code splitting
+  </Card>
+  <Card title="Runtime Optimization" icon="zap">
+    - Use edge functions for simple operations - Implement proper caching -
+    Optimize database queries - Use CDN for static assets
+  </Card>
+</Columns>
+
+<Info>
+  **Key Takeaway**: Vercel provides a powerful platform for deploying Next.js
+  applications with automatic deployments, global CDN, and serverless functions.
+  Use its features to optimize performance and simplify deployment workflows.
+</Info>
+

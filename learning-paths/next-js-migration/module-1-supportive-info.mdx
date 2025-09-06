@@ -1,0 +1,233 @@
+---
+title: "1.0: Fundamentals"
+description: "Essential domain knowledge and reference materials for Next.js Foundation & Project Setup"
+---
+
+import FileBasedRoutingBasics from "/snippets/nextjs-architecture/file-based-routing-basics.mdx";
+import ServerClientComponentsBasics from "/snippets/nextjs-architecture/server-client-components-basics.mdx";
+import LayoutsBasics from "/snippets/nextjs-architecture/layouts-basics.mdx";
+import LoadingStatesBasics from "/snippets/nextjs-architecture/loading-states-basics.mdx";
+
+## Overview
+
+This page contains the supportive information and domain knowledge areas that are essential for Module 1: Next.js Foundation & Project Setup. These resources provide the foundational knowledge needed to successfully complete the learning tasks in this module.
+
+<Info>
+  **How to Use This Page**: Bookmark this page and refer to it throughout
+  Module. You can also access individual snippets directly from the lesson pages
+  when you see the "Review" sections.
+</Info>
+
+## Core Next.js App Router Architecture
+
+### File-Based Routing System
+
+Understanding Next.js App Router's file-based routing system is fundamental to migrating from React Router.
+
+<Accordion title="Learn about File-Based Routing System">
+  <FileBasedRoutingBasics />
+</Accordion>
+
+**Key Concepts You'll Need:**
+
+- Route segments and special files
+- Dynamic routes with `[param]` syntax
+- Route groups with `(group)` syntax
+- Navigation with `Link` and `useRouter`
+
+### Server and Client Components
+
+The distinction between server and client components is crucial for optimal Next.js performance.
+
+<Accordion title="Server and Client Components">
+  <ServerClientComponentsBasics />
+</Accordion>
+
+**Key Concepts You'll Need:**
+
+- Server components for data fetching and static content
+- Client components for interactivity and browser APIs
+- The `'use client'` directive
+- Component composition patterns
+
+### Layouts
+
+Creating consistent UI patterns with layouts.
+
+<Accordion title="Layouts">
+  <LayoutsBasics />
+</Accordion>
+
+**Key Concepts You'll Need:**
+
+- Root layout for global UI
+- Nested layouts for section-specific UI
+- Layout hierarchy and composition
+- Basic layout patterns
+
+### Loading States
+
+Providing better user experience with loading states.
+
+<Accordion title="Loading States">
+  <LoadingStatesBasics />
+</Accordion>
+
+**Key Concepts You'll Need:**
+
+- `loading.tsx` for loading states
+- Basic skeleton loading patterns
+- Nested loading states
+- Loading state best practices
+
+## Additional Resources
+
+For more advanced concepts like streaming, suspense, concurrent features, and error boundaries, refer to the comprehensive snippets in later modules.
+
+## VSL Service Center Context
+
+### Project Structure Analysis
+
+Before starting the migration tasks, familiarize yourself with the VSL Service Center project structure:
+
+<Steps>
+  <Step title="Frontend Structure">
+    <ul className="list-disc list-inside">
+      <li>`src/Component/` - Main component directory</li>
+      <li>`src/Routes/` - React Router configuration</li>
+      <li>`src/Component/ui/` - Reusable UI components</li>
+      <li>`src/Component/Login/` - Authentication components</li>
+    </ul>
+  </Step>
+  <Step title="Key Components to Migrate">
+    <ul className="list-disc list-inside">
+      <li>`App.js` - Main application component</li>
+      <li>`Navbar.js` - Navigation component</li>
+      <li>`LandingPage.js` - Home page component</li>
+      <li>`ui/Card.jsx` - Reusable card component</li>
+    </ul>
+  </Step>
+  <Step title="Routing Structure">
+    <ul className="list-disc list-inside">
+      <li>Current React Router setup</li>
+      <li>Route definitions and navigation</li>
+      <li>Protected routes and authentication</li>
+    </ul>
+  </Step>
+</Steps>
+
+### Migration Strategy
+
+<Columns cols={2}>
+  <Card title="Component Migration Order" icon="list">
+    <ol>
+      <li>UI components first (no dependencies)</li>
+      <li>Layout components second</li>
+      <li>Business logic components last</li>
+      <li>Authentication components</li>
+    </ol>
+  </Card>
+  <Card title="Routing Migration" icon="route">
+    <ol>
+      <li>Analyze current route structure</li>
+      <li>Map to Next.js file-based routing</li>
+      <li>Implement layouts and templates</li>
+      <li>Update navigation components</li>
+    </ol>
+  </Card>
+</Columns>
+
+## Quick Reference
+
+### Essential Commands
+
+```bash
+# Create new Next.js project
+npx create-next-app@latest my-app --typescript --tailwind --eslint --app
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
+
+### Key File Patterns
+
+```
+app/
+├── layout.tsx          # Root layout
+├── page.tsx            # Home page
+├── loading.tsx         # Loading UI
+├── error.tsx           # Error boundary
+├── not-found.tsx       # 404 page
+├── template.tsx        # Template (optional)
+└── (auth)/             # Route group
+    ├── layout.tsx      # Auth layout
+    ├── login/
+    │   └── page.tsx    # Login page
+    └── register/
+        └── page.tsx    # Register page
+```
+
+### Component Patterns
+
+```typescript
+// Server Component (default)
+export default function ServerComponent() {
+  return <div>Server rendered content</div>;
+}
+
+// Client Component
+("use client");
+
+import { useState } from "react";
+
+export default function ClientComponent() {
+  const [state, setState] = useState("");
+  return <div>Interactive content</div>;
+}
+```
+
+## Troubleshooting Guide
+
+### Common Issues and Solutions
+
+<AccordionGroup>
+<Accordion title="Component Not Rendering">
+**Problem**: Component not showing up after migration
+**Solution**: Check file naming (`page.tsx` for routes), verify imports, ensure proper component export
+</Accordion>
+
+<Accordion title="Routing Issues">
+  **Problem**: Routes not working as expected **Solution**: Verify file
+  structure matches desired URL structure, check for typos in folder names
+</Accordion>
+
+<Accordion title="Client Component Errors">
+  **Problem**: "use client" directive not working **Solution**: Ensure directive
+  is at the very top of the file, check for any code before the directive
+</Accordion>
+
+<Accordion title="Layout Not Applying">
+**Problem**: Layout styles not showing
+**Solution**: Verify layout.tsx is in correct directory, ensure it wraps children properly
+</Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+After reviewing this supportive information, you'll be ready to:
+
+1. **Start with Module 1, Lesson 1**: Next.js App Router Fundamentals
+2. **Set up your development environment** with the VSL Service Center project
+3. **Begin the migration process** following the structured approach outlined in the lessons
+
+<Info>
+  **Remember**: These supportive information snippets are available throughout
+  the module. Look for "Review" callouts in the lesson pages to access specific
+  information when you need it.
+</Info>

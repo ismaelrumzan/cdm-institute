@@ -1,0 +1,525 @@
+---
+title: "Loading and Error Boundaries"
+description: "Understanding Next.js loading states and error boundaries for better user experience and error handling."
+---
+
+## Overview
+
+Next.js App Router provides built-in support for loading states and error boundaries through special files. These features help create better user experiences by handling loading states gracefully and providing proper error recovery.
+
+<AccordionGroup>
+<Accordion title="Loading States">
+
+### Loading UI
+
+The `loading.tsx` file creates a loading UI that shows while a route segment is loading.
+
+<Columns cols={2}>
+  <Card title="Loading Benefits" icon="loader">
+    <ul className="list-disc list-inside">
+      <li>Instant loading feedback</li>
+      <li>Better perceived performance</li>
+      <li>Prevents layout shift</li>
+      <li>Automatic implementation</li>
+    </ul>
+  </Card>
+  <Card title="Loading Scope" icon="target">
+    <ul className="list-disc list-inside">
+      <li>Applies to route segment</li>
+      <li>Wraps page and children</li>
+      <li>Automatic activation</li>
+      <li>Nested loading support</li>
+    </ul>
+  </Card>
+</Columns>
+
+### Basic Loading Component
+
+```typescript
+// app/loading.tsx
+export default function Loading() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+    </div>
+  );
+}
+```
+
+### Skeleton Loading
+
+```typescript
+// app/dashboard/loading.tsx
+export default function DashboardLoading() {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <div className="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/2 mt-2 animate-pulse"></div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white p-6 rounded-lg shadow-md">
+            <div className="h-4 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
+            <div className="h-8 bg-gray-200 rounded w-16 animate-pulse"></div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-4 bg-gray-200 rounded animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### Nested Loading States
+
+```
+app/
+├── loading.tsx              # Root loading
+├── dashboard/
+│   ├── loading.tsx          # Dashboard loading
+│   ├── page.tsx
+│   └── settings/
+│       ├── loading.tsx      # Settings loading
+│       └── page.tsx
+```
+
+Each loading component applies to its route segment and children.
+
+</Accordion>
+
+<Accordion title="Error Boundaries">
+
+### Error UI
+
+The `error.tsx` file creates an error UI that catches errors in route segments.
+
+<Columns cols={2}>
+  <Card title="Error Benefits" icon="alert-triangle">
+    <ul className="list-disc list-inside">
+      <li>Graceful error handling</li>
+      <li>User-friendly error messages</li>
+      <li>Error recovery options</li>
+      <li>Automatic error catching</li>
+    </ul>
+  </Card>
+  <Card title="Error Scope" icon="target">
+    <ul className="list-disc list-inside">
+      <li>Catches errors in route segment</li>
+      <li>Wraps page and children</li>
+      <li>Automatic activation</li>
+      <li>Nested error boundaries</li>
+    </ul>
+  </Card>
+</Columns>
+
+### Basic Error Component
+
+```typescript
+// app/error.tsx
+"use client";
+
+import { useEffect } from "react";
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
+  return (
+    <div className="error-boundary">
+      <h2>Something went wrong!</h2>
+      <p>An error occurred while loading this page.</p>
+      <button
+        onClick={reset}
+        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        Try again
+      </button>
+    </div>
+  );
+}
+```
+
+### Advanced Error Component
+
+```typescript
+// app/dashboard/error.tsx
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+export default function DashboardError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Log error to monitoring service
+    console.error("Dashboard error:", error);
+  }, [error]);
+
+  const handleGoHome = () => {
+    router.push("/");
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md text-center">
+        <div className="text-red-500 text-6xl mb-4">⚠️</div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          Dashboard Error
+        </h2>
+        <p className="text-gray-600 mb-6">
+          We encountered an error while loading your dashboard. This might be a
+          temporary issue.
+        </p>
+
+        <div className="space-y-3">
+          <button
+            onClick={reset}
+            className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors">
+            Try Again
+          </button>
+          <button
+            onClick={handleGoHome}
+            className="w-full bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors">
+            Go Home
+          </button>
+        </div>
+
+        {process.env.NODE_ENV === "development" && (
+          <details className="mt-6 text-left">
+            <summary className="cursor-pointer text-sm text-gray-500">
+              Error Details
+            </summary>
+            <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
+              {error.message}
+            </pre>
+          </details>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+</Accordion>
+
+<Accordion title="Not Found Pages">
+
+### 404 Handling
+
+The `not-found.tsx` file creates a 404 page for route segments.
+
+```typescript
+// app/not-found.tsx
+import Link from "next/link";
+
+export default function NotFound() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full text-center">
+        <div className="text-6xl font-bold text-gray-300 mb-4">404</div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          Page Not Found
+        </h2>
+        <p className="text-gray-600 mb-6">
+          The page you're looking for doesn't exist or has been moved.
+        </p>
+        <Link
+          href="/"
+          className="bg-blue-500 text-white px-6 py-3 rounded hover:bg-blue-600 transition-colors">
+          Go Home
+        </Link>
+      </div>
+    </div>
+  );
+}
+```
+
+### Nested Not Found Pages
+
+```typescript
+// app/blog/not-found.tsx
+import Link from "next/link";
+
+export default function BlogNotFound() {
+  return (
+    <div className="blog-not-found">
+      <h2>Blog Post Not Found</h2>
+      <p>The blog post you're looking for doesn't exist.</p>
+      <Link href="/blog">View All Posts</Link>
+    </div>
+  );
+}
+```
+
+</Accordion>
+
+<Accordion title="Advanced Patterns">
+
+### Loading with Suspense
+
+```typescript
+// app/dashboard/page.tsx
+import { Suspense } from "react";
+import DashboardStats from "@/components/DashboardStats";
+import DashboardLoading from "./loading";
+
+export default function DashboardPage() {
+  return (
+    <div className="dashboard">
+      <h1>Dashboard</h1>
+      <Suspense fallback={<DashboardLoading />}>
+        <DashboardStats />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+### Error Boundary with Retry Logic
+
+```typescript
+// app/error.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    setRetryCount((prev) => prev + 1);
+
+    // Wait a bit before retrying
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    reset();
+    setIsRetrying(false);
+  };
+
+  return (
+    <div className="error-boundary">
+      <h2>Something went wrong!</h2>
+      <p>Retry attempt: {retryCount}</p>
+      <button
+        onClick={handleRetry}
+        disabled={isRetrying}
+        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50">
+        {isRetrying ? "Retrying..." : "Try Again"}
+      </button>
+    </div>
+  );
+}
+```
+
+### Loading with Progress
+
+```typescript
+// app/loading.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+
+export default function Loading() {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) return 100;
+        return prev + Math.random() * 10;
+      });
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="w-64">
+        <div className="text-center mb-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div
+            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${progress}%` }}></div>
+        </div>
+        <p className="text-center mt-2 text-sm text-gray-600">
+          Loading... {Math.round(progress)}%
+        </p>
+      </div>
+    </div>
+  );
+}
+```
+
+## Best Practices
+
+### Loading State Design
+
+<Steps>
+  <Step title="Match Layout Structure">
+    Create loading states that match your page layout
+  </Step>
+  <Step title="Use Skeleton Screens">
+    Implement skeleton loading for better perceived performance
+  </Step>
+  <Step title="Provide Context">
+    Show what's loading and why it might take time
+  </Step>
+  <Step title="Handle Edge Cases">
+    Consider slow connections and timeout scenarios
+  </Step>
+</Steps>
+
+### Error Handling
+
+<Steps>
+  <Step title="User-Friendly Messages">
+    Provide clear, actionable error messages
+  </Step>
+  <Step title="Recovery Options">
+    Offer ways for users to recover from errors
+  </Step>
+  <Step title="Log Errors">Log errors for debugging and monitoring</Step>
+  <Step title="Graceful Degradation">
+    Provide fallback content when possible
+  </Step>
+</Steps>
+
+</Accordion>
+
+<Accordion title="Common Patterns">
+
+### Global Error Handler
+
+```typescript
+// app/global-error.tsx
+"use client";
+
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <html>
+      <body>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h2>Something went wrong!</h2>
+            <button onClick={reset}>Try again</button>
+          </div>
+        </div>
+      </body>
+    </html>
+  );
+}
+```
+
+### Conditional Loading
+
+```typescript
+// app/dashboard/loading.tsx
+export default function DashboardLoading() {
+  return (
+    <div className="dashboard-loading">
+      <div className="loading-header">
+        <div className="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+      </div>
+
+      <div className="loading-content">
+        <div className="loading-sidebar">
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-4 bg-gray-200 rounded animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+
+        <div className="loading-main">
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-32 bg-gray-200 rounded animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+</Accordion>
+
+<Accordion title="Troubleshooting">
+
+<AccordionGroup>
+<Accordion title="Loading Not Showing">
+**Problem**: Loading component not appearing
+**Solution**: Check that loading.tsx is in the correct directory and the page is actually loading
+</Accordion>
+
+<Accordion title="Error Not Catching">
+  **Problem**: Error boundary not catching errors **Solution**: Ensure error.tsx
+  is in the correct directory and the error is thrown in a client component
+</Accordion>
+
+<Accordion title="Loading Too Fast">
+  **Problem**: Loading state flashes too quickly **Solution**: Add minimum
+  loading time or use skeleton screens
+</Accordion>
+
+<Accordion title="Error Recovery Issues">
+**Problem**: Reset function not working properly
+**Solution**: Check that the error is recoverable and the reset function is properly implemented
+</Accordion>
+</AccordionGroup>
+
+</Accordion>
+
+</AccordionGroup>
+
+<Info>
+  **Key Takeaway**: Loading states and error boundaries are essential for
+  creating robust user experiences. Use loading.tsx for better perceived
+  performance and error.tsx for graceful error handling and recovery.
+</Info>

@@ -1,0 +1,51 @@
+---
+title: "AI Prompt Reflection"
+description: "Interactive component for AI-assisted learning and reflection"
+icon: "brain"
+---
+
+# AI Prompt Reflection Component
+
+The AI Prompt Reflection component is a powerful tool that helps learners engage with AI assistants like ChatGPT and Claude to deepen their understanding of course content.
+
+## Features
+
+- **Context-Aware**: Automatically captures page context and content
+- **Multi-AI Support**: Works with both ChatGPT and Claude
+- **Customizable Questions**: Pre-configured reflection questions
+- **Easy Integration**: Simple component that can be embedded anywhere
+
+## Usage
+
+```jsx
+import { AIPromptReflection } from "/snippets/ai-prompt-reflection.jsx";
+
+<AIPromptReflection
+  cardTitle="Reflection"
+  question="What are practical examples where you can use RAG in the manufacturing industry?"
+  chatgptButtonText="Ask ChatGPT"
+  claudeButtonText="Ask Claude"
+/>;
+```
+
+## Customization Options
+
+- `cardTitle`: Title displayed on the card
+- `question`: The reflection question to ask the AI
+- `chatgptButtonText`: Text for the ChatGPT button
+- `claudeButtonText`: Text for the Claude button
+- `className`: Additional CSS classes
+- `context`: Custom context instead of auto-detected page content
+
+## How It Works
+
+1. **Context Detection**: Automatically extracts page title and content
+2. **Prompt Generation**: Creates a comprehensive prompt with context
+3. **AI Integration**: Opens the selected AI tool with the generated prompt
+4. **Fallback Support**: Provides clipboard copy if direct opening fails
+
+<Info>
+  **Best Practice**: Use this component at the end of lessons to encourage
+  learners to reflect on the material and explore practical applications with AI
+  assistance.
+</Info>

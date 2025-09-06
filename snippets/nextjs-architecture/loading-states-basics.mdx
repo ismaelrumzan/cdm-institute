@@ -1,0 +1,172 @@
+---
+title: "Loading States Basics"
+description: "Essential concepts for understanding Next.js loading states for Module 1."
+---
+
+## Overview
+
+Next.js App Router provides built-in support for loading states through the `loading.tsx` file. This feature helps create better user experiences by handling loading states gracefully.
+
+## Loading UI
+
+The `loading.tsx` file creates a loading UI that shows while a route segment is loading.
+
+### Key Benefits
+
+<Columns cols={2}>
+  <Card title="Loading Benefits" icon="loader">
+    <ul className="list-disc list-inside">
+      <li>Instant loading feedback</li>
+      <li>Better perceived performance</li>
+      <li>Prevents layout shift</li>
+      <li>Automatic implementation</li>
+    </ul>
+  </Card>
+  <Card title="Loading Scope" icon="target">
+    <ul className="list-disc list-inside">
+      <li>Applies to route segment</li>
+      <li>Wraps page and children</li>
+      <li>Automatic activation</li>
+      <li>Nested loading support</li>
+    </ul>
+  </Card>
+</Columns>
+
+## Basic Loading Component
+
+```typescript
+// app/loading.tsx
+export default function Loading() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+    </div>
+  );
+}
+```
+
+## Simple Skeleton Loading
+
+```typescript
+// app/dashboard/loading.tsx
+export default function DashboardLoading() {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <div className="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/2 mt-2 animate-pulse"></div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white p-6 rounded-lg shadow-md">
+            <div className="h-4 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
+            <div className="h-8 bg-gray-200 rounded w-16 animate-pulse"></div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-4 bg-gray-200 rounded animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+## Nested Loading States
+
+```
+app/
+├── loading.tsx              # Root loading
+├── dashboard/
+│   ├── loading.tsx          # Dashboard loading
+│   ├── page.tsx
+│   └── settings/
+│       ├── loading.tsx      # Settings loading
+│       └── page.tsx
+```
+
+Each loading component applies to its route segment and children.
+
+## Basic Loading Patterns
+
+### Page-Level Loading
+
+```typescript
+// app/blog/loading.tsx
+export default function BlogLoading() {
+  return (
+    <div className="blog-loading">
+      <div className="loading-header">
+        <div className="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+      </div>
+
+      <div className="loading-content">
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-32 bg-gray-200 rounded animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### Simple Card Loading
+
+```typescript
+// app/products/loading.tsx
+export default function ProductsLoading() {
+  return (
+    <div className="products-loading">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="bg-white p-6 rounded-lg shadow-md">
+            <div className="h-48 bg-gray-200 rounded mb-4 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## Best Practices for Module 1
+
+### Loading State Design
+
+1. **Match Layout Structure**: Create loading states that match your page layout
+2. **Use Skeleton Screens**: Implement skeleton loading for better perceived performance
+3. **Provide Context**: Show what's loading and why it might take time
+4. **Keep It Simple**: Start with basic loading patterns and enhance later
+
+### File Organization
+
+```
+app/
+├── loading.tsx              # Global loading
+├── dashboard/
+│   ├── loading.tsx          # Dashboard-specific loading
+│   └── page.tsx
+└── blog/
+    ├── loading.tsx          # Blog-specific loading
+    └── page.tsx
+```
+
+<Info>
+  **Key Takeaway**: Loading states are essential for creating good user
+  experiences. Use loading.tsx files to provide immediate feedback while pages
+  are loading, and match the loading UI to your page structure.
+</Info>

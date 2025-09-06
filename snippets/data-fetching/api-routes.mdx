@@ -1,0 +1,735 @@
+---
+title: "API Routes"
+description: "Understanding Next.js API routes for building RESTful APIs and handling HTTP requests in your application."
+---
+
+## Overview
+
+Next.js API routes allow you to create API endpoints within your application. They provide a powerful way to build RESTful APIs, handle webhooks, and integrate with external services.
+
+<Columns cols={2}>
+  <Card title="API Route Benefits" icon="api">
+    - Built-in HTTP handling - Automatic request/response parsing - Middleware
+    support - TypeScript support
+  </Card>
+  <Card title="Use Cases" icon="target">
+    - RESTful APIs - Webhook endpoints - External API integrations - File
+    uploads
+  </Card>
+</Columns>
+
+## Basic API Routes
+
+### Simple GET Route
+
+```typescript
+// app/api/users/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/database";
+
+export async function GET() {
+  try {
+    const users = await db.users.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json({ success: true, data: users });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch users" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### POST Route with Validation
+
+```typescript
+// app/api/users/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/database";
+import { z } from "zod";
+
+const userSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  role: z.enum(["admin", "user", "viewer"]),
+});
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    // Validate input
+    const validationResult = userSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Validation failed",
+          details: validationResult.error.errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check for existing user
+    const existingUser = await db.users.findUnique({
+      where: { email: body.email },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { success: false, error: "User with this email already exists" },
+        { status: 409 }
+      );
+    }
+
+    const user = await db.users.create({
+      data: validationResult.data,
+    });
+
+    return NextResponse.json({ success: true, data: user }, { status: 201 });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to create user" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## Dynamic Routes
+
+### Single Dynamic Parameter
+
+```typescript
+// app/api/users/[id]/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/database";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await db.users.findUnique({
+      where: { id: params.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: user });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch user" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+
+    const user = await db.users.update({
+      where: { id: params.id },
+      data: body,
+    });
+
+    return NextResponse.json({ success: true, data: user });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to update user" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await db.users.delete({
+      where: { id: params.id },
+    });
+
+    return NextResponse.json({ success: true, message: "User deleted" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to delete user" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### Multiple Dynamic Parameters
+
+```typescript
+// app/api/posts/[userId]/[postId]/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/database";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { userId: string; postId: string } }
+) {
+  try {
+    const post = await db.posts.findFirst({
+      where: {
+        id: params.postId,
+        authorId: params.userId,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!post) {
+      return NextResponse.json(
+        { success: false, error: "Post not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: post });
+  } catch (error) {
+    console.error("Error fetching post:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch post" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## Advanced API Patterns
+
+### Authentication Middleware
+
+```typescript
+// app/api/middleware/auth.ts
+import { NextRequest, NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+
+export function withAuth(handler: Function) {
+  return async (request: NextRequest, context: any) => {
+    try {
+      const token = request.headers
+        .get("authorization")
+        ?.replace("Bearer ", "");
+
+      if (!token) {
+        return NextResponse.json(
+          { success: false, error: "No token provided" },
+          { status: 401 }
+        );
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      request.user = decoded;
+
+      return handler(request, context);
+    } catch (error) {
+      return NextResponse.json(
+        { success: false, error: "Invalid token" },
+        { status: 401 }
+      );
+    }
+  };
+}
+```
+
+### Using Authentication Middleware
+
+```typescript
+// app/api/protected/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { withAuth } from "../middleware/auth";
+
+async function handler(request: NextRequest) {
+  return NextResponse.json({
+    success: true,
+    message: "Protected route accessed",
+    user: request.user,
+  });
+}
+
+export const GET = withAuth(handler);
+```
+
+### Rate Limiting
+
+```typescript
+// app/api/middleware/rate-limit.ts
+import { NextRequest, NextResponse } from "next/server";
+
+const rateLimitMap = new Map();
+
+export function withRateLimit(
+  handler: Function,
+  limit: number = 100,
+  windowMs: number = 60000
+) {
+  return async (request: NextRequest, context: any) => {
+    const ip =
+      request.ip || request.headers.get("x-forwarded-for") || "unknown";
+    const now = Date.now();
+    const windowStart = now - windowMs;
+
+    // Clean old entries
+    for (const [key, value] of rateLimitMap.entries()) {
+      if (value.timestamp < windowStart) {
+        rateLimitMap.delete(key);
+      }
+    }
+
+    // Check rate limit
+    const userLimit = rateLimitMap.get(ip);
+
+    if (userLimit) {
+      if (userLimit.count >= limit) {
+        return NextResponse.json(
+          { success: false, error: "Rate limit exceeded" },
+          { status: 429 }
+        );
+      }
+      userLimit.count++;
+    } else {
+      rateLimitMap.set(ip, { count: 1, timestamp: now });
+    }
+
+    return handler(request, context);
+  };
+}
+```
+
+## File Upload Handling
+
+### Single File Upload
+
+```typescript
+// app/api/upload/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { writeFile } from "fs/promises";
+import { join } from "path";
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file") as File;
+
+    if (!file) {
+      return NextResponse.json(
+        { success: false, error: "No file provided" },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid file type" },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json(
+        { success: false, error: "File too large" },
+        { status: 400 }
+      );
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    const filename = `${Date.now()}-${file.name}`;
+    const path = join(process.cwd(), "public/uploads", filename);
+
+    await writeFile(path, buffer);
+
+    return NextResponse.json({
+      success: true,
+      filename,
+      url: `/uploads/${filename}`,
+    });
+  } catch (error) {
+    console.error("File upload error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to upload file" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### Multiple File Upload
+
+```typescript
+// app/api/upload/multiple/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { writeFile } from "fs/promises";
+import { join } from "path";
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const files = formData.getAll("files") as File[];
+
+    if (!files || files.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "No files provided" },
+        { status: 400 }
+      );
+    }
+
+    const uploadResults = [];
+
+    for (const file of files) {
+      // Validate file type
+      const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
+      if (!allowedTypes.includes(file.type)) {
+        uploadResults.push({
+          filename: file.name,
+          success: false,
+          error: "Invalid file type",
+        });
+        continue;
+      }
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        uploadResults.push({
+          filename: file.name,
+          success: false,
+          error: "File too large",
+        });
+        continue;
+      }
+
+      try {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        const filename = `${Date.now()}-${file.name}`;
+        const path = join(process.cwd(), "public/uploads", filename);
+
+        await writeFile(path, buffer);
+
+        uploadResults.push({
+          filename: file.name,
+          success: true,
+          url: `/uploads/${filename}`,
+        });
+      } catch (error) {
+        uploadResults.push({
+          filename: file.name,
+          success: false,
+          error: "Upload failed",
+        });
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      results: uploadResults,
+    });
+  } catch (error) {
+    console.error("Multiple file upload error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to upload files" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## Webhook Handling
+
+### Stripe Webhook
+
+```typescript
+// app/api/webhooks/stripe/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import { db } from "@/lib/database";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.text();
+    const signature = request.headers.get("stripe-signature")!;
+
+    let event: Stripe.Event;
+
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (error) {
+      console.error("Webhook signature verification failed:", error);
+      return NextResponse.json(
+        { success: false, error: "Invalid signature" },
+        { status: 400 }
+      );
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case "payment_intent.succeeded":
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        await handlePaymentSuccess(paymentIntent);
+        break;
+
+      case "payment_intent.payment_failed":
+        const failedPayment = event.data.object as Stripe.PaymentIntent;
+        await handlePaymentFailure(failedPayment);
+        break;
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Webhook error:", error);
+    return NextResponse.json(
+      { success: false, error: "Webhook processing failed" },
+      { status: 500 }
+    );
+  }
+}
+
+async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
+  // Update order status in database
+  await db.orders.update({
+    where: { paymentIntentId: paymentIntent.id },
+    data: { status: "paid" },
+  });
+}
+
+async function handlePaymentFailure(paymentIntent: Stripe.PaymentIntent) {
+  // Update order status in database
+  await db.orders.update({
+    where: { paymentIntentId: paymentIntent.id },
+    data: { status: "failed" },
+  });
+}
+```
+
+## Error Handling and Logging
+
+### Comprehensive Error Handling
+
+```typescript
+// app/api/error-handling/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/database";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+
+    // Validate parameters
+    if (page < 1 || limit < 1 || limit > 100) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid parameters",
+          details: "Page must be >= 1, limit must be between 1 and 100",
+        },
+        { status: 400 }
+      );
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      db.items.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      db.items.count(),
+    ]);
+
+    return NextResponse.json({
+      success: true,
+      data: items,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("API Error:", error);
+
+    // Log error details for debugging
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error details:", error);
+    }
+
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## Best Practices
+
+### API Route Best Practices
+
+<Steps>
+  <Step title="Input Validation">Always validate and sanitize input data</Step>
+  <Step title="Error Handling">
+    Provide comprehensive error handling and logging
+  </Step>
+  <Step title="HTTP Status Codes">
+    Use appropriate HTTP status codes for responses
+  </Step>
+  <Step title="Security">
+    Implement authentication, authorization, and rate limiting
+  </Step>
+</Steps>
+
+### Performance Optimization
+
+<Columns cols={2}>
+  <Card title="Database Optimization" icon="database">
+    - Use proper indexing - Implement connection pooling - Use database
+    transactions - Optimize queries
+  </Card>
+  <Card title="Response Optimization" icon="zap">
+    - Implement caching - Use compression - Optimize JSON responses - Implement
+    pagination
+  </Card>
+</Columns>
+
+## Common Patterns
+
+### CRUD API
+
+```typescript
+// app/api/items/route.ts
+export async function GET() {
+  // Read all items
+}
+
+export async function POST(request: NextRequest) {
+  // Create new item
+}
+
+// app/api/items/[id]/route.ts
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  // Read single item
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  // Update item
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  // Delete item
+}
+```
+
+### Search API
+
+```typescript
+// app/api/search/route.ts
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("q");
+  const category = searchParams.get("category");
+  const page = parseInt(searchParams.get("page") || "1");
+
+  // Implement search logic
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+<Accordion title="API Route Not Found">
+**Problem**: 404 error when accessing API route
+**Solution**: Check file naming convention and ensure route is in the correct directory
+</Accordion>
+
+<Accordion title="CORS Issues">
+  **Problem**: CORS errors when calling API from frontend **Solution**:
+  Configure CORS headers or use Next.js built-in CORS handling
+</Accordion>
+
+<Accordion title="Request Body Issues">
+  **Problem**: Request body is empty or malformed **Solution**: Ensure proper
+  Content-Type headers and body parsing
+</Accordion>
+
+<Accordion title="Database Connection Issues">
+**Problem**: Database operations failing in API routes
+**Solution**: Check database connection and implement proper error handling
+</Accordion>
+</AccordionGroup>
+
+<Info>
+  **Key Takeaway**: API routes provide a powerful way to build RESTful APIs
+  within your Next.js application. Use them for data operations, webhooks, and
+  external integrations while following best practices for security, validation,
+  and error handling.
+</Info>
+
+

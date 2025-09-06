@@ -1,0 +1,579 @@
+---
+title: "1.6 Advanced Patterns & Best Practices"
+description: "Explore advanced Next.js patterns, performance optimization techniques, and production-ready practices. Build upon your migration foundation with enterprise-level implementations."
+---
+
+import LoadingStatesBasics from "/snippets/nextjs-architecture/loading-states-basics.mdx";
+
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Implement advanced component patterns and composition techniques
+- Apply performance optimization strategies for production applications
+- Create robust error handling and resilience patterns
+- Set up comprehensive testing strategies for Next.js applications
+- Prepare applications for production deployment
+
+<Info>**Duration**: 3-4 hours</Info>
+
+---
+
+## Part 1: Strategic Understanding
+
+### Advanced Patterns Overview
+
+Now that you've mastered the fundamentals of Next.js App Router migration, let's explore advanced patterns and best practices that will make your applications production-ready and performant.
+
+<Accordion title="Review if needed: Loading and Error Boundaries">
+  <LoadingStatesBasics />
+</Accordion>
+
+### What You'll Learn
+
+<Columns cols={2}>
+  <Card title="Advanced Patterns" icon="layers">
+    - Compound component patterns - Render props and HOCs - Custom hooks for
+    shared logic - Advanced composition techniques
+  </Card>
+  <Card title="Performance Optimization" icon="zap">
+    - Bundle optimization strategies - Lazy loading patterns - Caching
+    strategies - Performance monitoring and profiling
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Production Readiness" icon="shield">
+    - Error boundaries and resilience - Testing strategies - Security best
+    practices - Deployment preparation
+  </Card>
+  <Card title="Enterprise Patterns" icon="building">
+    - Scalable architecture patterns - Code organization - Documentation
+    standards - Team collaboration workflows
+  </Card>
+</Columns>
+
+## Part 2: Hands-On Implementation
+
+### Exercise 1: Advanced Component Patterns
+
+**Objective**: Implement compound component patterns and advanced composition
+
+**Requirements**:
+
+- Create a compound DataTable component with flexible composition
+- Implement render prop pattern for data fetching
+- Build custom hooks for shared component logic
+- Add proper TypeScript generics for type safety
+
+**Deliverables**:
+
+- Compound DataTable component with sub-components
+- Custom hooks for data management
+- Render prop components for flexibility
+- Comprehensive TypeScript interfaces
+
+### Exercise 2: Performance Optimization
+
+**Objective**: Optimize application performance for production
+
+**Requirements**:
+
+- Implement dynamic imports for code splitting
+- Add proper caching strategies
+- Optimize bundle size and loading performance
+- Set up performance monitoring
+
+**Deliverables**:
+
+- Dynamic import implementations
+- Caching configuration
+- Bundle analysis and optimization
+- Performance monitoring setup
+
+### Exercise 3: Error Handling & Resilience
+
+**Objective**: Create robust error handling patterns
+
+**Requirements**:
+
+- Implement comprehensive error boundaries
+- Add retry mechanisms for failed operations
+- Create fallback UI components
+- Set up error logging and monitoring
+
+**Deliverables**:
+
+- Error boundary components
+- Retry logic implementations
+- Fallback UI components
+- Error logging system
+
+### Exercise 4: Testing Strategy
+
+**Objective**: Set up comprehensive testing for Next.js applications
+
+**Requirements**:
+
+- Configure Jest and React Testing Library
+- Write unit tests for components
+- Create integration tests for routing
+- Set up end-to-end testing
+
+**Deliverables**:
+
+- Testing configuration
+- Unit test suites
+- Integration tests
+- E2E test setup
+
+### Exercise 5: Production Deployment
+
+**Objective**: Prepare application for production deployment
+
+**Requirements**:
+
+- Configure production build optimizations
+- Set up environment variables
+- Create deployment scripts
+- Add health checks and monitoring
+
+**Deliverables**:
+
+- Production build configuration
+- Environment setup
+- Deployment documentation
+- Monitoring configuration
+
+### Advanced Pattern Implementation Examples
+
+#### Compound Component Pattern
+
+```typescript
+// components/ui/DataTable.tsx
+import React, { createContext, useContext } from "react";
+
+interface DataTableContextType {
+  data: any[];
+  columns: any[];
+  loading: boolean;
+}
+
+const DataTableContext = createContext<DataTableContextType | null>(null);
+
+const useDataTable = () => {
+  const context = useContext(DataTableContext);
+  if (!context) {
+    throw new Error("useDataTable must be used within DataTable");
+  }
+  return context;
+};
+
+interface DataTableProps {
+  data: any[];
+  columns: any[];
+  loading?: boolean;
+  children: React.ReactNode;
+}
+
+export function DataTable({
+  data,
+  columns,
+  loading = false,
+  children,
+}: DataTableProps) {
+  return (
+    <DataTableContext.Provider value={{ data, columns, loading }}>
+      <div className="overflow-x-auto">{children}</div>
+    </DataTableContext.Provider>
+  );
+}
+
+DataTable.Header = function DataTableHeader() {
+  const { columns } = useDataTable();
+  return (
+    <thead className="bg-gray-50">
+      <tr>
+        {columns.map((column, index) => (
+          <th
+            key={index}
+            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+            {column.header}
+          </th>
+        ))}
+      </tr>
+    </thead>
+  );
+};
+
+DataTable.Body = function DataTableBody() {
+  const { data, columns, loading } = useDataTable();
+
+  if (loading) {
+    return (
+      <tbody>
+        <tr>
+          <td colSpan={columns.length} className="px-6 py-4 text-center">
+            Loading...
+          </td>
+        </tr>
+      </tbody>
+    );
+  }
+
+  return (
+    <tbody className="bg-white divide-y divide-gray-200">
+      {data.map((row, index) => (
+        <tr key={index} className="hover:bg-gray-50">
+          {columns.map((column, colIndex) => (
+            <td
+              key={colIndex}
+              className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {column.render
+                ? column.render(row[column.key], row)
+                : row[column.key]}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  );
+};
+
+// Usage:
+<DataTable data={customers} columns={columns} loading={isLoading}>
+  <DataTable.Header />
+  <DataTable.Body />
+</DataTable>;
+```
+
+#### Custom Hook for Data Management
+
+```typescript
+// hooks/useDataTable.ts
+import { useState, useEffect, useCallback } from "react";
+
+interface UseDataTableOptions {
+  initialData?: any[];
+  fetchData?: () => Promise<any[]>;
+  pageSize?: number;
+}
+
+export function useDataTable({
+  initialData = [],
+  fetchData,
+  pageSize = 10,
+}: UseDataTableOptions) {
+  const [data, setData] = useState(initialData);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const loadData = useCallback(async () => {
+    if (!fetchData) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await fetchData();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchData]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const paginatedData = data.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  return {
+    data: paginatedData,
+    loading,
+    error,
+    currentPage,
+    totalPages: Math.ceil(data.length / pageSize),
+    setCurrentPage,
+    refresh: loadData,
+  };
+}
+```
+
+#### Error Boundary with Retry Logic
+
+```typescript
+// components/ErrorBoundary.tsx
+import React, { Component, ErrorInfo, ReactNode } from "react";
+
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+  onRetry?: () => void;
+}
+
+interface State {
+  hasError: boolean;
+  error?: Error;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    // Log to error reporting service
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: undefined });
+    this.props.onRetry?.();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        this.props.fallback || (
+          <div className="flex flex-col items-center justify-center p-8">
+            <h2 className="text-xl font-semibold text-red-600 mb-4">
+              Something went wrong
+            </h2>
+            <p className="text-gray-600 mb-4">
+              {this.state.error?.message || "An unexpected error occurred"}
+            </p>
+            <button
+              onClick={this.handleRetry}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+              Try Again
+            </button>
+          </div>
+        )
+      );
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+## Part 3: Reflection & Extension
+
+### Performance Optimization Best Practices
+
+#### Bundle Analysis and Optimization
+
+```typescript
+// next.config.js
+const nextConfig = {
+  experimental: {
+    optimizeCss: true,
+    optimizePackageImports: ["@mui/material", "@mui/icons-material"],
+  },
+  webpack: (config, { dev, isServer }) => {
+    if (!dev && !isServer) {
+      config.optimization.splitChunks.cacheGroups = {
+        ...config.optimization.splitChunks.cacheGroups,
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: "vendors",
+          chunks: "all",
+        },
+      };
+    }
+    return config;
+  },
+};
+
+module.exports = nextConfig;
+```
+
+#### Dynamic Imports for Code Splitting
+
+```typescript
+// components/LazyComponent.tsx
+import dynamic from "next/dynamic";
+import { Suspense } from "react";
+
+const HeavyChart = dynamic(() => import("./HeavyChart"), {
+  loading: () => <div className="animate-pulse bg-gray-200 h-64 rounded" />,
+  ssr: false,
+});
+
+const LazyComponent = () => {
+  return (
+    <Suspense fallback={<div>Loading chart...</div>}>
+      <HeavyChart />
+    </Suspense>
+  );
+};
+```
+
+### Testing Strategy Implementation
+
+#### Jest Configuration
+
+```javascript
+// jest.config.js
+const nextJest = require("next/jest");
+
+const createJestConfig = nextJest({
+  dir: "./",
+});
+
+const customJestConfig = {
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+  moduleNameMapping: {
+    "^@/(.*)$": "<rootDir>/$1",
+  },
+  testEnvironment: "jest-environment-jsdom",
+};
+
+module.exports = createJestConfig(customJestConfig);
+```
+
+#### Component Testing Example
+
+```typescript
+// __tests__/components/DataTable.test.tsx
+import { render, screen, fireEvent } from "@testing-library/react";
+import { DataTable } from "@/components/ui/DataTable";
+
+const mockData = [
+  { id: 1, name: "John Doe", email: "john@example.com" },
+  { id: 2, name: "Jane Smith", email: "jane@example.com" },
+];
+
+const mockColumns = [
+  { key: "name", header: "Name" },
+  { key: "email", header: "Email" },
+];
+
+describe("DataTable", () => {
+  it("renders data correctly", () => {
+    render(
+      <DataTable data={mockData} columns={mockColumns}>
+        <DataTable.Header />
+        <DataTable.Body />
+      </DataTable>
+    );
+
+    expect(screen.getByText("John Doe")).toBeInTheDocument();
+    expect(screen.getByText("jane@example.com")).toBeInTheDocument();
+  });
+
+  it("shows loading state", () => {
+    render(
+      <DataTable data={[]} columns={mockColumns} loading={true}>
+        <DataTable.Header />
+        <DataTable.Body />
+      </DataTable>
+    );
+
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
+  });
+});
+```
+
+### Reflection Questions
+
+1. **How do advanced component patterns improve code maintainability and reusability?**
+
+   - Consider compound components vs traditional props
+   - Think about custom hooks for shared logic
+   - Reflect on render props and composition patterns
+
+2. **What performance optimization strategies had the biggest impact on your application?**
+
+   - Bundle splitting and lazy loading
+   - Caching strategies
+   - Component optimization techniques
+
+3. **How does comprehensive error handling improve user experience?**
+   - Error boundaries and fallback UI
+   - Retry mechanisms
+   - User-friendly error messages
+
+### Extension Activities
+
+1. **Advanced Architecture Patterns:**
+
+   - Research micro-frontend architectures
+   - Study state management patterns for large applications
+   - Explore server-side rendering optimization
+
+2. **Production Monitoring:**
+
+   - Set up application performance monitoring (APM)
+   - Implement error tracking and logging
+   - Create performance dashboards
+
+3. **Security Best Practices:**
+   - Implement content security policies
+   - Add authentication and authorization patterns
+   - Set up security headers and validation
+
+### Production Deployment Checklist
+
+Before deploying to production, ensure you have:
+
+<Check>
+  - [ ] Implemented comprehensive error boundaries and fallback UI - [ ] Set up
+  performance monitoring and error tracking - [ ] Configured proper caching
+  strategies - [ ] Optimized bundle size and loading performance - [ ] Added
+  comprehensive testing coverage - [ ] Implemented security best practices - [ ]
+  Set up proper environment configuration - [ ] Created deployment documentation
+  - [ ] Configured health checks and monitoring - [ ] Tested in staging
+  environment
+</Check>
+
+### Key Takeaways
+
+By completing this lesson, you've learned:
+
+- **Advanced Component Patterns**: Compound components, render props, and custom hooks
+- **Performance Optimization**: Bundle splitting, lazy loading, and caching strategies
+- **Error Handling**: Robust error boundaries and retry mechanisms
+- **Testing Strategies**: Unit, integration, and end-to-end testing approaches
+- **Production Readiness**: Deployment preparation and monitoring setup
+
+These advanced patterns and best practices will help you build scalable, maintainable, and production-ready Next.js applications.
+
+## Next Steps
+
+After completing this lesson, you'll be ready to move on to **Module 2: Data Integration & API Modernization**, where you'll:
+
+- Modernize the VSL-Api backend
+- Implement API routes and server actions
+- Integrate with databases
+- Set up authentication systems
+
+<Info>
+  **Key Takeaway**: Advanced patterns and best practices are essential for
+  building production-ready applications. Focus on creating scalable,
+  maintainable code that follows enterprise-level standards and provides
+  excellent user experience.
+</Info>
+
+## Support and Resources
+
+If you need help with advanced patterns:
+
+- Review the Next.js documentation for advanced features
+- Check the React documentation for component patterns
+- Explore performance optimization guides
+- Join the Next.js community for best practices
+- Study open-source Next.js applications for real-world examples
+
+**Congratulations on completing Module 1!** 🎉
