@@ -1,0 +1,585 @@
+---
+title: "Streaming and Suspense"
+description: "Understanding React's streaming and Suspense features for better performance and user experience in Next.js applications."
+---
+
+## Overview
+
+React's streaming and Suspense features enable progressive rendering and better loading experiences. These features are particularly powerful in Next.js applications where they can significantly improve perceived performance.
+
+## What is Streaming?
+
+Streaming allows React to send HTML to the browser as it's being rendered on the server, rather than waiting for the entire page to be ready.
+
+<Columns cols={2}>
+  <Card title="Streaming Benefits" icon="zap">
+    <ul className="list-disc list-inside">
+      <li>Faster initial page load</li>
+      <li>Progressive content rendering</li>
+      <li>Better perceived performance</li>
+      <li>Reduced time to first byte</li>
+    </ul>
+  </Card>
+  <Card title="Streaming Use Cases" icon="target">
+    <ul className="list-disc list-inside">
+      <li>Slow data fetching</li>
+      <li>Large component trees</li>
+      <li>Third-party integrations</li>
+      <li>Complex calculations</li>
+    </ul>
+  </Card>
+</Columns>
+
+## Understanding Suspense
+
+Suspense is a React component that lets you declaratively handle loading states for components that are waiting for data.
+
+### Basic Suspense Usage
+
+```typescript
+import { Suspense } from "react";
+
+function App() {
+  return (
+    <div>
+      <h1>My App</h1>
+      <Suspense fallback={<div>Loading...</div>}>
+        <SlowComponent />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+### Suspense with Custom Loading
+
+```typescript
+import { Suspense } from "react";
+import LoadingSpinner from "@/components/LoadingSpinner";
+
+function Dashboard() {
+  return (
+    <div className="dashboard">
+      <h1>Dashboard</h1>
+      <Suspense fallback={<LoadingSpinner />}>
+        <DashboardContent />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+## Streaming in Next.js
+
+### Automatic Streaming
+
+Next.js automatically streams server components by default:
+
+```typescript
+// app/dashboard/page.tsx
+import { db } from "@/lib/database";
+
+export default async function Dashboard() {
+  // This will stream as it loads
+  const stats = await db.getDashboardStats();
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <div className="stats">
+        {stats.map((stat) => (
+          <div key={stat.id}>
+            {stat.title}: {stat.value}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### Manual Streaming with Suspense
+
+```typescript
+// app/dashboard/page.tsx
+import { Suspense } from "react";
+import DashboardStats from "@/components/DashboardStats";
+import DashboardCharts from "@/components/DashboardCharts";
+
+export default function Dashboard() {
+  return (
+    <div className="dashboard">
+      <h1>Dashboard</h1>
+
+      <Suspense fallback={<StatsSkeleton />}>
+        <DashboardStats />
+      </Suspense>
+
+      <Suspense fallback={<ChartsSkeleton />}>
+        <DashboardCharts />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+## Advanced Streaming Patterns
+
+### Nested Suspense Boundaries
+
+```typescript
+// app/dashboard/page.tsx
+import { Suspense } from "react";
+
+export default function Dashboard() {
+  return (
+    <div className="dashboard">
+      <h1>Dashboard</h1>
+
+      <Suspense fallback={<div>Loading stats...</div>}>
+        <StatsSection />
+      </Suspense>
+
+      <Suspense fallback={<div>Loading charts...</div>}>
+        <ChartsSection />
+      </Suspense>
+
+      <Suspense fallback={<div>Loading recent activity...</div>}>
+        <RecentActivity />
+      </Suspense>
+    </div>
+  );
+}
+
+// Each section can have its own Suspense boundaries
+function StatsSection() {
+  return (
+    <div className="stats-section">
+      <Suspense fallback={<div>Loading user stats...</div>}>
+        <UserStats />
+      </Suspense>
+
+      <Suspense fallback={<div>Loading system stats...</div>}>
+        <SystemStats />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+### Streaming with Error Boundaries
+
+```typescript
+// app/dashboard/page.tsx
+import { Suspense } from "react";
+import ErrorBoundary from "@/components/ErrorBoundary";
+
+export default function Dashboard() {
+  return (
+    <div className="dashboard">
+      <h1>Dashboard</h1>
+
+      <ErrorBoundary fallback={<StatsError />}>
+        <Suspense fallback={<StatsSkeleton />}>
+          <DashboardStats />
+        </Suspense>
+      </ErrorBoundary>
+
+      <ErrorBoundary fallback={<ChartsError />}>
+        <Suspense fallback={<ChartsSkeleton />}>
+          <DashboardCharts />
+        </Suspense>
+      </ErrorBoundary>
+    </div>
+  );
+}
+```
+
+## Data Fetching with Suspense
+
+### Server Components with Suspense
+
+```typescript
+// app/blog/page.tsx
+import { Suspense } from "react";
+import { db } from "@/lib/database";
+
+async function BlogPosts() {
+  const posts = await db.getBlogPosts();
+
+  return (
+    <div className="blog-posts">
+      {posts.map((post) => (
+        <article key={post.id}>
+          <h2>{post.title}</h2>
+          <p>{post.excerpt}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+async function BlogSidebar() {
+  const categories = await db.getCategories();
+
+  return (
+    <aside className="blog-sidebar">
+      <h3>Categories</h3>
+      <ul className="list-disc list-inside">
+        {categories.map((category) => (
+          <li key={category.id}>
+            <a href={`/blog/category/${category.slug}`}>{category.name}</a>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+}
+
+export default function BlogPage() {
+  return (
+    <div className="blog-layout">
+      <main>
+        <Suspense fallback={<PostsSkeleton />}>
+          <BlogPosts />
+        </Suspense>
+      </main>
+
+      <aside>
+        <Suspense fallback={<SidebarSkeleton />}>
+          <BlogSidebar />
+        </Suspense>
+      </aside>
+    </div>
+  );
+}
+```
+
+### Client Components with Suspense
+
+```typescript
+"use client";
+
+import { Suspense, useState } from "react";
+
+function UserProfile({ userId }: { userId: string }) {
+  const [user, setUser] = useState(null);
+
+  // Simulate data fetching
+  useState(() => {
+    fetch(`/api/users/${userId}`)
+      .then((res) => res.json())
+      .then(setUser);
+  }, [userId]);
+
+  if (!user) {
+    throw new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+
+  return (
+    <div className="user-profile">
+      <h2>{user.name}</h2>
+      <p>{user.email}</p>
+    </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <div>
+      <h1>Profile</h1>
+      <Suspense fallback={<ProfileSkeleton />}>
+        <UserProfile userId="123" />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+## Performance Optimization
+
+### Streaming Strategies
+
+<Steps>
+  <Step title="Critical Path First">
+    Stream the most important content first
+  </Step>
+  <Step title="Progressive Enhancement">
+    Load basic content first, then enhance
+  </Step>
+  <Step title="Parallel Loading">Load multiple sections simultaneously</Step>
+  <Step title="Error Isolation">
+    Use error boundaries to prevent cascading failures
+  </Step>
+</Steps>
+
+### Loading State Design
+
+```typescript
+// components/StatsSkeleton.tsx
+export default function StatsSkeleton() {
+  return (
+    <div className="stats-skeleton">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white p-6 rounded-lg shadow-md">
+            <div className="h-4 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
+            <div className="h-8 bg-gray-200 rounded w-16 animate-pulse"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## Real-World Examples
+
+### E-commerce Product Page
+
+```typescript
+// app/products/[id]/page.tsx
+import { Suspense } from "react";
+
+async function ProductInfo({ productId }: { productId: string }) {
+  const product = await db.getProduct(productId);
+
+  return (
+    <div className="product-info">
+      <h1>{product.name}</h1>
+      <p className="price">${product.price}</p>
+      <p>{product.description}</p>
+    </div>
+  );
+}
+
+async function ProductReviews({ productId }: { productId: string }) {
+  const reviews = await db.getProductReviews(productId);
+
+  return (
+    <div className="product-reviews">
+      <h2>Reviews</h2>
+      {reviews.map((review) => (
+        <div key={review.id} className="review">
+          <h3>{review.title}</h3>
+          <p>{review.content}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+async function RelatedProducts({ productId }: { productId: string }) {
+  const related = await db.getRelatedProducts(productId);
+
+  return (
+    <div className="related-products">
+      <h2>Related Products</h2>
+      <div className="grid grid-cols-4 gap-4">
+        {related.map((product) => (
+          <div key={product.id} className="product-card">
+            <h3>{product.name}</h3>
+            <p>${product.price}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function ProductPage({ params }: { params: { id: string } }) {
+  return (
+    <div className="product-page">
+      <Suspense fallback={<ProductInfoSkeleton />}>
+        <ProductInfo productId={params.id} />
+      </Suspense>
+
+      <div className="product-details">
+        <Suspense fallback={<ReviewsSkeleton />}>
+          <ProductReviews productId={params.id} />
+        </Suspense>
+
+        <Suspense fallback={<RelatedSkeleton />}>
+          <RelatedProducts productId={params.id} />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
+```
+
+### Dashboard with Multiple Data Sources
+
+```typescript
+// app/dashboard/page.tsx
+import { Suspense } from "react";
+
+async function UserStats() {
+  const stats = await db.getUserStats();
+  return <StatsWidget data={stats} />;
+}
+
+async function SystemMetrics() {
+  const metrics = await db.getSystemMetrics();
+  return <MetricsWidget data={metrics} />;
+}
+
+async function RecentActivity() {
+  const activity = await db.getRecentActivity();
+  return <ActivityFeed data={activity} />;
+}
+
+export default function Dashboard() {
+  return (
+    <div className="dashboard">
+      <h1>Dashboard</h1>
+
+      <div className="dashboard-grid">
+        <div className="stats-section">
+          <Suspense fallback={<StatsSkeleton />}>
+            <UserStats />
+          </Suspense>
+        </div>
+
+        <div className="metrics-section">
+          <Suspense fallback={<MetricsSkeleton />}>
+            <SystemMetrics />
+          </Suspense>
+        </div>
+
+        <div className="activity-section">
+          <Suspense fallback={<ActivitySkeleton />}>
+            <RecentActivity />
+          </Suspense>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+## Best Practices
+
+### Streaming Best Practices
+
+<Steps>
+  <Step title="Identify Slow Components">
+    Find components that take time to load
+  </Step>
+  <Step title="Create Loading States">
+    Design appropriate loading skeletons
+  </Step>
+  <Step title="Use Error Boundaries">
+    Handle errors gracefully in streaming
+  </Step>
+  <Step title="Monitor Performance">Track streaming performance metrics</Step>
+</Steps>
+
+### Suspense Best Practices
+
+<Columns cols={2}>
+  <Card title="Granular Boundaries" icon="target">
+    <ul className="list-disc list-inside">
+      <li>Use multiple Suspense boundaries</li>
+      <li>Isolate slow components</li>
+      <li>Provide specific loading states</li>
+    </ul>
+  </Card>
+  <Card title="Error Handling" icon="shield">
+    <ul className="list-disc list-inside">
+      <li>Combine with error boundaries</li>
+      <li>Provide fallback content</li>
+      <li>Handle network failures</li>
+    </ul>
+  </Card>
+</Columns>
+
+## Common Patterns
+
+### Progressive Loading
+
+```typescript
+// app/dashboard/page.tsx
+export default function Dashboard() {
+  return (
+    <div className="dashboard">
+      <h1>Dashboard</h1>
+
+      {/* Load immediately */}
+      <QuickStats />
+
+      {/* Load progressively */}
+      <Suspense fallback={<div>Loading detailed stats...</div>}>
+        <DetailedStats />
+      </Suspense>
+
+      <Suspense fallback={<div>Loading charts...</div>}>
+        <Charts />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+### Conditional Streaming
+
+```typescript
+// app/dashboard/page.tsx
+import { Suspense } from "react";
+
+export default function Dashboard({
+  searchParams,
+}: {
+  searchParams: { tab?: string };
+}) {
+  const activeTab = searchParams.tab || "overview";
+
+  return (
+    <div className="dashboard">
+      <h1>Dashboard</h1>
+
+      {activeTab === "overview" && (
+        <Suspense fallback={<OverviewSkeleton />}>
+          <OverviewTab />
+        </Suspense>
+      )}
+
+      {activeTab === "analytics" && (
+        <Suspense fallback={<AnalyticsSkeleton />}>
+          <AnalyticsTab />
+        </Suspense>
+      )}
+    </div>
+  );
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+<Accordion title="Streaming Not Working">
+**Problem**: Content not streaming as expected
+**Solution**: Check that components are server components and data fetching is properly implemented
+</Accordion>
+
+<Accordion title="Suspense Not Triggering">
+  **Problem**: Suspense fallback not showing **Solution**: Ensure the component
+  is actually suspending (throwing a promise)
+</Accordion>
+
+<Accordion title="Loading States Flashing">
+  **Problem**: Loading states appear too briefly **Solution**: Add minimum
+  loading time or optimize data fetching
+</Accordion>
+
+<Accordion title="Error in Suspense">
+**Problem**: Errors breaking the streaming experience
+**Solution**: Wrap Suspense boundaries with error boundaries
+</Accordion>
+</AccordionGroup>
+
+<Info>
+  **Key Takeaway**: Streaming and Suspense are powerful tools for creating
+  better user experiences. Use them to progressively load content and provide
+  immediate feedback to users while data is being fetched.
+</Info>

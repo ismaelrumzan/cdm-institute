@@ -76,20 +76,73 @@
                 ]
               }
             ]
+          },
+          {
+            "item": "Next.js Migration",
+            "icon": "code",
+            "groups": [
+              {
+                "group": "Next.js Migration Course",
+                "icon": "code",
+                "pages": [
+                  "learning-paths/next-js-migration/home",
+                  {
+                    "group": "Module 1: Next.js Foundation & Project Setup",
+                    "pages": [
+                      "learning-paths/next-js-migration/module-1-home",
+                      "learning-paths/next-js-migration/module-1-supportive-info",
+                      "learning-paths/next-js-migration/module-1-1",
+                      "learning-paths/next-js-migration/module-1-2",
+                      "learning-paths/next-js-migration/module-1-3",
+                      "learning-paths/next-js-migration/module-1-4",
+                      "learning-paths/next-js-migration/module-1-5",
+                      "learning-paths/next-js-migration/module-1-assessment"
+                    ]
+                  },
+                  {
+                    "group": "Module 2: Data Integration & API Modernization",
+                    "pages": ["learning-paths/next-js-migration/module-2-home"]
+                  },
+                  {
+                    "group": "Module 3: Advanced Features & Complex Migrations",
+                    "pages": ["learning-paths/next-js-migration/module-3-home"]
+                  },
+                  {
+                    "group": "Module 4: Production Deployment & Monitoring",
+                    "pages": ["learning-paths/next-js-migration/module-4-home"]
+                  },
+                  "learning-paths/next-js-migration/conclusion"
+                ]
+              }
+            ]
           }
         ]
       },
       {
         "tab": "Topics",
-        "pages": ["topics/ai/concepts"]
+        "pages": ["topics", "topics/ai/concepts", "topics/ai-prompt-reflection"]
       },
       {
         "tab": "Reference",
-        "pages": ["reference/nextjs"]
+        "pages": [
+          "reference",
+          "reference/nextjs",
+          "reference/file-based-routing",
+          "reference/file-based-routing-basics",
+          "reference/server-client-components",
+          "reference/server-client-components-basics",
+          "reference/layouts-templates",
+          "reference/layouts-basics",
+          "reference/loading-error-boundaries",
+          "reference/loading-states-basics",
+          "reference/api-routes-server-actions",
+          "reference/deployment-devops",
+          "reference/react-patterns"
+        ]
       },
       {
         "tab": "Tutorials",
-        "pages": ["tutorials/cursor"]
+        "pages": ["tutorials", "tutorials/cursor"]
       }
     ]
   },

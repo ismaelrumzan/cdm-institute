@@ -1,0 +1,367 @@
+---
+title: "File-Based Routing System"
+description: "Understanding Next.js App Router's file-based routing system and how it differs from traditional React Router approaches."
+---
+
+## Overview
+
+Next.js App Router uses a file-based routing system where the file structure in the `app` directory directly maps to URL routes. This approach simplifies routing configuration and provides better performance through automatic code splitting.
+
+<AccordionGroup>
+<Accordion title="Key Concepts">
+
+### Route Segments
+
+Each folder in the `app` directory represents a route segment:
+
+```
+app/
+├── page.tsx          # / (root route)
+├── about/
+│   └── page.tsx      # /about
+├── blog/
+│   ├── page.tsx      # /blog
+│   └── [slug]/
+│       └── page.tsx  # /blog/[slug] (dynamic route)
+└── dashboard/
+    ├── page.tsx      # /dashboard
+    └── settings/
+        └── page.tsx  # /dashboard/settings
+```
+
+### Special Files
+
+<Columns cols={2}>
+  <Card title="page.tsx" icon="file">
+    <ul className="list-disc list-inside">
+      <li>Makes a route publicly accessible</li>
+      <li>Required for a route to be accessible</li>
+      <li>Defines the UI for that route</li>
+    </ul>
+  </Card>
+  <Card title="layout.tsx" icon="list-tree">
+    <ul className="list-disc list-inside">
+      <li>Shared UI for multiple pages</li>
+      <li>Wraps child layouts and pages</li>
+      <li>Maintains state during navigation</li>
+    </ul>
+  </Card>
+</Columns>
+
+<Columns cols={2}>
+  <Card title="loading.tsx" icon="loader">
+    <ul className="list-disc list-inside">
+      <li>Loading UI for a route segment</li>
+      <li>Shows while page is loading</li>
+      <li>Automatically wraps page and children</li>
+    </ul>
+  </Card>
+  <Card title="error.tsx" icon="circle-x">
+    <ul className="list-disc list-inside">
+      <li>Error UI for a route segment</li>
+      <li>Catches errors in child segments</li>
+      <li>Provides error boundaries</li>
+    </ul>
+  </Card>
+</Columns>
+
+<Columns cols={2}>
+  <Card title="not-found.tsx" icon="search">
+    <ul className="list-disc list-inside">
+      <li>404 page for a route segment</li>
+      <li>Shows when route is not found</li>
+      <li>Can be nested at different levels</li>
+    </ul>
+  </Card>
+  <Card title="template.tsx" icon="layout-template">
+    <ul className="list-disc list-inside">
+      <li>Re-renders on every navigation</li>
+      <li>Useful for animations and transitions</li>
+      <li>Creates new instance for each route</li>
+    </ul>
+  </Card>
+</Columns>
+
+</Accordion>
+
+<Accordion title="Route Groups">
+
+Use parentheses to group routes without affecting the URL structure:
+
+```
+app/
+├── (auth)/
+│   ├── login/
+│   │   └── page.tsx    # /login
+│   └── register/
+│       └── page.tsx    # /register
+├── (dashboard)/
+│   ├── profile/
+│   │   └── page.tsx    # /profile
+│   └── settings/
+│       └── page.tsx    # /settings
+└── page.tsx            # / (root)
+```
+
+</Accordion>
+
+<Accordion title="Dynamic Routes">
+
+### Single Dynamic Segment
+
+```
+app/
+└── blog/
+    └── [slug]/
+        └── page.tsx    # /blog/[slug]
+```
+
+```typescript
+// app/blog/[slug]/page.tsx
+interface PageProps {
+  params: { slug: string };
+}
+
+export default function BlogPost({ params }: PageProps) {
+  return <h1>Blog Post: {params.slug}</h1>;
+}
+```
+
+### Multiple Dynamic Segments
+
+```
+app/
+└── shop/
+    └── [category]/
+        └── [product]/
+            └── page.tsx    # /shop/[category]/[product]
+```
+
+```typescript
+// app/shop/[category]/[product]/page.tsx
+interface PageProps {
+  params: {
+    category: string;
+    product: string;
+  };
+}
+
+export default function ProductPage({ params }: PageProps) {
+  return (
+    <div>
+      <h1>Category: {params.category}</h1>
+      <h2>Product: {params.product}</h2>
+    </div>
+  );
+}
+```
+
+### Catch-All Routes
+
+```
+app/
+└── docs/
+    └── [...slug]/
+        └── page.tsx    # /docs/[...slug]
+```
+
+```typescript
+// app/docs/[...slug]/page.tsx
+interface PageProps {
+  params: { slug: string[] };
+}
+
+export default function DocsPage({ params }: PageProps) {
+  return <h1>Docs: {params.slug.join("/")}</h1>;
+}
+```
+
+</Accordion>
+
+<Accordion title="Navigation">
+
+### Link Component
+
+```typescript
+import Link from "next/link";
+
+export default function Navigation() {
+  return (
+    <nav>
+      <Link href="/">Home</Link>
+      <Link href="/about">About</Link>
+      <Link href="/blog/hello-world">Blog Post</Link>
+    </nav>
+  );
+}
+```
+
+### Programmatic Navigation
+
+```typescript
+"use client";
+
+import { useRouter } from "next/navigation";
+
+export default function MyComponent() {
+  const router = useRouter();
+
+  const handleClick = () => {
+    router.push("/dashboard");
+    // or
+    router.replace("/login");
+    // or
+    router.back();
+  };
+
+  return <button onClick={handleClick}>Navigate</button>;
+}
+```
+
+</Accordion>
+
+<Accordion title="Best Practices">
+
+### Route Organization
+
+<Steps>
+  <Step title="Group Related Routes">
+    Use route groups to organize related pages without affecting URLs
+  </Step>
+  <Step title="Use Descriptive Names">
+    Choose clear, descriptive folder and file names
+  </Step>
+  <Step title="Keep Routes Flat">Avoid deeply nested routes when possible</Step>
+  <Step title="Use Dynamic Routes Wisely">
+    Use dynamic routes for content that changes frequently
+  </Step>
+</Steps>
+
+### Performance Considerations
+
+<Columns cols={2}>
+  <Card title="Automatic Code Splitting" icon="package">
+    <ul className="list-disc list-inside">
+      <li>Each route is automatically code-split</li>
+      <li>Only loads code needed for current route</li>
+      <li>Improves initial page load performance</li>
+    </ul>
+  </Card>
+  <Card title="Prefetching" icon="zap">
+    <ul className="list-disc list-inside">
+      <li>Links are automatically prefetched</li>
+      <li>Improves navigation performance</li>
+      <li>Can be disabled with prefetch={false}</li>
+    </ul>
+  </Card>
+</Columns>
+
+</Accordion>
+
+<Accordion title="Migration from React Router">
+
+### Before (React Router)
+
+```typescript
+// App.js
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/blog/:slug" element={<BlogPost />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+```
+
+### After (Next.js App Router)
+
+```
+app/
+├── page.tsx              # /
+├── about/
+│   └── page.tsx          # /about
+└── blog/
+    └── [slug]/
+        └── page.tsx      # /blog/[slug]
+```
+
+</Accordion>
+
+<Accordion title="Common Patterns">
+
+### Nested Layouts
+
+```
+app/
+├── layout.tsx            # Root layout
+├── dashboard/
+│   ├── layout.tsx        # Dashboard layout
+│   ├── page.tsx          # /dashboard
+│   └── settings/
+│       └── page.tsx      # /dashboard/settings
+```
+
+### Route Protection
+
+```typescript
+// app/dashboard/layout.tsx
+import { redirect } from "next/navigation";
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Check authentication
+  const isAuthenticated = checkAuth();
+
+  if (!isAuthenticated) {
+    redirect("/login");
+  }
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      {children}
+    </div>
+  );
+}
+```
+
+</Accordion>
+
+<Accordion title="Troubleshooting">
+
+<AccordionGroup>
+<Accordion title="Route Not Found">
+**Problem**: Route returns 404 even though file exists
+**Solution**: Ensure the file is named `page.tsx` and is in the correct directory
+</Accordion>
+
+<Accordion title="Layout Not Applying">
+  **Problem**: Layout styles not showing on child routes **Solution**: Check
+  that layout.tsx is in the correct directory and wraps children
+</Accordion>
+
+<Accordion title="Dynamic Route Not Working">
+**Problem**: Dynamic route parameters not accessible
+**Solution**: Ensure the page component receives params as props and handles the correct parameter names
+</Accordion>
+</AccordionGroup>
+
+</Accordion>
+
+</AccordionGroup>
+
+<Info>
+  **Key Takeaway**: Next.js file-based routing simplifies route management by
+  using the file system structure to define routes. This approach provides
+  better performance through automatic code splitting and makes routing more
+  intuitive for developers.
+</Info>

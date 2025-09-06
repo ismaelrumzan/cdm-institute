@@ -1,0 +1,668 @@
+---
+title: "2.1 API Routes & Server Actions"
+description: "Learn to create API routes and server actions for modern data fetching patterns. Master the integration between frontend and backend in Next.js applications."
+---
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Create and configure API routes in Next.js applications
+- Implement server actions for form handling and mutations
+- Understand the differences between API routes and server actions
+- Integrate with existing backend APIs and databases
+- Handle authentication and authorization in API routes
+- Implement proper error handling and validation
+
+<Info>**Duration**: 4-5 hours</Info>
+
+---
+
+## Understanding API Routes vs Server Actions
+
+Next.js provides two main approaches for server-side logic: API routes and server actions. Understanding when to use each is crucial for effective application development.
+
+### API Routes
+
+API routes are traditional REST endpoints that handle HTTP requests:
+
+<Columns cols={2}>
+  <Card title="When to Use API Routes" icon="api">
+    - External API integrations - Third-party service calls - Complex business
+    logic - Webhook endpoints - File uploads
+  </Card>
+  <Card title="API Route Benefits" icon="zap">
+    - Standard HTTP methods - External accessibility - Middleware support -
+    Request/response handling - Caching capabilities
+  </Card>
+</Columns>
+
+### Server Actions
+
+Server actions are functions that run on the server and can be called directly from components:
+
+<Columns cols={2}>
+  <Card title="When to Use Server Actions" icon="server">
+    - Form submissions - Database mutations - Simple server logic - Progressive
+    enhancement - Type-safe operations
+  </Card>
+  <Card title="Server Action Benefits" icon="code">
+    - Type safety - Simplified data flow - Automatic serialization - Built-in
+    error handling - Form integration
+  </Card>
+</Columns>
+
+## Creating API Routes
+
+API routes in Next.js are created using the `route.js` file in the `app/api/` directory.
+
+### Basic API Route Structure
+
+```
+app/
+├── api/
+│   ├── users/
+│   │   └── route.js        # /api/users
+│   ├── products/
+│   │   ├── route.js        # /api/products
+│   │   └── [id]/
+│   │       └── route.js    # /api/products/[id]
+│   └── auth/
+│       └── login/
+│           └── route.js    # /api/auth/login
+```
+
+### Example: User Management API
+
+```javascript
+// app/api/users/route.js
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/database";
+
+// GET /api/users
+export async function GET(request) {
+  try {
+    const users = await db.users.findMany();
+    return NextResponse.json(users);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch users" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/users
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    const user = await db.users.create({
+      data: body,
+    });
+    return NextResponse.json(user, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to create user" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### Dynamic API Routes
+
+```javascript
+// app/api/users/[id]/route.js
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/database";
+
+// GET /api/users/[id]
+export async function GET(request, { params }) {
+  try {
+    const user = await db.users.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(user);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch user" },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/users/[id]
+export async function PUT(request, { params }) {
+  try {
+    const body = await request.json();
+    const user = await db.users.update({
+      where: { id: params.id },
+      data: body,
+    });
+    return NextResponse.json(user);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to update user" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/users/[id]
+export async function DELETE(request, { params }) {
+  try {
+    await db.users.delete({
+      where: { id: params.id },
+    });
+    return NextResponse.json({ message: "User deleted" });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to delete user" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## Implementing Server Actions
+
+Server actions provide a more direct way to handle server-side operations from components.
+
+### Basic Server Action
+
+```javascript
+// app/actions/user-actions.js
+"use server";
+
+import { db } from "@/lib/database";
+import { revalidatePath } from "next/cache";
+
+export async function createUser(formData) {
+  try {
+    const user = await db.users.create({
+      data: {
+        name: formData.get("name"),
+        email: formData.get("email"),
+        role: formData.get("role"),
+      },
+    });
+
+    revalidatePath("/users");
+    return { success: true, user };
+  } catch (error) {
+    return { success: false, error: "Failed to create user" };
+  }
+}
+
+export async function updateUser(id, formData) {
+  try {
+    const user = await db.users.update({
+      where: { id },
+      data: {
+        name: formData.get("name"),
+        email: formData.get("email"),
+        role: formData.get("role"),
+      },
+    });
+
+    revalidatePath("/users");
+    return { success: true, user };
+  } catch (error) {
+    return { success: false, error: "Failed to update user" };
+  }
+}
+```
+
+### Using Server Actions in Components
+
+```javascript
+// app/components/UserForm.js
+import { createUser, updateUser } from "@/app/actions/user-actions";
+
+export default function UserForm({ user = null }) {
+  return (
+    <form action={user ? updateUser.bind(null, user.id) : createUser}>
+      <div>
+        <label htmlFor="name">Name:</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          defaultValue={user?.name || ""}
+          required
+        />
+      </div>
+
+      <div>
+        <label htmlFor="email">Email:</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          defaultValue={user?.email || ""}
+          required
+        />
+      </div>
+
+      <div>
+        <label htmlFor="role">Role:</label>
+        <select id="role" name="role" defaultValue={user?.role || ""}>
+          <option value="admin">Admin</option>
+          <option value="user">User</option>
+          <option value="viewer">Viewer</option>
+        </select>
+      </div>
+
+      <button type="submit">{user ? "Update User" : "Create User"}</button>
+    </form>
+  );
+}
+```
+
+## VSL Service Center Integration
+
+Let's see how to integrate API routes and server actions with the VSL Service Center application.
+
+### Authentication API Route
+
+```javascript
+// app/api/auth/login/route.js
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/database";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+
+export async function POST(request) {
+  try {
+    const { email, password } = await request.json();
+
+    // Find user in database
+    const user = await db.users.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 }
+      );
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (!isValidPassword) {
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 }
+      );
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    return NextResponse.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    return NextResponse.json({ error: "Login failed" }, { status: 500 });
+  }
+}
+```
+
+### Material Management Server Actions
+
+```javascript
+// app/actions/material-actions.js
+"use server";
+
+import { db } from "@/lib/database";
+import { revalidatePath } from "next/cache";
+
+export async function createMaterial(formData) {
+  try {
+    const material = await db.materials.create({
+      data: {
+        code: formData.get("code"),
+        name: formData.get("name"),
+        description: formData.get("description"),
+        unit: formData.get("unit"),
+        category: formData.get("category"),
+        supplierId: formData.get("supplierId"),
+      },
+    });
+
+    revalidatePath("/materials");
+    return { success: true, material };
+  } catch (error) {
+    return { success: false, error: "Failed to create material" };
+  }
+}
+
+export async function updateMaterial(id, formData) {
+  try {
+    const material = await db.materials.update({
+      where: { id },
+      data: {
+        code: formData.get("code"),
+        name: formData.get("name"),
+        description: formData.get("description"),
+        unit: formData.get("unit"),
+        category: formData.get("category"),
+        supplierId: formData.get("supplierId"),
+      },
+    });
+
+    revalidatePath("/materials");
+    return { success: true, material };
+  } catch (error) {
+    return { success: false, error: "Failed to update material" };
+  }
+}
+
+export async function deleteMaterial(id) {
+  try {
+    await db.materials.delete({
+      where: { id },
+    });
+
+    revalidatePath("/materials");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to delete material" };
+  }
+}
+```
+
+## Error Handling and Validation
+
+Proper error handling and validation are crucial for production applications.
+
+### API Route Error Handling
+
+```javascript
+// app/api/materials/route.js
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { db } from "@/lib/database";
+
+const materialSchema = z.object({
+  code: z.string().min(1, "Code is required"),
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+  unit: z.string().min(1, "Unit is required"),
+  category: z.string().min(1, "Category is required"),
+  supplierId: z.string().min(1, "Supplier is required"),
+});
+
+export async function POST(request) {
+  try {
+    const body = await request.json();
+
+    // Validate input
+    const validationResult = materialSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: validationResult.error.errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check for duplicate code
+    const existingMaterial = await db.materials.findUnique({
+      where: { code: body.code },
+    });
+
+    if (existingMaterial) {
+      return NextResponse.json(
+        { error: "Material code already exists" },
+        { status: 409 }
+      );
+    }
+
+    const material = await db.materials.create({
+      data: validationResult.data,
+    });
+
+    return NextResponse.json(material, { status: 201 });
+  } catch (error) {
+    console.error("Material creation error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### Server Action Error Handling
+
+```javascript
+// app/actions/material-actions.js
+"use server";
+
+import { db } from "@/lib/database";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+const materialSchema = z.object({
+  code: z.string().min(1, "Code is required"),
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+  unit: z.string().min(1, "Unit is required"),
+  category: z.string().min(1, "Category is required"),
+  supplierId: z.string().min(1, "Supplier is required"),
+});
+
+export async function createMaterial(formData) {
+  try {
+    const data = {
+      code: formData.get("code"),
+      name: formData.get("name"),
+      description: formData.get("description"),
+      unit: formData.get("unit"),
+      category: formData.get("category"),
+      supplierId: formData.get("supplierId"),
+    };
+
+    // Validate input
+    const validationResult = materialSchema.safeParse(data);
+
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: "Validation failed",
+        details: validationResult.error.errors,
+      };
+    }
+
+    // Check for duplicate code
+    const existingMaterial = await db.materials.findUnique({
+      where: { code: data.code },
+    });
+
+    if (existingMaterial) {
+      return {
+        success: false,
+        error: "Material code already exists",
+      };
+    }
+
+    const material = await db.materials.create({
+      data: validationResult.data,
+    });
+
+    revalidatePath("/materials");
+    return { success: true, material };
+  } catch (error) {
+    console.error("Material creation error:", error);
+    return {
+      success: false,
+      error: "Failed to create material",
+    };
+  }
+}
+```
+
+## Hands-On Exercise
+
+### Exercise 1: Create API Routes for VSL Service Center
+
+1. **Create a materials API route:**
+
+   ```javascript
+   // app/api/materials/route.js
+   import { NextRequest, NextResponse } from "next/server";
+
+   export async function GET() {
+     // Implement GET logic for materials
+   }
+
+   export async function POST(request) {
+     // Implement POST logic for creating materials
+   }
+   ```
+
+2. **Create a dynamic route for individual materials:**
+
+   ```javascript
+   // app/api/materials/[id]/route.js
+   export async function GET(request, { params }) {
+     // Implement GET logic for single material
+   }
+
+   export async function PUT(request, { params }) {
+     // Implement PUT logic for updating material
+   }
+
+   export async function DELETE(request, { params }) {
+     // Implement DELETE logic for deleting material
+   }
+   ```
+
+### Exercise 2: Implement Server Actions
+
+1. **Create server actions for material management:**
+
+   ```javascript
+   // app/actions/material-actions.js
+   "use server";
+
+   export async function createMaterial(formData) {
+     // Implement material creation logic
+   }
+
+   export async function updateMaterial(id, formData) {
+     // Implement material update logic
+   }
+
+   export async function deleteMaterial(id) {
+     // Implement material deletion logic
+   }
+   ```
+
+2. **Create a form component that uses server actions:**
+
+   ```javascript
+   // app/components/MaterialForm.js
+   import { createMaterial } from "@/app/actions/material-actions";
+
+   export default function MaterialForm() {
+     return <form action={createMaterial}>{/* Form fields */}</form>;
+   }
+   ```
+
+## Self-Assessment Quiz
+
+Test your understanding of API routes and server actions:
+
+1. When should you use API routes instead of server actions?
+
+   - For form submissions
+   - For external API integrations
+   - For database mutations
+   - For simple server logic
+
+2. What is the main benefit of server actions?
+
+   - They provide better performance
+   - They offer type safety and simplified data flow
+   - They support external accessibility
+   - They provide better caching
+
+3. How do you create a dynamic API route in Next.js?
+
+   - Use [id] in the folder name
+   - Use {id} in the folder name
+   - Use :id in the folder name
+   - Use $id in the folder name
+
+4. What is the purpose of revalidatePath in server actions?
+
+   - To validate form data
+   - To revalidate cached data
+   - To refresh the page
+   - To update the database
+
+5. How do you handle errors in API routes?
+
+   - Use try-catch blocks and return appropriate status codes
+   - Use error boundaries
+   - Use middleware
+   - Use custom hooks
+
+## Reflection Questions
+
+Take a moment to reflect on what you've learned:
+
+1. **How would you decide between using API routes vs server actions for a specific feature?**
+
+   - Consider the complexity of the operation
+   - Think about external accessibility requirements
+   - Reflect on type safety and developer experience
+
+2. **What are the key considerations for error handling in production applications?**
+
+   - Think about user experience
+   - Consider security implications
+   - Reflect on debugging and monitoring needs
+
+3. **How would you implement authentication and authorization in your API routes?**
+
+   - Consider JWT token validation
+   - Think about role-based access control
+   - Reflect on security best practices
+
+## Next Steps
+
+You've now learned how to create API routes and server actions! In the next section, you'll learn about:
+
+- **Database integration** and connection patterns
+- **Authentication implementation** with JWT tokens
+- **File handling** and upload processing
+
+<Info>
+  **Key Takeaway**: API routes and server actions provide powerful ways to
+  handle server-side logic in Next.js applications, with each approach optimized
+  for different use cases and scenarios.
+</Info>
+

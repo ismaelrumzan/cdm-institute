@@ -1,0 +1,196 @@
+---
+title: "Server and Client Components Basics"
+description: "Essential concepts for understanding server and client components in Next.js App Router for Module 1."
+---
+
+## Overview
+
+Next.js App Router introduces a new component model that distinguishes between server and client components. This distinction is crucial for optimizing performance, reducing bundle size, and improving user experience.
+
+## Server Components (Default)
+
+Server components run on the server and are rendered before being sent to the browser. They have access to server-side resources and don't include JavaScript in the client bundle.
+
+### Key Characteristics
+
+<Columns cols={2}>
+  <Card title="Server-Side Rendering" icon="server">
+    <ul className="list-disc list-inside">
+      <li>Rendered on the server</li>
+      <li>HTML sent to browser</li>
+      <li>No JavaScript in client bundle</li>
+      <li>Direct database access</li>
+    </ul>
+  </Card>
+  <Card title="Performance Benefits" icon="zap">
+    <ul className="list-disc list-inside">
+      <li>Reduced bundle size</li>
+      <li>Faster initial page load</li>
+      <li>Better SEO</li>
+      <li>Enhanced security</li>
+    </ul>
+  </Card>
+</Columns>
+
+### When to Use Server Components
+
+- **Data Fetching**: Fetch data from databases, APIs, or file systems
+- **Static Content**: Display content that doesn't change frequently
+- **Large Dependencies**: Use libraries that are large or server-only
+- **Sensitive Operations**: Handle operations that shouldn't be exposed to the client
+
+### Example: Server Component
+
+```typescript
+// app/dashboard/page.tsx (Server Component)
+import { db } from "@/lib/database";
+
+export default async function Dashboard() {
+  // Direct database access on the server
+  const stats = await db.getDashboardStats();
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <div className="stats-grid">
+        {stats.map((stat) => (
+          <div key={stat.id} className="stat-card">
+            <h3>{stat.title}</h3>
+            <p>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## Client Components
+
+Client components run in the browser and provide interactivity. They include JavaScript in the client bundle and can use browser APIs and React hooks.
+
+### Key Characteristics
+
+<Columns cols={2}>
+  <Card title="Client-Side Rendering" icon="monitor">
+    <ul className="list-disc list-inside">
+      <li>Rendered in the browser</li>
+      <li>Includes JavaScript bundle</li>
+      <li>Hydration required</li>
+      <li>Interactive features</li>
+    </ul>
+  </Card>
+  <Card title="Use Cases" icon="mouse-pointer">
+    <ul className="list-disc list-inside">
+      <li>Event handlers</li>
+      <li>State management</li>
+      <li>Browser APIs</li>
+      <li>Real-time updates</li>
+    </ul>
+  </Card>
+</Columns>
+
+### When to Use Client Components
+
+- **Interactivity**: Components that need event handlers (onClick, onChange)
+- **Browser APIs**: Access to localStorage, geolocation, camera, etc.
+- **State Management**: Components using useState, useEffect, or other hooks
+- **Third-Party Libraries**: Libraries that require browser APIs
+
+### Example: Client Component
+
+```typescript
+"use client";
+
+import { useState, useEffect } from "react";
+
+export default function InteractiveCounter() {
+  const [count, setCount] = useState(0);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // Access browser APIs
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  const handleIncrement = () => {
+    setCount(count + 1);
+  };
+
+  return (
+    <div>
+      <h2>Interactive Counter</h2>
+      <p>Count: {count}</p>
+      <button onClick={handleIncrement}>Increment</button>
+      {user && <p>Welcome, {user.name}!</p>}
+    </div>
+  );
+}
+```
+
+## The 'use client' Directive
+
+The `'use client'` directive tells Next.js that a component should run on the client side.
+
+### Important Rules
+
+- **Must be at the top**: The directive must be the very first line in the file
+- **No code before it**: Nothing can come before the directive
+- **File-level scope**: Applies to the entire file and all its exports
+
+```typescript
+"use client"; // Must be first line
+
+import { useState } from "react";
+
+export default function ClientComponent() {
+  const [state, setState] = useState("");
+  return <div>Interactive content</div>;
+}
+```
+
+## Basic Component Composition
+
+### Server Component with Client Children
+
+```typescript
+// Server Component (app/dashboard/page.tsx)
+import { db } from "@/lib/database";
+import InteractiveChart from "@/components/InteractiveChart"; // Client component
+
+export default async function Dashboard() {
+  const data = await db.getChartData();
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      {/* Server-rendered content */}
+      <div className="stats">
+        <p>Total Users: {data.totalUsers}</p>
+        <p>Active Sessions: {data.activeSessions}</p>
+      </div>
+
+      {/* Client component for interactivity */}
+      <InteractiveChart data={data} />
+    </div>
+  );
+}
+```
+
+## Best Practices for Module 1
+
+### Component Design
+
+1. **Start with Server Components**: Default to server components unless client features are needed
+2. **Minimize Client Boundaries**: Keep client components small and focused
+3. **Use Composition**: Compose server and client components effectively
+4. **Add 'use client' Only When Necessary**: Only use the directive when you need interactivity
+
+<Info>
+  **Key Takeaway**: The key to optimal Next.js performance is using server
+  components by default and only adding client components where interactivity is
+  required. This approach reduces bundle size and improves user experience.
+</Info>

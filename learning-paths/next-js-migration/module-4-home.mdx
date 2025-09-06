@@ -1,0 +1,291 @@
+---
+title: "Module 4: Production Deployment & Monitoring"
+description: "Deploy your migrated application to production with CI/CD, monitoring, and maintenance procedures for enterprise environments. Master Vercel deployment and production best practices."
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- Deploy Next.js applications to production on Vercel with optimal configuration
+- Set up CI/CD pipelines with GitHub Actions for automated deployment
+- Implement comprehensive monitoring, logging, and error tracking systems
+- Configure environment management and security best practices
+- Optimize production performance and handle scaling requirements
+- Create maintenance procedures and documentation for enterprise environments
+
+<Callout>**Time Estimate**: 2-3 weeks (15-20 hours total)</Callout>
+
+## Module Structure
+
+<Columns cols={3}>
+  <Card
+    title="4.1 Vercel Deployment & Configuration"
+    icon="cloud"
+    href="/learning-paths/next-js-migration/module-4-1">
+    **Duration**: 4-5 hours
+    <br />
+    Deploy your Next.js application to Vercel and configure production settings.
+  </Card>
+  <Card
+    title="4.2 CI/CD Pipeline Setup"
+    icon="git-branch"
+    href="/learning-paths/next-js-migration/module-4-2">
+    **Duration**: 3-4 hours
+    <br />
+    Set up automated deployment pipelines with GitHub Actions and Vercel
+    integration.
+  </Card>
+  <Card
+    title="4.3 Environment & Security"
+    icon="shield"
+    href="/learning-paths/next-js-migration/module-4-3">
+    **Duration**: 3-4 hours
+    <br />
+    Configure environment variables, security settings, and production secrets
+    management.
+  </Card>
+</Columns>
+<Columns cols={3}>
+  <Card
+    title="4.4 Monitoring & Analytics"
+    icon="activity"
+    href="/learning-paths/next-js-migration/module-4-4">
+    **Duration**: 3-4 hours
+    <br />
+    Implement comprehensive monitoring, logging, and performance analytics.
+  </Card>
+  <Card
+    title="4.5 Performance & Scaling"
+    icon="trending-up"
+    href="/learning-paths/next-js-migration/module-4-5">
+    **Duration**: 2-3 hours
+    <br />
+    Optimize production performance and implement scaling strategies.
+  </Card>
+  <Card
+    title="4.6 Maintenance & Documentation"
+    icon="book"
+    href="/learning-paths/next-js-migration/module-4-6">
+    **Duration**: 2-3 hours
+    <br />
+    Create maintenance procedures, documentation, and troubleshooting guides.
+  </Card>
+</Columns>
+
+## Prerequisites
+
+Before starting this module, ensure you have:
+
+- Completed Module 3: Advanced Features & Complex Migrations
+- A fully migrated and tested Next.js application
+- GitHub repository with your project code
+- Understanding of deployment concepts and CI/CD principles
+- Basic knowledge of monitoring and logging systems
+
+<Tip>
+  **Pro Tip**: Test your deployment process thoroughly in staging environments
+  before deploying to production. Always have rollback procedures ready.
+</Tip>
+
+## Real-World Context
+
+In this module, you'll deploy the complete VSL Service Center application to production, including:
+
+<Columns cols={2}>
+  <Card title="Production Environment" icon="server">
+    Vercel deployment with custom domain, SSL certificates, and CDN optimization
+  </Card>
+  <Card title="Database Integration" icon="database">
+    Production database connections with connection pooling and failover
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Authentication System" icon="shield">
+    Production-ready JWT authentication with secure token management
+  </Card>
+  <Card title="File Storage" icon="upload">
+    Production file storage with CDN integration and backup strategies
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Monitoring Systems" icon="activity">
+    Comprehensive monitoring with alerts, logging, and performance tracking
+  </Card>
+  <Card title="Backup & Recovery" icon="save">
+    Automated backup systems and disaster recovery procedures
+  </Card>
+</Columns>
+
+## Production Deployment Architecture
+
+<Columns cols={2}>
+  <Card title="Frontend Deployment" icon="globe">
+    - Vercel hosting with global CDN - Automatic SSL certificates - Edge
+    functions and serverless architecture - Performance optimization and caching
+  </Card>
+  <Card title="Backend Services" icon="server">
+    - API routes and server actions - Database connections and pooling -
+    External service integrations - Error handling and logging
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="CI/CD Pipeline" icon="git-branch">
+    - GitHub Actions automation - Automated testing and validation - Staging and
+    production deployments - Rollback and recovery procedures
+  </Card>
+  <Card title="Monitoring & Analytics" icon="chart">
+    - Application performance monitoring - Error tracking and alerting - User
+    analytics and behavior tracking - System health and uptime monitoring
+  </Card>
+</Columns>
+
+## Key Technologies & Services
+
+<Columns cols={2}>
+  <Card title="Vercel Platform" icon="cloud">
+    Next.js-optimized hosting with global CDN and edge functions
+  </Card>
+  <Card title="GitHub Actions" icon="git-branch">
+    Automated CI/CD pipelines with testing and deployment
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Monitoring Tools" icon="activity">
+    Vercel Analytics, Sentry, and custom monitoring solutions
+  </Card>
+  <Card title="Security Services" icon="shield">
+    SSL certificates, security headers, and vulnerability scanning
+  </Card>
+</Columns>
+
+## Module Outcomes
+
+By the end of this module, you will have:
+
+- ✅ Successfully deployed your application to production on Vercel
+- ✅ Set up automated CI/CD pipelines with GitHub Actions
+- ✅ Implemented comprehensive monitoring and error tracking
+- ✅ Configured production security and environment management
+- ✅ Optimized performance and implemented scaling strategies
+- ✅ Created maintenance procedures and documentation
+
+## Assessment Criteria
+
+Your progress will be evaluated based on:
+
+<Columns cols={2}>
+  <Card title="Deployment & Infrastructure" icon="cloud">
+    - Successful production deployment - CI/CD pipeline functionality -
+    Environment configuration - Security implementation
+  </Card>
+  <Card title="Monitoring & Maintenance" icon="activity">
+    - Monitoring system setup - Performance optimization - Documentation quality
+    - Troubleshooting procedures
+  </Card>
+</Columns>
+
+## Production Checklist
+
+<AccordionGroup>
+<Accordion title="Pre-Deployment Checklist">
+- [ ] All tests passing in staging environment
+- [ ] Environment variables configured correctly
+- [ ] Database connections tested and optimized
+- [ ] Security headers and SSL certificates configured
+- [ ] Performance benchmarks met
+- [ ] Error handling and logging implemented
+</Accordion>
+
+<Accordion title="Post-Deployment Checklist">
+  - [ ] Application accessible and functional - [ ] Monitoring and alerting
+  systems active - [ ] Performance metrics within acceptable ranges - [ ] Backup
+  and recovery procedures tested - [ ] Documentation updated and accessible - [
+  ] Team trained on maintenance procedures
+</Accordion>
+
+<Accordion title="Ongoing Maintenance Checklist">
+- [ ] Regular security updates and patches
+- [ ] Performance monitoring and optimization
+- [ ] Database maintenance and optimization
+- [ ] Backup verification and testing
+- [ ] User feedback collection and analysis
+- [ ] Documentation updates and improvements
+</Accordion>
+</AccordionGroup>
+
+## Common Production Challenges & Solutions
+
+<AccordionGroup>
+<Accordion title="Performance Issues">
+**Challenge**: Slow loading times and poor user experience in production
+**Solution**: Implement CDN caching, optimize images, and use performance monitoring tools
+</Accordion>
+
+<Accordion title="Database Connection Limits">
+  **Challenge**: Database connection pool exhaustion under load **Solution**:
+  Implement connection pooling, optimize queries, and use read replicas
+</Accordion>
+
+<Accordion title="Security Vulnerabilities">
+  **Challenge**: Exposed sensitive data and security vulnerabilities
+  **Solution**: Implement security headers, use environment variables, and
+  regular security audits
+</Accordion>
+
+<Accordion title="Monitoring & Debugging">
+**Challenge**: Difficult to debug issues in production environment
+**Solution**: Implement comprehensive logging, error tracking, and monitoring dashboards
+</Accordion>
+</AccordionGroup>
+
+## Enterprise Considerations
+
+<Columns cols={2}>
+  <Card title="Scalability" icon="trending-up">
+    - Horizontal scaling strategies - Database optimization and sharding - CDN
+    and edge computing - Load balancing and failover
+  </Card>
+  <Card title="Security" icon="shield">
+    - Data encryption and protection - Access control and authentication -
+    Compliance and audit trails - Vulnerability management
+  </Card>
+</Columns>
+<Columns cols={2}>
+  <Card title="Reliability" icon="check-circle">
+    - High availability and uptime - Disaster recovery procedures - Backup and
+    restore strategies - Service level agreements
+  </Card>
+  <Card title="Maintenance" icon="wrench">
+    - Automated updates and patches - Performance monitoring and optimization -
+    Capacity planning and resource management - Documentation and knowledge
+    transfer
+  </Card>
+</Columns>
+
+## Final Project Deliverables
+
+By the end of this module, you will have delivered:
+
+1. **Production-Ready Application**: Fully deployed and functional VSL Service Center
+2. **CI/CD Pipeline**: Automated deployment and testing workflows
+3. **Monitoring Dashboard**: Comprehensive monitoring and alerting system
+4. **Documentation**: Complete deployment and maintenance documentation
+5. **Performance Report**: Optimization results and performance benchmarks
+6. **Security Assessment**: Security implementation and compliance documentation
+
+## Next Steps
+
+After completing this module, you will have successfully:
+
+- ✅ Migrated a complex enterprise application to Next.js
+- ✅ Deployed it to production with modern DevOps practices
+- ✅ Implemented monitoring and maintenance procedures
+- ✅ Created a scalable, secure, and performant application
+
+<Info>
+  **Key Takeaway**: This module completes your journey from legacy React
+  application to modern, production-ready Next.js application with
+  enterprise-grade deployment and monitoring capabilities.
+</Info>
+

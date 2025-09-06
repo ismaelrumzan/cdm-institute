@@ -1,0 +1,666 @@
+---
+title: "1.5 Layouts & Templates"
+description: "Implement layouts and templates to create consistent UI patterns across your application. Learn to create reusable layout hierarchies for the VSL Service Center."
+---
+
+import LayoutsBasics from "/snippets/nextjs-architecture/layouts-basics.mdx";
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Implement consistent layouts across your Next.js application
+- Create reusable layout patterns for different sections
+- Set up proper layout hierarchies and nesting
+- Optimize layout performance and user experience
+- Apply layout patterns to the VSL Service Center structure
+
+<Info>**Duration**: 2-3 hours</Info>
+
+---
+
+## Part 1: Strategic Understanding
+
+<Accordion title="Review if needed: Layouts and Templates">
+  <LayoutsBasics />
+</Accordion>
+
+### Layout vs Template
+
+<Columns cols={2}>
+  <Card title="Layout" icon="layout-dashboard">
+    - Shared UI that persists across route changes - Maintains state during
+    navigation - Perfect for navigation, headers, footers - Renders once and
+    stays mounted
+  </Card>
+  <Card title="Template" icon="layout-template">
+    - Creates new instance for each route - Re-renders on every navigation -
+    Perfect for animations, enter/exit effects - Useful for page transitions
+  </Card>
+</Columns>
+
+### Layout Hierarchy Concept
+
+Next.js layouts create a hierarchy where child layouts wrap their parent layouts. This allows you to:
+
+- **Share common UI elements** across multiple pages
+- **Maintain state** during navigation
+- **Create section-specific layouts** for different parts of your app
+- **Optimize performance** by reducing re-renders
+
+### VSL Service Center Layout Strategy
+
+For the VSL Service Center, we'll create a layout hierarchy that includes:
+
+- **Root Layout**: Global navigation, footer, and authentication state
+- **Auth Layout**: Clean, centered design for login/register pages
+- **Master Layout**: Navigation and breadcrumbs for master data sections
+- **Transaction Layout**: Specialized layout for transaction workflows
+
+## Part 2: Hands-On Implementation
+
+### Exercise 1: Create Root Layout
+
+1. **Create the root layout with proper structure:**
+
+   ```typescript app/layout.tsx
+   import type { Metadata } from "next";
+   import { Inter } from "next/font/google";
+   import "./globals.css";
+   import RootLayoutClient from "@/components/layout/RootLayoutClient";
+
+   const inter = Inter({ subsets: ["latin"] });
+
+   export const metadata: Metadata = {
+     title: "VSL Service Center",
+     description: "Warehouse Management System",
+     keywords: ["warehouse", "management", "inventory", "logistics"],
+   };
+
+   export default function RootLayout({
+     children,
+   }: {
+     children: React.ReactNode;
+   }) {
+     return (
+       <html lang="en" className={inter.className}>
+         <body className="min-h-screen bg-gray-50">
+           <RootLayoutClient>{children}</RootLayoutClient>
+         </body>
+       </html>
+     );
+   }
+   ```
+
+2. **Create the root layout client component:**
+
+   ```typescript components/layout/RootLayoutClient.tsx
+   "use client";
+
+   import { useState, useEffect } from "react";
+   import { usePathname } from "next/navigation";
+   import Navbar from "./Navbar";
+   import Sidebar from "./Sidebar";
+   import Footer from "./Footer";
+
+   export default function RootLayoutClient({
+     children,
+   }: {
+     children: React.ReactNode;
+   }) {
+     const [sidebarOpen, setSidebarOpen] = useState(false);
+     const [isAuthenticated, setIsAuthenticated] = useState(false);
+     const pathname = usePathname();
+
+     useEffect(() => {
+       const token = localStorage.getItem("token");
+       setIsAuthenticated(!!token);
+     }, []);
+
+     // Don't show navbar/sidebar on auth pages
+     const isAuthPage =
+       pathname.startsWith("/login") || pathname.startsWith("/register");
+
+     return (
+       <div className="min-h-screen flex flex-col">
+         {!isAuthPage && (
+           <>
+             <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+             <div className="flex flex-1">
+               <Sidebar
+                 isOpen={sidebarOpen}
+                 onClose={() => setSidebarOpen(false)}
+               />
+               <main className="flex-1 overflow-x-hidden">{children}</main>
+             </div>
+           </>
+         )}
+
+         {isAuthPage && <main className="flex-1">{children}</main>}
+
+         {!isAuthPage && <Footer />}
+       </div>
+     );
+   }
+   ```
+
+### Exercise 2: Create Authentication Layout
+
+1. **Create the auth layout for login/register pages:**
+
+   ```typescript app/(auth)/layout.tsx
+   import Image from "next/image";
+   import logo from "@/public/images/TSSCL_Logo.png";
+
+   export default function AuthLayout({
+     children,
+   }: {
+     children: React.ReactNode;
+   }) {
+     return (
+       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+         <div className="max-w-md w-full space-y-8">
+           <div className="text-center">
+             <Image
+               src={logo}
+               alt="VSL Service Center"
+               width={80}
+               height={80}
+               className="mx-auto"
+             />
+             <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+               VSL Service Center
+             </h2>
+             <p className="mt-2 text-sm text-gray-600">
+               Warehouse Management System
+             </p>
+           </div>
+
+           <div className="bg-white py-8 px-6 shadow rounded-lg">
+             {children}
+           </div>
+         </div>
+       </div>
+     );
+   }
+   ```
+
+### Exercise 3: Create Master Data Layout
+
+1. **Create the master data layout with navigation:**
+
+```typescript app/master/layout.tsx
+import Link from "next/link";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Master Data - VSL Service Center",
+  description:
+    "Manage warehouse master data including customers, suppliers, and materials",
+};
+
+export default function MasterLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const masterMenuItems = [
+    { name: "Customers", href: "/master/customers", icon: "Users" },
+    { name: "Suppliers", href: "/master/suppliers", icon: "Building" },
+    { name: "Materials", href: "/master/materials", icon: "Package" },
+    { name: "Locations", href: "/master/locations", icon: "MapPin" },
+    { name: "Operators", href: "/master/operators", icon: "User" },
+    { name: "Work Centers", href: "/master/work-centers", icon: "Factory" },
+  ];
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">
+          Master Data Management
+        </h1>
+        <p className="text-gray-600 mt-2">
+          Manage your warehouse master data and configuration
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {masterMenuItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 hover:border-blue-300">
+            <div className="flex items-center">
+              <span className="text-2xl mr-3">{item.icon}</span>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {item.name}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Manage {item.name.toLowerCase()}
+                </p>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md">{children}</div>
+    </div>
+  );
+}
+```
+
+### Transaction Layout
+
+**Transaction Layout** (`app/transactions/layout.tsx`):
+
+```typescript app/transactions/layout.tsx
+import Link from "next/link";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Transactions - VSL Service Center",
+  description:
+    "Manage warehouse transactions including inward and outward operations",
+};
+
+export default function TransactionLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const transactionMenuItems = [
+    { name: "Material Inward", href: "/transactions/inward", icon: "📥" },
+    { name: "Material Outward", href: "/transactions/outward", icon: "📤" },
+    { name: "Packing", href: "/transactions/packing", icon: "📦" },
+    { name: "Loading Slip", href: "/transactions/loading-slip", icon: "🚛" },
+    {
+      name: "Delivery Challan",
+      href: "/transactions/delivery-challan",
+      icon: "📋",
+    },
+    { name: "Production Entry", href: "/transactions/production", icon: "⚙️" },
+  ];
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">
+          Transaction Management
+        </h1>
+        <p className="text-gray-600 mt-2">
+          Process warehouse transactions and operations
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {transactionMenuItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 hover:border-green-300">
+            <div className="flex items-center">
+              <span className="text-2xl mr-3">{item.icon}</span>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {item.name}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Process {item.name.toLowerCase()}
+                </p>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md">{children}</div>
+    </div>
+  );
+}
+```
+
+## Template Implementation
+
+### Page Transition Template
+
+**Template** (`app/template.tsx`):
+
+```typescript app/template.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+
+export default function Template({ children }: { children: React.ReactNode }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, [pathname]);
+
+  return (
+    <div
+      className={`transition-opacity duration-300 ${
+        isLoading ? "opacity-0" : "opacity-100"
+      }`}>
+      {children}
+    </div>
+  );
+}
+```
+
+### Loading Templates
+
+**Loading Template** (`app/loading.tsx`):
+
+```typescript app/loading.tsx
+export default function Loading() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+    </div>
+  );
+}
+```
+
+**Master Loading Template** (`app/master/loading.tsx`):
+
+```typescript app/master/loading.tsx
+export default function MasterLoading() {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <div className="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/2 mt-2 animate-pulse"></div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-gray-200 rounded mr-3 animate-pulse"></div>
+              <div>
+                <div className="h-4 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
+                <div className="h-3 bg-gray-200 rounded w-32 animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-4 bg-gray-200 rounded animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### Exercise 4: Create Sidebar Component
+
+1. **Create a responsive sidebar component:**
+
+   ```typescript components/layout/Sidebar.tsx
+   "use client";
+
+   import { useState } from "react";
+   import Link from "next/link";
+   import { usePathname } from "next/navigation";
+
+   interface SidebarProps {
+     isOpen: boolean;
+     onClose: () => void;
+   }
+
+   export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+     const pathname = usePathname();
+
+     const menuItems = [
+       { name: "Dashboard", href: "/dashboard", icon: "📊" },
+       { name: "Master Data", href: "/master", icon: "📋" },
+       { name: "Transactions", href: "/transactions", icon: "🔄" },
+       { name: "Reports", href: "/reports", icon: "📈" },
+       { name: "Visitor Management", href: "/visitor", icon: "👥" },
+       { name: "YMS", href: "/yms", icon: "🏭" },
+     ];
+
+     return (
+       <>
+         {/* Mobile overlay */}
+         {isOpen && (
+           <div
+             className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+             onClick={onClose}
+           />
+         )}
+
+         {/* Sidebar */}
+         <div
+           className={`
+           fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50
+           ${isOpen ? "translate-x-0" : "-translate-x-full"}
+           lg:translate-x-0 lg:static lg:shadow-none
+         `}>
+           <div className="p-6">
+             <h2 className="text-xl font-bold text-gray-800 mb-6">
+               Navigation
+             </h2>
+
+             <nav className="space-y-2">
+               {menuItems.map((item) => (
+                 <Link
+                   key={item.href}
+                   href={item.href}
+                   className={`
+                     flex items-center px-4 py-3 rounded-lg transition-colors
+                     ${
+                       pathname === item.href
+                         ? "bg-blue-100 text-blue-700"
+                         : "text-gray-700 hover:bg-gray-100"
+                     }
+                   `}
+                   onClick={onClose}>
+                   <span className="mr-3">{item.icon}</span>
+                   {item.name}
+                 </Link>
+               ))}
+             </nav>
+           </div>
+         </div>
+       </>
+     );
+   }
+   ```
+
+### Exercise 5: Test Layout Hierarchy
+
+1. **Create a dashboard-specific layout:**
+
+   ```typescript app/dashboard/layout.tsx
+   import { Metadata } from "next";
+
+   export const metadata: Metadata = {
+     title: "Dashboard - VSL Service Center",
+     description:
+       "Warehouse management dashboard with key metrics and insights",
+   };
+
+   export default function DashboardLayout({
+     children,
+   }: {
+     children: React.ReactNode;
+   }) {
+     return (
+       <div className="container mx-auto px-4 py-8">
+         <div className="mb-8">
+           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+           <p className="text-gray-600 mt-2">
+             Welcome to your warehouse management dashboard
+           </p>
+         </div>
+
+         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+           <div className="lg:col-span-3">{children}</div>
+
+           <div className="lg:col-span-1">
+             <div className="bg-white p-6 rounded-lg shadow-md">
+               <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+               <div className="space-y-3">
+                 <button className="w-full text-left p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                   📥 New Inward
+                 </button>
+                 <button className="w-full text-left p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                   📤 New Outward
+                 </button>
+                 <button className="w-full text-left p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors">
+                   📋 Generate Report
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+     );
+   }
+   ```
+
+## Part 3: Reflection & Assessment
+
+1. **Create test pages to verify layout hierarchy:**
+
+   ```typescript app/dashboard/page.tsx
+   export default function DashboardPage() {
+     return (
+       <div className="bg-white p-6 rounded-lg shadow-md">
+         <h2 className="text-2xl font-bold mb-4">Dashboard Content</h2>
+         <p>
+           This page is wrapped by both the root layout and dashboard layout.
+         </p>
+       </div>
+     );
+   }
+   ```
+
+   ```typescript app/master/customers/page.tsx
+   export default function CustomersPage() {
+     return (
+       <div className="p-6">
+         <h2 className="text-2xl font-bold mb-4">Customer Management</h2>
+         <p>This page is wrapped by root layout and master layout.</p>
+       </div>
+     );
+   }
+   ```
+
+### Layout Implementation Best Practices
+
+<Steps>
+  <Step title="Consistent Structure">
+    Maintain consistent layout structure across all pages
+  </Step>
+  <Step title="Responsive Design">
+    Ensure layouts work well on all device sizes
+  </Step>
+  <Step title="Component Organization">
+    Organize layout components logically
+  </Step>
+</Steps>
+
+### Assessment Criteria
+
+Your layout implementation will be evaluated based on:
+
+<Columns cols={2}>
+  <Card title="Layout Structure" icon="blueprint">
+    - Proper layout hierarchy implementation - Consistent UI patterns across
+    pages - Responsive design implementation - Clean and maintainable code
+    structure
+  </Card>
+  <Card title="User Experience" icon="user">
+    - Smooth navigation between pages - Proper loading states and transitions -
+    Intuitive layout organization - Accessibility compliance
+  </Card>
+</Columns>
+
+### Common Layout Challenges & Solutions
+
+<AccordionGroup>
+<Accordion title="Layout State Management">
+**Challenge**: Managing state across different layouts
+**Solution**: Use context providers or state management libraries
+</Accordion>
+
+<Accordion title="Responsive Layout Issues">
+  **Challenge**: Ensuring layouts work on all screen sizes **Solution**: Use
+  Tailwind CSS responsive utilities and test thoroughly
+</Accordion>
+
+<Accordion title="Layout Performance">
+  **Challenge**: Large layouts causing performance issues **Solution**: Split
+  layouts into smaller components and use dynamic imports
+</Accordion>
+
+<Accordion title="Layout Consistency">
+**Challenge**: Maintaining consistent styling across layouts
+**Solution**: Create a design system and reusable layout components
+</Accordion>
+</AccordionGroup>
+
+### Reflection Questions
+
+1. **How did implementing layouts change your understanding of Next.js architecture?**
+
+   - Consider the hierarchy and nesting concepts
+   - Think about state management across layouts
+   - Reflect on performance implications
+
+2. **What challenges did you face when creating responsive layouts?**
+
+   - Mobile vs desktop considerations
+   - Navigation and sidebar behavior
+   - Content organization and spacing
+
+3. **How would you optimize the layout performance for a larger application?**
+   - Component splitting strategies
+   - Lazy loading considerations
+   - State management optimization
+
+### Extension Activities
+
+1. **Layout Patterns:**
+
+   - Research nested layout patterns
+   - Study layout composition techniques
+   - Explore dynamic layout switching
+
+2. **Advanced Layout Features:**
+
+   - Learn about layout-level code splitting
+   - Study layout performance optimization
+   - Explore advanced layout patterns
+
+## Next Steps
+
+After completing this lesson, you'll be ready to move on to **Lesson 1.6: Module 1 Assessment**, where you'll:
+
+- Test your migrated components and layouts
+- Demonstrate understanding of Next.js App Router concepts
+- Complete hands-on exercises and assessments
+- Prepare for Module 2: Data Integration & API Modernization
+
+<Info>
+  **Key Takeaway**: Well-designed layouts create a consistent user experience
+  and provide a solid foundation for your application. Focus on creating
+  reusable, responsive layouts that enhance usability and performance.
+</Info>

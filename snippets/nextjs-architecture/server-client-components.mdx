@@ -1,0 +1,467 @@
+---
+title: "Server and Client Components"
+description: "Understanding the distinction between server and client components in Next.js App Router and when to use each."
+---
+
+## Overview
+
+Next.js App Router introduces a new component model that distinguishes between server and client components. This distinction is crucial for optimizing performance, reducing bundle size, and improving user experience.
+
+<AccordionGroup>
+<Accordion title="Server Components (Default)">
+
+Server components run on the server and are rendered before being sent to the browser. They have access to server-side resources and don't include JavaScript in the client bundle.
+
+### Characteristics
+
+<Columns cols={2}>
+  <Card title="Server-Side Rendering" icon="server">
+    <ul className="list-disc list-inside">
+      <li>Rendered on the server</li>
+      <li>HTML sent to browser</li>
+      <li>No JavaScript in client bundle</li>
+      <li>Direct database access</li>
+    </ul>
+  </Card>
+  <Card title="Performance Benefits" icon="zap">
+    <ul className="list-disc list-inside">
+      <li>Reduced bundle size</li>
+      <li>Faster initial page load</li>
+      <li>Better SEO</li>
+      <li>Enhanced security</li>
+    </ul>
+  </Card>
+</Columns>
+
+### When to Use Server Components
+
+<Steps>
+  <Step title="Data Fetching">
+    Fetch data from databases, APIs, or file systems
+  </Step>
+  <Step title="Static Content">
+    Display content that doesn't change frequently
+  </Step>
+  <Step title="Large Dependencies">
+    Use libraries that are large or server-only
+  </Step>
+  <Step title="Sensitive Operations">
+    Handle operations that shouldn't be exposed to the client
+  </Step>
+</Steps>
+
+### Example: Server Component
+
+```typescript
+// app/dashboard/page.tsx (Server Component)
+import { db } from "@/lib/database";
+
+export default async function Dashboard() {
+  // Direct database access on the server
+  const stats = await db.getDashboardStats();
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <div className="stats-grid">
+        {stats.map((stat) => (
+          <div key={stat.id} className="stat-card">
+            <h3>{stat.title}</h3>
+            <p>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+</Accordion>
+
+<Accordion title="Client Components">
+
+Client components run in the browser and provide interactivity. They include JavaScript in the client bundle and can use browser APIs and React hooks.
+
+### Characteristics
+
+<Columns cols={2}>
+  <Card title="Client-Side Rendering" icon="monitor">
+    <ul className="list-disc list-inside">
+      <li>Rendered in the browser</li>
+      <li>Includes JavaScript bundle</li>
+      <li>Hydration required</li>
+      <li>Interactive features</li>
+    </ul>
+  </Card>
+  <Card title="Use Cases" icon="mouse-pointer">
+    <ul className="list-disc list-inside">
+      <li>Event handlers</li>
+      <li>State management</li>
+      <li>Browser APIs</li>
+      <li>Real-time updates</li>
+    </ul>
+  </Card>
+</Columns>
+
+### When to Use Client Components
+
+<Steps>
+  <Step title="Interactivity">
+    Components that need event handlers (onClick, onChange)
+  </Step>
+  <Step title="Browser APIs">
+    Access to localStorage, geolocation, camera, etc.
+  </Step>
+  <Step title="State Management">
+    Components using useState, useEffect, or other hooks
+  </Step>
+  <Step title="Third-Party Libraries">Libraries that require browser APIs</Step>
+</Steps>
+
+### Example: Client Component
+
+```typescript
+"use client";
+
+import { useState, useEffect } from "react";
+
+export default function InteractiveCounter() {
+  const [count, setCount] = useState(0);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // Access browser APIs
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  const handleIncrement = () => {
+    setCount(count + 1);
+  };
+
+  return (
+    <div>
+      <h2>Interactive Counter</h2>
+      <p>Count: {count}</p>
+      <button onClick={handleIncrement}>Increment</button>
+      {user && <p>Welcome, {user.name}!</p>}
+    </div>
+  );
+}
+```
+
+</Accordion>
+
+<Accordion title="Component Composition Patterns">
+
+### Server Component with Client Children
+
+```typescript
+// Server Component (app/dashboard/page.tsx)
+import { db } from "@/lib/database";
+import InteractiveChart from "@/components/InteractiveChart"; // Client component
+
+export default async function Dashboard() {
+  const data = await db.getChartData();
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      {/* Server-rendered content */}
+      <div className="stats">
+        <p>Total Users: {data.totalUsers}</p>
+        <p>Active Sessions: {data.activeSessions}</p>
+      </div>
+
+      {/* Client component for interactivity */}
+      <InteractiveChart data={data} />
+    </div>
+  );
+}
+```
+
+### Client Component with Server Children
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import UserProfile from "@/components/UserProfile"; // Server component
+
+export default function UserDashboard() {
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+
+  return (
+    <div>
+      <div className="user-selector">
+        <button onClick={() => setSelectedUserId("user1")}>
+          Select User 1
+        </button>
+        <button onClick={() => setSelectedUserId("user2")}>
+          Select User 2
+        </button>
+      </div>
+
+      {/* Server component for user data */}
+      {selectedUserId && <UserProfile userId={selectedUserId} />}
+    </div>
+  );
+}
+```
+
+</Accordion>
+
+<Accordion title="Performance Optimization">
+
+### Bundle Size Optimization
+
+<Columns cols={2}>
+  <Card title="Use Server Components" icon="server">
+    <ul className="list-disc list-inside">
+      <li>Keep static content as server components</li>
+      <li>Reduce JavaScript bundle size</li>
+      <li>Improve initial page load performance</li>
+    </ul>
+  </Card>
+  <Card title="Minimize Client Components" icon="minimize">
+    <ul className="list-disc list-inside">
+      <li>Only use 'use client' when necessary</li>
+      <li>Split large client components</li>
+      <li>Use dynamic imports for heavy components</li>
+    </ul>
+  </Card>
+</Columns>
+
+### Data Fetching Optimization
+
+<Columns cols={2}>
+  <Card title="Server-Side Fetching" icon="database">
+    <ul className="list-disc list-inside">
+      <li>Fetch data in server components</li>
+      <li>Use database connections directly</li>
+      <li>Implement proper caching strategies</li>
+    </ul>
+  </Card>
+  <Card title="Client-Side Fetching" icon="monitor">
+    <ul className="list-disc list-inside">
+      <li>Use for real-time updates</li>
+      <li>Implement proper loading states</li>
+      <li>Handle errors gracefully</li>
+    </ul>
+  </Card>
+</Columns>
+
+</Accordion>
+
+<Accordion title="Common Patterns">
+
+### Form Handling
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function ContactForm() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        router.push("/thank-you");
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        value={formData.name}
+        onChange={(e) =>
+          setFormData((prev) => ({ ...prev, name: e.target.value }))
+        }
+        placeholder="Name"
+        required
+      />
+      <input
+        type="email"
+        value={formData.email}
+        onChange={(e) =>
+          setFormData((prev) => ({ ...prev, email: e.target.value }))
+        }
+        placeholder="Email"
+        required
+      />
+      <textarea
+        value={formData.message}
+        onChange={(e) =>
+          setFormData((prev) => ({ ...prev, message: e.target.value }))
+        }
+        placeholder="Message"
+        required
+      />
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Sending..." : "Send Message"}
+      </button>
+    </form>
+  );
+}
+```
+
+### Real-Time Updates
+
+```typescript
+"use client";
+
+import { useState, useEffect } from "react";
+
+export default function LiveStats() {
+  const [stats, setStats] = useState({
+    onlineUsers: 0,
+    totalRequests: 0,
+  });
+
+  useEffect(() => {
+    // WebSocket connection for real-time updates
+    const ws = new WebSocket("ws://localhost:8080");
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setStats(data);
+    };
+
+    return () => ws.close();
+  }, []);
+
+  return (
+    <div className="live-stats">
+      <h3>Live Statistics</h3>
+      <p>Online Users: {stats.onlineUsers}</p>
+      <p>Total Requests: {stats.totalRequests}</p>
+    </div>
+  );
+}
+```
+
+</Accordion>
+
+<Accordion title="Best Practices">
+
+### Component Design
+
+<Steps>
+  <Step title="Start with Server Components">
+    Default to server components unless client features are needed
+  </Step>
+  <Step title="Minimize Client Boundaries">
+    Keep client components small and focused
+  </Step>
+  <Step title="Use Composition">
+    Compose server and client components effectively
+  </Step>
+  <Step title="Optimize Data Flow">
+    Pass data from server to client components efficiently
+  </Step>
+</Steps>
+
+### Performance Considerations
+
+<Columns cols={2}>
+  <Card title="Bundle Analysis" icon="package">
+    <ul className="list-disc list-inside">
+      <li>Monitor bundle size regularly</li>
+      <li>Use dynamic imports for large components</li>
+      <li>Split client components appropriately</li>
+    </ul>
+  </Card>
+  <Card title="Hydration Optimization" icon="zap">
+    <ul className="list-disc list-inside">
+      <li>Minimize hydration mismatches</li>
+      <li>Use proper loading states</li>
+      <li>Optimize client component rendering</li>
+    </ul>
+  </Card>
+</Columns>
+
+</Accordion>
+
+<Accordion title="Common Pitfalls">
+
+<AccordionGroup>
+<Accordion title="Overusing Client Components">
+**Problem**: Adding 'use client' to components that don't need it
+**Solution**: Start with server components and only add 'use client' when necessary
+</Accordion>
+
+<Accordion title="Mixing Server and Client Logic">
+  **Problem**: Trying to use server-side APIs in client components **Solution**:
+  Use API routes or server actions for server-side operations
+</Accordion>
+
+<Accordion title="Hydration Mismatches">
+  **Problem**: Server and client rendering different content **Solution**:
+  Ensure consistent rendering between server and client
+</Accordion>
+
+<Accordion title="Bundle Size Issues">
+**Problem**: Large JavaScript bundles due to unnecessary client components
+**Solution**: Audit bundle size and optimize component architecture
+</Accordion>
+</AccordionGroup>
+
+</Accordion>
+
+</AccordionGroup>
+
+<AccordionGroup>
+<Accordion title="Migration Strategies">
+
+### From Create React App
+
+<Steps>
+  <Step title="Identify Client Components">
+    Find components that use hooks, event handlers, or browser APIs
+  </Step>
+  <Step title="Add 'use client' Directive">
+    Add the directive to components that need client-side features
+  </Step>
+  <Step title="Convert Server Components">
+    Remove 'use client' from components that can be server components
+  </Step>
+  <Step title="Optimize Data Fetching">
+    Move data fetching to server components where possible
+  </Step>
+</Steps>
+
+</Accordion>
+
+</AccordionGroup>
+
+<Info>
+  **Key Takeaway**: The key to optimal Next.js performance is using server
+  components by default and only adding client components where interactivity is
+  required. This approach reduces bundle size and improves user experience.
+</Info>

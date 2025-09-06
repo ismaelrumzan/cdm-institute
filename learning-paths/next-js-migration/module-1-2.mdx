@@ -1,0 +1,381 @@
+---
+title: "1.2 Project Setup & Migration Strategy"
+description: "Set up your Next.js project and create a comprehensive migration strategy for the VSL Service Center. Learn to analyze existing codebases and plan systematic migrations."
+---
+
+import LayoutsBasics from "/snippets/nextjs-architecture/layouts-basics.mdx";
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+
+- Set up a Next.js 14 project with proper configuration for enterprise applications
+- Analyze the VSL Service Center codebase structure and dependencies
+- Create a comprehensive migration strategy document
+- Configure development environment and tools for the migration project
+- Identify migration priorities and potential challenges
+
+<Info>**Duration**: 3-4 hours</Info>
+
+---
+
+<Accordion title="Review if needed: Layouts Basics">
+  <LayoutsBasics />
+</Accordion>
+
+## Part 1: Strategic Analysis & Planning
+
+### VSL Service Center Codebase Analysis
+
+Let's analyze the existing VSL Service Center structure to understand what we're working with:
+
+<Columns cols={2}>
+  <Card title="Current Structure" icon="folder">
+    - Create React App with React Router - Component-based architecture - CSS
+    modules for styling - Axios for API calls - Local storage for state
+    management
+  </Card>
+  <Card title="Key Components" icon="code">
+    - LandingPage: Main dashboard - Navbar: Navigation with dynamic menus -
+    Master components: CRUD operations - Transaction components: Business logic
+    - Report components: Data visualization
+  </Card>
+</Columns>
+
+### Component Categories Analysis
+
+<AccordionGroup>
+<Accordion title="UI Components (Easy Migration)">
+<ul>
+<li>**Components**: Card.jsx, Badge.jsx, Stat.jsx, Table.jsx</li>
+<li>**Migration Strategy**: Direct conversion to Next.js components</li>
+<li>**Priority**: High (foundation components)</li>
+<li>**Estimated Time**: 1-2 hours per component</li>
+</ul>
+</Accordion>
+
+<Accordion title="Layout Components (Medium Complexity)">
+  <ul>
+    <li>**Components**: Navbar.js, Footer.js, SideBar.js</li>
+    <li>**Migration Strategy**: Convert to Next.js layouts and navigation</li>
+    <li>**Priority**: High (core navigation)</li>
+    <li>**Estimated Time**: 3-4 hours per component</li>
+  </ul>
+</Accordion>
+
+<Accordion title="Business Logic Components (High Complexity)">
+  <ul>
+    <li>**Components**: MaterialInward.js, ProductionEntry.js, Dashboard.js</li>
+    <li>
+      **Migration Strategy**: Separate server/client logic, implement server
+      actions
+    </li>
+    <li>**Priority**: Medium (can be done after foundation)</li>
+    <li>**Estimated Time**: 4-6 hours per component</li>
+  </ul>
+</Accordion>
+
+<Accordion title="Third-Party Integration Components (Complex)">
+<ul>
+  <li>**Components**: BarcodeScanner.js, WebcamCapture.js, WhatsApp integration</li>
+  <li>**Migration Strategy**: Client components with proper hydration</li>
+  <li>**Priority**: Low (can be done last)</li>
+  <li>**Estimated Time**: 6-8 hours per component</li>
+</ul>
+</Accordion>
+</AccordionGroup>
+
+### Migration Strategy Development
+
+#### Phase 1: Foundation Setup (Week 1)
+
+<Steps>
+  <Step title="Project Infrastructure">
+    <ul>
+      <li>Set up Next.js project with proper configuration</li>
+      <li>Configure TypeScript and ESLint</li>
+      <li>Set up Tailwind CSS and component library</li>
+      <li>Create basic project structure</li>
+    </ul>
+  </Step>
+  <Step title="Core Components Migration">
+    <ul>
+      <li>Migrate UI components (Card, Badge, Table)</li>
+      <li>Create layout components (Navbar, Footer)</li>
+      <li>Set up routing structure</li>
+      <li>Implement basic authentication flow</li>
+    </ul>
+  </Step>
+  <Step title="Data Layer Setup">
+    <ul>
+      <li>Set up API routes structure</li>
+      <li>Configure database connections</li>
+      <li>Implement basic CRUD operations</li>
+      <li>Set up error handling</li>
+    </ul>
+  </Step>
+</Steps>
+
+#### Phase 2: Core Features (Week 2)
+
+<Steps>
+  <Step title="Master Data Management">
+    <ul>
+      <li>Migrate customer, supplier, material management</li>
+      <li>Implement server actions for CRUD operations</li>
+      <li>Add form validation and error handling</li>
+      <li>Test data persistence</li>
+    </ul>
+  </Step>
+  <Step title="Authentication & Authorization">
+    <ul>
+      <li>Implement JWT-based authentication</li>
+      <li>Set up role-based access control</li>
+      <li>Migrate user management features</li>
+      <li>Test security implementation</li>
+    </ul>
+  </Step>
+  <Step title="Basic Transactions">
+    <ul>
+      <li>Migrate simple transaction components</li>
+      <li>Implement data fetching patterns</li>
+      <li>Add loading states and error handling</li>
+      <li>Test business logic</li>
+    </ul>
+  </Step>
+</Steps>
+
+## Part 2: Hands-On Implementation
+
+### Exercise 1: Create Migration Strategy Document
+
+Create a comprehensive migration strategy document with the following sections:
+
+```markdown
+# VSL Service Center Migration Strategy
+
+## 1. Project Overview
+
+- Current technology stack analysis
+- Target technology stack
+- Migration objectives and success criteria
+
+## 2. Component Analysis
+
+- Component inventory and categorization
+- Migration complexity assessment
+- Dependencies and integration points
+
+## 3. Migration Phases
+
+- Phase 1: Foundation (Week 1)
+- Phase 2: Core Features (Week 2)
+- Phase 3: Advanced Features (Week 3+)
+
+## 4. Risk Assessment
+
+- Technical risks and mitigation strategies
+- Timeline risks and contingency plans
+- Resource requirements and availability
+
+## 5. Testing Strategy
+
+- Unit testing approach
+- Integration testing plan
+- User acceptance testing criteria
+```
+
+### Exercise 2: Set Up Next.js Project
+
+1. **Create the Next.js project:**
+
+   ```bash
+   npx create-next-app@latest vsl-service-center-nextjs \
+     --typescript \
+     --tailwind \
+     --eslint \
+     --app \
+     --src-dir \
+     --import-alias "@/*"
+
+   cd vsl-service-center-nextjs
+   ```
+
+2. **Install required dependencies:**
+
+   ```bash
+   # UI and styling dependencies
+   npm install @mui/material @emotion/react @emotion/styled
+   npm install @mui/icons-material @mui/x-data-grid
+   npm install ag-grid-community ag-grid-react
+
+   # Data handling and utilities
+   npm install axios moment
+   npm install file-saver jspdf jspdf-autotable
+   npm install html-to-image xlsx
+
+   # Barcode and scanning
+   npm install bwip-js react-barcode-reader react-barcode-scanner
+   npm install react-qr-barcode-scanner react-qr-code
+
+   # Charts and visualization
+   npm install chart.js react-chartjs-2
+
+   # Date handling
+   npm install react-datepicker
+
+   # Notifications and UI feedback
+   npm install react-toastify react-to-print
+
+   # Development dependencies
+   npm install -D @types/file-saver
+   ```
+
+3. **Set up project structure:**
+
+   ```bash
+   mkdir -p src/components/{ui,forms,charts,common}
+   mkdir -p src/lib src/types
+   mkdir -p src/app/{\(auth\),dashboard,master/{customers,suppliers,materials},transactions/{inward,outward},reports,visitor,yms}
+   ```
+
+### Exercise 3: Configure Project Structure
+
+Create the initial project structure that mirrors the VSL Service Center organization:
+
+```
+src/
+├── app/
+│   ├── (auth)/
+│   │   ├── login/
+│   │   │   └── page.tsx
+│   │   └── layout.tsx
+│   ├── dashboard/
+│   │   └── page.tsx
+│   ├── master/
+│   │   ├── customers/
+│   │   ├── suppliers/
+│   │   ├── materials/
+│   │   └── layout.tsx
+│   ├── transactions/
+│   │   ├── inward/
+│   │   ├── outward/
+│   │   └── layout.tsx
+│   ├── reports/
+│   │   └── page.tsx
+│   ├── visitor/
+│   │   └── page.tsx
+│   ├── yms/
+│   │   └── page.tsx
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/
+│   ├── ui/
+│   ├── forms/
+│   ├── charts/
+│   └── common/
+├── lib/
+│   ├── utils.ts
+│   ├── api.ts
+│   └── database.ts
+└── types/
+    └── index.ts
+```
+
+### Exercise 4: Analyze VSL Components
+
+1. **Examine the VSL Service Center components:**
+
+   - Review `src/Component/ui/Card.jsx`
+   - Analyze `src/Component/Navbar.js`
+   - Study `src/Component/LandingPage.js`
+
+2. **Create component analysis document:**
+
+   - List all components and their purposes
+   - Identify server vs client component candidates
+   - Note dependencies and integration points
+   - Estimate migration complexity
+
+3. **Plan the first 3 components to migrate:**
+   - Choose 3 components from the UI folder
+   - Document their current implementation
+   - Plan the Next.js migration approach
+   - Estimate time and effort required
+
+## Part 3: Reflection & Extension
+
+### Assessment Criteria
+
+Your migration strategy will be evaluated based on:
+
+<Columns cols={2}>
+  <Card title="Technical Analysis" icon="code">
+    - Accurate assessment of current architecture - Proper identification of
+    migration challenges - Realistic timeline and effort estimates - Appropriate
+    technology choices
+  </Card>
+  <Card title="Strategic Planning" icon="target">
+    - Clear migration phases and priorities - Risk identification and mitigation
+    - Resource planning and allocation - Success criteria and milestones
+  </Card>
+</Columns>
+
+### Common Challenges & Solutions
+
+<AccordionGroup>
+<Accordion title="Dependency Management">
+**Challenge**: Managing complex dependencies from the original React app
+**Solution**: Use package.json analysis tools and create a dependency migration plan
+</Accordion>
+
+<Accordion title="State Management">
+  **Challenge**: Converting local storage and component state to Next.js
+  patterns **Solution**: Plan server state vs client state separation early
+</Accordion>
+
+<Accordion title="Routing Migration">
+  **Challenge**: Converting React Router to Next.js App Router **Solution**:
+  Create a routing mapping document and plan URL structure
+</Accordion>
+
+<Accordion title="Styling Migration">
+**Challenge**: Converting CSS modules to Tailwind CSS
+**Solution**: Create a design system and component style guide
+</Accordion>
+</AccordionGroup>
+
+### Extension Activities
+
+1. **Research Next.js 14 Features:**
+
+   - Investigate new App Router capabilities
+   - Study server actions and form handling
+   - Explore performance optimization techniques
+
+2. **Plan Advanced Migration Strategies:**
+
+   - Consider incremental migration approaches
+   - Plan for zero-downtime deployment
+   - Design rollback strategies
+
+3. **Create Migration Checklist:**
+   - Develop a comprehensive checklist for each component type
+   - Include testing and validation steps
+   - Plan for code review and quality assurance
+
+## Next Steps
+
+After completing this lesson, you'll be ready to move on to **Lesson 1.3: Component Migration & Routing**, where you'll:
+
+- Migrate your first React components to Next.js
+- Implement the new routing structure
+- Set up layouts and templates
+- Test the migrated components
+
+<Info>
+  **Key Takeaway**: A well-planned migration strategy is crucial for success.
+  Take time to analyze the existing codebase thoroughly and create a realistic
+  plan that accounts for complexity, dependencies, and business requirements.
+</Info>
